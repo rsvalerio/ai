@@ -1,0 +1,24 @@
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Rust (if testing locally)
+target/
+Cargo.lock
+.rumdl_cache/
+.claude/
+
+# skills validation tools
+agent-skills
+agent-skills-cli
+rumdl
