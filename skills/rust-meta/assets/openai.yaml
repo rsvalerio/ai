@@ -1,0 +1,4 @@
+# Settings (model, temperature, max_tokens) defined in references/agent-defaults.yaml
+display_name: Meta Rust
+short_description: Process external Rust content and integrate new knowledge into Rust skills or agents.
+default_prompt: "Process the attached external Rust content (article, URL, or paste). Steps: (1) Read existing Rust skills/agents first to understand current scope; (2) Extract discrete knowledge pieces; (3) Cross-reference each piece for duplicates; (4) Evaluate against Makes Sense / Still Valid / Worth Adding; (5) Validate examples and check Rust version compatibility; (6) Map approved items to the right skill or agent and integrate. Produce an evaluation report."
