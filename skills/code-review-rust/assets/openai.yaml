@@ -1,0 +1,7 @@
+# Agent settings
+model: gpt-4o
+temperature: 0.2
+max_tokens: 16384
+display_name: Rust Code Review
+short_description: Review Rust code or self-check Rust changes for idioms, security, complexity, duplication, test quality, and NATS patterns.
+default_prompt: "Run a formal code-review-rust. Survey all .rs files, Cargo.toml, and tests; scan against all rule categories (OWN, ERR, TRAIT, CONC, ASYNC, PERF, UNSAFE, SEC, FN, READ, ARCH, API, CL, DUP, TEST, NATS); create one backlog task per finding via CLI; print a summary table."
