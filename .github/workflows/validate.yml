@@ -1,4 +1,4 @@
-name: Validate Skills
+name: CI
 
 on:
   push:
@@ -6,19 +6,66 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SKILL_VALIDATOR_VERSION: 1.5.5
+  RUMDL_VERSION: 0.1.81
+
 jobs:
-  validate:
+  lint:
+    name: Markdown format and lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install validation tools
+      - name: Install rumdl
         uses: taiki-e/install-action@v2
         with:
-          tool: skill-validator@1.5.5,rumdl@0.1.81
+          tool: rumdl@${{ env.RUMDL_VERSION }}
+
+      - name: Check formatting
+        run: make fmt-check
+
+      - name: Check lint rules
+        run: make lint-check
+
+  validate:
+    name: Skill structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install skill-validator
+        uses: taiki-e/install-action@v2
+        with:
+          tool: skill-validator@${{ env.SKILL_VALIDATOR_VERSION }}
 
       - name: Validate all agent skills
         run: make validate
 
-      - name: Lint all markdown files
-        run: make lint
+  install:
+    name: Symlink install smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Link skills into the agent directory
+        run: make link
+
+      - name: Verify every skill resolves to a SKILL.md
+        run: |
+          set -e
+          for skill in skills/*/; do
+            name=$(basename "$skill")
+            test -f "$HOME/.claude/skills/$name/SKILL.md" \
+              || { echo "::error::$name did not link to a readable SKILL.md"; exit 1; }
+          done
+
+      - name: Unlink skills
+        run: make unlink
