@@ -1,0 +1,204 @@
+# Worktree Protocol
+
+Mechanics for running code-review waves in parallel without corrupting each other.
+`code-review-run-wave` and `code-review-run-waves` both follow this protocol; it is the
+single source of truth for worktree naming, claiming, merging, and recovery.
+
+## Why Isolation Is Required
+
+Waves are grouped semantically, not spatially. Two of the grouping axes in
+`code-review-triage` are *by concern* (`error handling`, `test coverage`, a shared root
+cause), so two waves routinely touch the same files. Running them in one checkout breaks
+in four ways:
+
+| Shared resource | Failure when two waves run in one checkout |
+|---|---|
+| Working tree | `ops verify` builds the other wave's half-finished edits; failures are attributed to the wrong wave |
+| Git index | Interleaved `git add` / `git commit` produce commits containing the other wave's files |
+| Commit script path | Both runs write the same file and overwrite each other |
+| Wave selection | Two runners pick the same wave and apply every fix twice |
+
+A worktree per wave gives each wave its own working tree, its own index, and its own
+pre-merge build. Merges are then serialized so only one wave mutates the base branch at
+a time.
+
+## Naming
+
+| Thing | Pattern | Example |
+|---|---|---|
+| Wave branch | `code-review/<waveTaskId>` | `code-review/TASK-0119` |
+| Worktree path | `../.wave-<waveTaskId>` (sibling of the repo, not inside it) | `../.wave-TASK-0119` |
+| Commit script | `/tmp/commit-groups-<waveTaskId>.sh` | `/tmp/commit-groups-TASK-0119.sh` |
+| Merge lock | `.git/code-review-merge.lock` (a directory) | — |
+
+The worktree must be a **sibling** of the repository, never a subdirectory of it.
+A worktree nested inside the main checkout shows up as untracked files there and gets
+swept into commits.
+
+## Claiming a Wave
+
+Creating the wave branch **is** the claim. `git worktree add -b` fails if the branch
+already exists, so the claim is exclusive without a separate lock file:
+
+```bash
+git worktree add ../.wave-<waveTaskId> -b code-review/<waveTaskId>
+```
+
+A second runner attempting the same wave gets:
+
+```text
+fatal: a branch named 'code-review/<waveTaskId>' already exists
+```
+
+Treat that as **"this wave is already claimed"** — do not delete the branch to force the
+claim. Pick a different wave, or if no other wave is open, stop and report that the wave
+is in flight elsewhere. See [Recovery](#recovery) for genuinely abandoned claims.
+
+Only after the claim succeeds, flip the wave parent to `In Progress`. Claiming first
+means a failed claim never leaves a task marked in progress by a run that never started.
+
+## The Main-Checkout Rule
+
+**Code edits happen in the worktree. Every `backlog` command runs from the main
+checkout.**
+
+`backlog` stores tasks as files inside the repository. A worktree holds a *separate copy*
+of those files, so task-status edits made from a worktree would ride the wave branch and
+collide with every other wave's task edits on merge.
+
+| Action | Where it runs |
+|---|---|
+| `backlog task view` / `edit` / `create` / `list` / `search` | main checkout |
+| Reading and editing source files | wave worktree |
+| `ops verify` (pre-merge) | wave worktree |
+| `commit-script` and the generated script | wave worktree |
+| `ops verify` (integration), merge, `chore(backlog)` commit | main checkout |
+
+The useful side effect: the wave branch contains only code, and backlog task files are
+committed separately from the main checkout. Code commits and bookkeeping commits can no
+longer end up mixed in one blob.
+
+## Merging
+
+Merges are serialized through a lock directory. `mkdir` is atomic on POSIX filesystems,
+so it either creates the directory or fails — there is no race window:
+
+```bash
+# acquire (retry in a loop; do not proceed without it)
+mkdir .git/code-review-merge.lock
+
+# release, always, including on failure
+rmdir .git/code-review-merge.lock
+```
+
+Holding the lock, land the wave:
+
+```bash
+# 1. rebase the wave branch onto the current base branch, from the worktree
+cd ../.wave-<waveTaskId> && git rebase main
+
+# 2. integration verify: the merged result, not the isolated result
+ops verify
+
+# 3. fast-forward the base branch, from the main checkout
+git merge --ff-only code-review/<waveTaskId>
+```
+
+`--ff-only` is deliberate. After a successful rebase the merge must be a fast-forward;
+if git refuses, the base branch moved under you — another wave merged while you held a
+stale rebase. Re-run the rebase rather than falling back to a merge commit.
+
+Release the lock as soon as the fast-forward completes or the attempt fails. Never hold
+it across the member-fix phase — only across rebase → integration verify → merge.
+
+### Two Verifies, Two Different Jobs
+
+- **Pre-merge `ops verify`** runs in the worktree on the wave's changes alone. It proves
+  the wave is internally correct and gates the merge attempt.
+- **Integration `ops verify`** runs after the rebase, on the wave's changes combined with
+  everything already on the base branch. It catches the failures isolation cannot:
+  a wave that renames a function another wave started calling, two waves adding the same
+  helper, a trait impl that only conflicts once both halves are present.
+
+A wave that passes pre-merge and fails integration is a normal outcome, not a bug in the
+protocol. Fix it on the wave branch, re-verify, retry the merge.
+
+## Handling a Rebase Conflict
+
+Expected whenever two waves touched the same file. The conflict surfaces as:
+
+```text
+CONFLICT (content): Merge conflict in <path>
+error: could not apply <sha>... <subject>
+```
+
+Resolve it in the worktree — you have both sides and the wave's full context. If the
+resolution is not obvious, `git rebase --abort` restores the branch exactly as it was;
+the wave's commits are not lost. Then either retry after the conflicting wave settles, or
+leave the wave parked (below) and report it.
+
+Do not resolve a conflict by discarding the other wave's hunk. The other wave already
+merged and passed integration verify; overwriting it silently reverts completed work.
+
+## Teardown
+
+Only after the merge has landed:
+
+```bash
+git worktree remove ../.wave-<waveTaskId>
+git branch -d code-review/<waveTaskId>
+```
+
+`git worktree remove` refuses when the worktree has modified or untracked files:
+
+```text
+fatal: '../.wave-<id>' contains modified or untracked files, use --force to delete it
+```
+
+That refusal is a feature — it is the protocol's last guard against deleting unmerged
+work. **Never reach for `--force` to get past it.** Investigate what is uncommitted
+first; it is usually a fix that was applied but never committed. Likewise `git branch -d`
+(lowercase) refuses to delete an unmerged branch, where `-D` would discard it silently.
+
+A wave that did not merge keeps its worktree and branch on purpose. Leaving it in place is
+what makes the work resumable.
+
+## Recovery
+
+**A parked wave (merge failed, worktree still present).** The branch holds the committed
+fixes and the worktree holds any uncommitted remainder. Resume by re-entering the
+worktree, finishing the work, and retrying rebase → integration verify → merge. Nothing
+needs to be recreated.
+
+**A stale worktree whose directory was deleted manually.** Git still lists it. Clear the
+bookkeeping, then re-claim normally:
+
+```bash
+git worktree prune
+```
+
+**An abandoned claim branch (no worktree, no runner).** Confirm all three before touching
+it: `git worktree list` does not show it, the wave task is not `In Progress` under an
+active run, and the branch has no commits you need (`git log main..code-review/<id>`).
+Only then delete the branch to release the claim. If the branch *does* carry commits, it
+is parked work, not an abandoned claim — resume it instead.
+
+**A stuck merge lock.** The lock is a plain directory, so a killed runner leaves it
+behind. Verify no wave is mid-merge (`git worktree list`, plus `git status` in each
+worktree showing no rebase in progress), then `rmdir .git/code-review-merge.lock`.
+
+**A wave whose branch no longer rebases cleanly after repeated attempts.** Stop retrying.
+Leave it parked, file a `Triage` task describing the conflict and which wave it collides
+with, and report it. A wave that fights the base branch usually means the grouping put
+genuinely coupled work in two different waves — that is triage feedback, not a merge
+problem to brute-force.
+
+## Invariants
+
+1. One wave, one branch, one worktree. Never two runners on one wave.
+2. Claim before mutating any task state.
+3. All `backlog` commands from the main checkout; all code edits in the worktree.
+4. The merge lock is held across rebase → integration verify → merge, and nothing else.
+5. A wave closes `Done` only when every member is `Done` **and** the merge landed.
+6. Never `--force` a worktree removal or `-D` a wave branch to clear an obstacle.
+7. A failed wave never blocks another wave — it parks and the others carry on.
