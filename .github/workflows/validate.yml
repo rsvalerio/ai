@@ -1,0 +1,24 @@
+name: Validate Skills
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install validation tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: skill-validator@1.5.5,rumdl@0.1.81
+
+      - name: Validate all agent skills
+        run: make validate
+
+      - name: Lint all markdown files
+        run: make lint
