@@ -1,0 +1,13 @@
+# rumdl configuration for rust-skills
+# https://rumdl.dev/configuration/
+
+[global]
+exclude = ["target", ".git"]
+
+disable = [
+    "MD013", # Line length
+    "MD033" # Bare URL
+]
+
+[MD007]
+indent = 2
