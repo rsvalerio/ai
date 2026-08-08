@@ -1,6 +1,6 @@
 ---
 name: code-review-web
-description: Reviews web frontend code (React + TypeScript + Vite SPAs) and acts as an implementation guardrail for frontend changes, covering React idioms and hooks, TypeScript type safety, async/error handling, performance/re-renders, accessibility, security (XSS, Web Crypto, secrets, OWASP), complexity, readability, architecture, duplication, test quality, and real-time/socket.io usage. Use during authoring or editing of React/TypeScript code to prevent rule violations before they ship, and for formal reviews where findings are filed as backlog tasks.
+description: Reviews React and TypeScript frontend code (Vite SPAs) against a rule set spanning hooks and type safety, async and error handling, re-render performance, accessibility, security including XSS and Web Crypto, readability and architecture, test quality and socket.io real-time patterns. Use it as an implementation guardrail while authoring or editing frontend code so violations are caught before they ship, or run it as a formal review that files one backlog task per finding.
 allowed-tools: Read Grep Glob Bash(wc *) Bash(ls *) Bash(tree *) Bash(git rev-parse:*) Bash(git log:*) Bash(backlog task:*) Bash(backlog search:*) Bash(eslint *) Bash(npx eslint *) Bash(bunx eslint *) Bash(tsc *) Bash(npx tsc *) Bash(bunx tsc *)
 license: Apache-2.0
 ---
