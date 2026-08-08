@@ -1,0 +1,7 @@
+# Agent settings
+model: gpt-4o
+temperature: 0.2
+max_tokens: 16384
+display_name: Web Code Review
+short_description: Review React + TypeScript + Vite frontend code or self-check frontend changes for React idioms, type safety, async/error handling, performance, accessibility, security, complexity, duplication, test quality, and real-time (socket.io) patterns.
+default_prompt: "Run a formal code-review-web. Survey all .ts/.tsx files, package.json, tsconfig*.json, eslint/vite/vitest config, and tests; scan against all rule categories (REACT, TS, ASYNC, PERF, A11Y, FN, READ, ARCH, API, DUP, SEC, TEST, RT); skip what eslint/tsc already enforce; create one backlog task per finding via CLI; print a summary table."
