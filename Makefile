@@ -7,10 +7,12 @@ SKILLS_ABS := $(abspath $(SKILLS_DIR))
 # the most-read pages here and were previously unlinted.
 MARKDOWN := $(SKILLS_DIR) docs reports README.md AGENTS.md CONTRIBUTING.md .github
 
-# .tool-versions is the single source of truth; CI reads the same file.
+# .tool-versions is the single source of truth; CI and `mise install` read the
+# same file. Names may carry a mise backend prefix, so match on the last segment.
 TOOL_VERSIONS := .tool-versions
-RUMDL_VERSION := $(shell awk '$$1 == "rumdl" { print $$2 }' $(TOOL_VERSIONS))
-SKILL_VALIDATOR_VERSION := $(shell awk '$$1 == "skill-validator" { print $$2 }' $(TOOL_VERSIONS))
+tool_version = $(shell awk -v t=$(1) '$$1 == t || $$1 ~ "/" t "$$" { print $$2 }' $(TOOL_VERSIONS))
+RUMDL_VERSION := $(call tool_version,rumdl)
+SKILL_VALIDATOR_VERSION := $(call tool_version,skill-validator)
 
 .PHONY: all ci validate lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
 

@@ -29,7 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           for tool in rumdl skill-validator; do
-            version=$(awk -v t="$tool" '$1 == t { print $2 }' .tool-versions)
+            version=$(awk -v t="$tool" '$1 == t || $1 ~ "/" t "$" { print $2 }' .tool-versions)
             test -n "$version" || { echo "::error::$tool missing from .tool-versions"; exit 1; }
             echo "$tool=$version" >> "$GITHUB_OUTPUT"
           done

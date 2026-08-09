@@ -7,9 +7,13 @@ from your checkout to `main`.
 ## Set up
 
 ```bash
-make install-tools   # rumdl + skill-validator
+mise install         # or: make install-tools (Homebrew)
 make check-tools     # confirm they match .tool-versions
 ```
+
+`mise install` is the portable path and reads `.tool-versions` directly;
+`make install-tools` is a Homebrew convenience and installs whatever brew has as
+current, so `check-tools` may tell you to pin it back.
 
 `.tool-versions` pins the versions CI runs. If `check-tools` fails, your local gates are
 not the gates that will run on your pull request — fix that before trusting a green run.
