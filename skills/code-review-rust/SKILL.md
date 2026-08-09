@@ -97,6 +97,12 @@ Survey for these signals, then check against the corresponding rules:
 | `Arc<Mutex<T>>` around collections | CONC-1--3, CONC-7--9 |
 | `Result<T, String>` or `Box<dyn Error>` in library API | ERR-1, ERR-2, ERR-10 |
 | Missing `.with_context()` on `?` propagation | ERR-4 |
+| `std::fs` error propagated with no path in the message | ERR-13 |
+| `serde_*::from_str` on human-edited config with no field path in the error | ERR-14, SEC-11 |
+| Repeated `to_str().unwrap()` / `to_string_lossy()` on the same path values | API-12 |
+| `HashMap` used as a cache with no size cap, TTL, or eviction | PERF-16, SEC-33 |
+| `Arc<RwLock<T>>` read on every request, replaced wholesale and rarely | CONC-1, CONC-8 |
+| CLI binary with no test that runs it as a command (flags, exit codes, stderr) | TEST-31, READ-8 |
 | `unsafe` blocks | UNSAFE-1--5, UNSAFE-8, SEC-1--4, SEC-34--36 |
 | `lazy_static!` / `once_cell::sync::Lazy` in new code | CONC-10 |
 | `async-trait` macro on types that could use native async fn | ASYNC-10 |
