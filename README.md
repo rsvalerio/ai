@@ -46,7 +46,7 @@ Restart your AI tool after installing so it picks up the new skills.
 ## Requirements
 
 - **AI agent**: Claude Code, OpenAI Codex, Cursor, or another Agent Skills-compatible platform
-- **Developing this repo**: Git, Homebrew; full workflow in [AGENTS.md](AGENTS.md)
+- **Developing this repo**: Git, plus `rumdl` and `skill-validator` at the versions pinned in [`.tool-versions`](.tool-versions) — `mise install` gets both, or `make install-tools` via Homebrew. Full workflow in [AGENTS.md](AGENTS.md)
 
 ## Usage
 
@@ -110,7 +110,12 @@ Details: [Worktree Protocol](skills/code-review-run-wave/references/worktree-pro
 
 ## Contributing
 
-Validation, linting, conventions, and publishing: [AGENTS.md](AGENTS.md).
+Setup, gates, commit format, and pull request rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+Skill authoring conventions and publishing: [AGENTS.md](AGENTS.md).
+
+`main` is protected: pull requests merge by squash only, need signed commits, and
+must pass the `Lint`, `Validate` and `Install` checks. `make ci` runs the same
+gates locally.
 
 ## License
 
@@ -119,8 +124,12 @@ Apache-2.0. See [LICENSE](LICENSE).
 ## Support
 
 - Issues: <https://github.com/rsvalerio/ai/issues>
-- Discussions: <https://github.com/rsvalerio/ai/discussions>
 
 ## Acknowledgments
 
-Based on [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/), [The Rust Book](https://doc.rust-lang.org/book/), [Rust By Example](https://doc.rust-lang.org/rust-by-example/), and community best practices.
+Rust rules draw on the [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/),
+[The Rust Book](https://doc.rust-lang.org/book/) and
+[Rust By Example](https://doc.rust-lang.org/rust-by-example/). Frontend rules draw on the
+[React documentation](https://react.dev/), the
+[TypeScript handbook](https://www.typescriptlang.org/docs/handbook/intro.html) and the
+[OWASP Top 10](https://owasp.org/www-project-top-ten/), alongside community best practices.
