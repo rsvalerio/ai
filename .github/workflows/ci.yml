@@ -14,37 +14,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  versions:
-    name: Versions
-    runs-on: ubuntu-latest
-    outputs:
-      rumdl: ${{ steps.read.outputs.rumdl }}
-      skill-validator: ${{ steps.read.outputs.skill-validator }}
-    steps:
-      - uses: actions/checkout@v4
-
-      # .tool-versions is the same file `make check-tools` reads locally.
-      - name: Read pinned tool versions
-        id: read
-        run: |
-          set -euo pipefail
-          for tool in rumdl skill-validator; do
-            version=$(awk -v t="$tool" '$1 == t || $1 ~ "/" t "$" { print $2 }' .tool-versions)
-            test -n "$version" || { echo "::error::$tool missing from .tool-versions"; exit 1; }
-            echo "$tool=$version" >> "$GITHUB_OUTPUT"
-          done
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    needs: versions
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install rumdl
-        uses: taiki-e/install-action@v2
-        with:
-          tool: rumdl@${{ needs.versions.outputs.rumdl }}
+      # mise reads .tool-versions directly — the same file `make check-tools`
+      # reads locally, so CI and a developer machine install identical versions.
+      # skill-validator ships as GitHub release assets rather than a crates.io
+      # crate, which is why it is pinned through mise's `github:` backend.
+      - uses: jdx/mise-action@v2
+
+      - name: Confirm tooling matches .tool-versions
+        run: make check-tools
 
       - name: Check formatting
         run: make fmt-check
@@ -55,14 +38,13 @@ jobs:
   validate:
     name: Validate
     runs-on: ubuntu-latest
-    needs: versions
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install skill-validator
-        uses: taiki-e/install-action@v2
-        with:
-          tool: skill-validator@${{ needs.versions.outputs.skill-validator }}
+      - uses: jdx/mise-action@v2
+
+      - name: Confirm tooling matches .tool-versions
+        run: make check-tools
 
       - name: Validate all agent skills
         run: make validate
