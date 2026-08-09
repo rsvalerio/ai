@@ -2,7 +2,8 @@
 # https://rumdl.dev/configuration/
 
 [global]
-exclude = ["target", ".git"]
+# pull_request_template.md opens with a section heading by design, not MD041's H1.
+exclude = ["target", ".git", ".github/pull_request_template.md"]
 
 disable = [
     "MD013", # Line length
