@@ -21,7 +21,7 @@ jobs:
       rumdl: ${{ steps.read.outputs.rumdl }}
       skill-validator: ${{ steps.read.outputs.skill-validator }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # .tool-versions is the same file `make check-tools` reads locally.
       - name: Read pinned tool versions
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: versions
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install rumdl
         uses: taiki-e/install-action@v2
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: versions
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install skill-validator
         uses: taiki-e/install-action@v2
@@ -71,7 +71,7 @@ jobs:
     name: Install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Link skills into the agent directory
         run: make link
