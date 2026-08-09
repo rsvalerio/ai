@@ -121,7 +121,7 @@ Prerequisites: `make lint-and-validate` passes.
 **GitHub catalog:** this repo *is* the catalog. Users install with:
 
 ```bash
-agent-skills install https://github.com/rsvalerio/skills/tree/main/skills/code-review-rust
+agent-skills install https://github.com/rsvalerio/ai/tree/main/skills/code-review-rust
 ```
 
 Publish by pushing to `main` (and optionally tagging `vX.Y.Z` for versioned installs). To submit upstream, fork [openai/skills](https://github.com/openai/skills) and follow that repo's guidelines. For discovery, keep the README clear and use topics such as `rust`, `agent-skills`, `claude`, `codex`.

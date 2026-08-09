@@ -82,7 +82,7 @@ Run `cargo fmt`, `cargo clippy --all-targets --workspace -- -D warnings`, and
 ## Rust implementation guardrails
 
 When editing Rust code, follow the rules in the `code-review-rust` Agent Skill
-(<https://github.com/rsvalerio/skills/tree/main/skills/code-review-rust>). The
+(<https://github.com/rsvalerio/ai/tree/main/skills/code-review-rust>). The
 full rule index is at `references/rules.md`.
 
 Treat each rule as an acceptance criterion, not a post-hoc check. Run

@@ -21,8 +21,8 @@ A collection of [Agent Skills](https://agentskills.io/specification) for Rust an
 ### Option 1: Clone the Repository
 
 ```bash
-git clone https://github.com/rsvalerio/skills.git
-cd skills
+git clone https://github.com/rsvalerio/ai.git
+cd ai
 
 # Claude Code
 cp -r skills/* .claude/skills/
@@ -38,7 +38,7 @@ For a live symlink into `~/.claude/skills/` while developing this repo, use `mak
 Using [agent-skills-cli](https://lib.rs/crates/agent-skills-cli):
 
 ```bash
-agent-skills install https://github.com/rsvalerio/skills/tree/main/skills/code-review-rust
+agent-skills install https://github.com/rsvalerio/ai/tree/main/skills/code-review-rust
 ```
 
 Restart your AI tool after installing so it picks up the new skills.
@@ -118,8 +118,8 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 ## Support
 
-- Issues: <https://github.com/rsvalerio/skills/issues>
-- Discussions: <https://github.com/rsvalerio/skills/discussions>
+- Issues: <https://github.com/rsvalerio/ai/issues>
+- Discussions: <https://github.com/rsvalerio/ai/discussions>
 
 ## Acknowledgments
 
