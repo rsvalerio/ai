@@ -30,7 +30,7 @@ Skill purposes are listed in the [README overview](README.md#overview). Relation
 - **code-review-triage** — groups `Triage` backlog findings into `code-review-plan-waveN` parents and stamps file scope via `--modified-file` for merge ordering.
 - **code-review-run-wave** — claims one open wave, applies fixes in an isolated git worktree, runs QA, merges under a shared lock. Protocol: `skills/code-review-run-wave/references/worktree-protocol.md`.
 - **code-review-run-waves** — fans out across open waves; delegates per-wave work to `code-review-run-wave`.
-- **commit-script** — groups related files into conventional commit scripts.
+- **commit-script** — groups related files into conventional commit scripts. Two modes: `commit` (default, local commits only — what the wave runners use) and `pr` (topic branch + push + `gh pr create`).
 - **rust-meta** — maps external Rust knowledge into `code-review-rust`.
 
 ### Finding output

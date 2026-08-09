@@ -177,11 +177,15 @@ run happens in Step 7 against the merged result.
 ## Step 5 — Commit the wave's code
 
 After the pre-merge gate passes, invoke the **commit-script** skill from inside the wave
-worktree, with a per-wave output path so concurrent waves cannot overwrite each other:
+worktree, in `commit` mode and with a per-wave output path so concurrent waves cannot
+overwrite each other:
 
 ```text
+mode: commit
 output path: /tmp/commit-groups-<waveTaskId>.sh
 ```
+
+Never ask for `pr` mode here — this skill merges the wave branch itself in Step 7.
 
 If the skill produces a script and there are changes to commit, run it from the worktree:
 
