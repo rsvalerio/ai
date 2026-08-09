@@ -23,7 +23,8 @@
 - **READ-5.** Make invariants explicit (types, asserts, docs)
 - **READ-6.** Consistent patterns for similar problems
 - **READ-7.** Prefer pattern matching over nested if/else; compiler enforces exhaustiveness. Note: clippy catches narrow cases (`match_like_matches_macro`); this rule covers the broader stylistic preference
-- **READ-8.** For new service/application code, prefer the `tracing` crate over `log` — structured fields, spans, and per-async-task context are first-class, and most modern observability exporters (OpenTelemetry, Honeycomb, Datadog) target `tracing::Subscriber`. The `log` crate is still appropriate for libraries that want a minimal dependency footprint; bridge library logs into `tracing` with `tracing-log`. Flag `println!`/`eprintln!` in non-binary, non-test code as a finding
+- **READ-8.** For new service/application code, prefer the `tracing` crate over `log` — structured fields, spans, and per-async-task context are first-class, and most modern observability exporters (OpenTelemetry, Honeycomb, Datadog) target `tracing::Subscriber`. The `log` crate is still appropriate for libraries that want a minimal dependency footprint; bridge library logs into `tracing` with `tracing-log`. Flag `println!`/`eprintln!` in non-binary, non-test code as a finding. **In CLI binaries**, where direct printing is correct, honour the stream contract: `stdout` carries the program's *result* (the part a caller may pipe or parse), `stderr` carries diagnostics, progress, warnings, and errors. Any `println!` used for a diagnostic breaks downstream pipelines and must be `eprintln!`
+- **READ-9.** `dbg!` must not survive into committed code. It writes the expression source and value to stderr *unconditionally* — it is not stripped in release builds, unlike `debug_assert!` — so a leftover call becomes permanent noise on the diagnostic stream and can leak internal state (SEC-21). It also takes ownership of its argument, so inserting or removing it can change move semantics. Enable `clippy::dbg_macro` (restriction lint) at deny level in CI to catch it mechanically; use `tracing::debug!` for logging that is meant to stay
 
 ## Architecture & Modules
 
@@ -38,6 +39,16 @@
 - **ARCH-9.** Minimal public surface; hide internals behind modules
 - **ARCH-10.** Snake_case files; singular names (`config.rs` not `configs.rs`)
 - **ARCH-11.** In Cargo workspaces, centralize shared dependency versions and lints in `[workspace.dependencies]` and `[workspace.lints]`, then inherit with `dep = { workspace = true }` and `[lints] workspace = true`. Prevents version drift across member crates and makes CVE upgrades a single-point change. Flag workspaces where sibling crates pin different versions of the same transitive dep or duplicate lint configuration
+- **ARCH-12.** Enforce feature-flag invariants with `compile_error!` rather than a runtime check or a silent fallback. Cargo features are *additive* — any consumer in the dependency graph can turn one on, and `--all-features` turns on every one — so a crate whose backends are mutually exclusive, or that requires at least one of a set, must say so at compile time:
+
+  ```rust
+  #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
+  compile_error!("enable exactly one backend: `sqlite` or `postgres`");
+  #[cfg(all(feature = "sqlite", feature = "postgres"))]
+  compile_error!("`sqlite` and `postgres` are mutually exclusive");
+  ```
+
+  Cover both directions (none-selected *and* over-selected); a single `not(any(...))` guard still lets `--all-features` produce a nonsense build. Prefer restructuring so features are genuinely additive (e.g. select the backend at runtime from a trait object) — mutually exclusive features are a design smell that breaks feature unification for downstream crates. `compile_error!` is the right tool where that restructuring is not possible, and inside declarative/procedural macros to reject invalid invocations with a readable message
 
 ## API Design (typical severity: Medium)
 
