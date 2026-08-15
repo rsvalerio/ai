@@ -25,11 +25,11 @@ Arguments are free-form; recognise these anywhere in them:
 Examples:
 
 ```text
-/commit-script                                  # commit mode, /tmp/commit-groups.sh
+/commit-script                                  # commit mode, .git/commit-script.sh
 /commit-script pr                               # branch + push + gh pr create
 /commit-script pr --draft --base develop
 /commit-script pr --branch feat/pr-mode
-/commit-script /tmp/commit-groups-TASK-12.sh    # commit mode, custom output path
+/commit-script .git/commit-script-TASK-12.sh    # commit mode, custom output path
 ```
 
 ## Step 0 — Determine the mode
@@ -61,16 +61,40 @@ will fail halfway through.
 
 ## Step 0b — Determine the output path
 
-Default to `/tmp/commit-groups.sh`.
+Default to `commit-script.sh` inside the repo's git directory — resolve it with:
+
+```bash
+git rev-parse --git-dir
+```
+
+so the path is `<git-dir>/commit-script.sh` (usually `.git/commit-script.sh`).
+
+**Write it there and nowhere else by default.** A commit script is about exactly one
+repo, and the git directory is the only location that is repo-scoped by construction. It
+also survives reboots, and `git status` never sees it because it is inside `.git/`.
+
+Every artifact this skill writes is named after the skill — `commit-script.sh`,
+`commit-script-<waveTaskId>.sh`, `commit-script-pr-body-<slug>.md`. The shared prefix
+keeps them identifiable among git's own files, groups them in a directory listing, and
+makes cleanup a single glob: `rm .git/commit-script-*`. Do not invent unprefixed names.
+
+Do **not** default to `/tmp`. A machine-global filename is shared by every repo on the
+box, so a leftover script from one project can be run later from another project's
+directory. That is not hypothetical — it has happened: a script generated for one repo
+was run from a second repo, where `git switch -c` succeeded (branch creation works in any
+repo) and the following `git add` failed on paths that did not exist there, leaving a
+stray branch behind. Step 3a's repo guard exists to make that impossible; a repo-scoped
+path stops it being likely in the first place.
 
 If the caller supplied an output path, use it verbatim. Callers that may run concurrently
 **must** supply one — `code-review-run-wave` passes
-`/tmp/commit-groups-<waveTaskId>.sh` so parallel waves cannot overwrite each other's
-script.
+`commit-script-<waveTaskId>.sh` so parallel waves cannot overwrite each other's script.
 
 All git commands below run in the **current working directory**. When the caller is
 working inside a git worktree, run this skill from that worktree so `git status` and the
-generated `git add` paths describe that tree and not the main checkout.
+generated `git add` paths describe that tree and not the main checkout. `git rev-parse
+--git-dir` resolves to that worktree's own `.git/worktrees/<name>` directory, so the
+default path is already distinct per worktree.
 
 ## Step 1 — Gather context
 
@@ -112,12 +136,39 @@ Format: `type(scope): short imperative description`
 Create the script at the output path from Step 0b. Both modes share the same commit
 blocks; `pr` mode wraps them in a branch and a pull request.
 
-### 3a — Commit blocks (both modes)
+### 3a — Repo guard (both modes, always first)
+
+Every script opens with a guard that refuses to run outside the repo it was generated
+for. Resolve the absolute path once with `git rev-parse --show-toplevel` and inline it:
 
 ```sh
 #!/usr/bin/env bash
 set -e
 
+# Generated for this repo only. Refuse to run anywhere else.
+EXPECTED_TOPLEVEL="<absolute path from git rev-parse --show-toplevel>"
+ACTUAL_TOPLEVEL="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ "$ACTUAL_TOPLEVEL" != "$EXPECTED_TOPLEVEL" ]; then
+  echo "refusing to run: generated for $EXPECTED_TOPLEVEL, but this is ${ACTUAL_TOPLEVEL:-not a git repo}" >&2
+  exit 1
+fi
+cd "$EXPECTED_TOPLEVEL"
+```
+
+This **must** precede every mutating command, `git switch -c` included. Branch creation
+succeeds in any git repo, so without the guard a wrong-directory run gets past the first
+line and only fails later — after it has already changed branch state. Failing before
+anything mutates is the whole point.
+
+The trailing `cd` is not decorative. The guard compares *repo identity*, so it passes
+from any subdirectory of the right repo — but `git add` resolves pathspecs against the
+current directory, not the repo root, so `git add docs/x.md` run from `crates/` looks for
+`crates/docs/x.md` and dies with `pathspec did not match any files`. Since Step 3b writes
+every path relative to the repo root, the script has to stand there.
+
+### 3b — Commit blocks (both modes)
+
+```sh
 echo "Group N — <short label>"
 git add <files...>
 git commit -m "type(scope): description"
@@ -133,7 +184,7 @@ up anything else present in the tree, which is how unrelated work ends up in a c
 
 In `commit` mode the script stops here. It never pushes.
 
-### 3b — Branch and pull request (`pr` mode only)
+### 3c — Branch and pull request (`pr` mode only)
 
 Wrap the commit blocks: a branch prologue before Group 1, and a push plus PR epilogue
 after the last group.
@@ -159,8 +210,9 @@ gh pr create --base <base> --head <branch> --title "<title>" --body "<body>"
 - title = the dominant group's commit subject, or a summary line when the groups are
   peers
 - body = a short paragraph of intent followed by one bullet per commit group
-- Write the body with `--body-file /tmp/pr-body-<slug>.md` and a heredoc when it spans
-  more than a couple of lines, so quoting cannot mangle it
+- Write the body with `--body-file <git-dir>/commit-script-pr-body-<slug>.md` and a heredoc when it
+  spans more than a couple of lines, so quoting cannot mangle it — same reasoning as the
+  script path in Step 0b
 - Add `--draft` when the caller asked for a draft
 
 Do not add `--fill`, `--web`, or any auto-merge flag. The script's job ends at an open PR.
@@ -170,6 +222,15 @@ Full shape of a `pr`-mode script:
 ```sh
 #!/usr/bin/env bash
 set -e
+
+# Generated for this repo only. Refuse to run anywhere else.
+EXPECTED_TOPLEVEL="/home/you/Projects/example"
+ACTUAL_TOPLEVEL="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ "$ACTUAL_TOPLEVEL" != "$EXPECTED_TOPLEVEL" ]; then
+  echo "refusing to run: generated for $EXPECTED_TOPLEVEL, but this is ${ACTUAL_TOPLEVEL:-not a git repo}" >&2
+  exit 1
+fi
+cd "$EXPECTED_TOPLEVEL"
 
 git switch -c feat/pr-mode
 
@@ -184,7 +245,7 @@ git commit -m "docs: describe commit-script modes"
 git push -u origin feat/pr-mode
 gh pr create --base main --head feat/pr-mode \
   --title "feat(commit-script): add pull request mode" \
-  --body-file /tmp/pr-body-pr-mode.md
+  --body-file .git/commit-script-pr-body-pr-mode.md
 ```
 
 ## Step 4 — Review
@@ -202,6 +263,14 @@ Multiple instances can run in parallel only if each is given a distinct output p
 checkout would stage from the same git index and interleave commits; isolate them with
 `git worktree` first — see `skills/code-review-run-wave/references/worktree-protocol.md`
 in the **code-review-run-wave** skill.
+
+Note that the two requirements collapse into one under the Step 0b default: each worktree
+has its own git directory, so `<git-dir>/commit-script.sh` is already distinct per
+worktree. Pass an explicit path only when several scripts must coexist in one tree.
+
+Concurrency is not the only collision. A script left behind from an *earlier* run in a
+*different* repo is the sequential version of the same hazard, and it is the one that has
+actually caused damage — see Step 0b. The Step 3a guard covers both.
 
 Concurrent runs use `commit` mode. `pr` mode creates and pushes a branch, which the wave
 protocol already owns — a wave runner asking for a PR would push a second branch for work
