@@ -18,13 +18,13 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # mise reads .tool-versions directly — the same file `make check-tools`
       # reads locally, so CI and a developer machine install identical versions.
       # skill-validator ships as GitHub release assets rather than a crates.io
       # crate, which is why it is pinned through mise's `github:` backend.
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v4
 
       - name: Confirm tooling matches .tool-versions
         run: make check-tools
@@ -39,9 +39,9 @@ jobs:
     name: Validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v4
 
       - name: Confirm tooling matches .tool-versions
         run: make check-tools
@@ -53,7 +53,7 @@ jobs:
     name: Install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Link skills into the agent directory
         run: make link
