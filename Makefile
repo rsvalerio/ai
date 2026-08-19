@@ -16,7 +16,7 @@ SKILL_VALIDATOR_VERSION := $(call tool_version,skill-validator)
 
 .PHONY: all ci validate validate-marketplace lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
 
-lint-and-validate: lint validate
+lint-and-validate: lint validate validate-marketplace
 
 # Non-mutating gate for CI: structure, marketplace, formatting and lint rules.
 ci: validate validate-marketplace fmt-check lint-check

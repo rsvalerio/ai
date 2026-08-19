@@ -53,7 +53,11 @@ jobs:
     name: Marketplace
     runs-on: ubuntu-latest
     steps:
+      # This job npm-installs third-party code after checkout; do not leave the
+      # repo token in git config for those steps to see.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # claude-code stays out of .tool-versions on purpose: mise's registry
       # does not know the tool, so an entry would fail `mise install` in CI.

@@ -28,7 +28,8 @@ asdf plugin add claude-code https://github.com/wguilherme/asdf-claude-code.git
 asdf install claude-code 2.1.235 && asdf global claude-code 2.1.235
 ```
 
-Any recent `claude-code` on PATH also works — `plugin validate` is stable across versions.
+Any `claude-code` 2.1.142 or later on PATH works — that is the minimum for the plugin
+layouts this repo uses.
 
 ## Make a change
 
