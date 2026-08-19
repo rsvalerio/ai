@@ -1,6 +1,6 @@
 ---
 name: code-review-run-waves
-description: Run every open code-review wave concurrently, each in its own git worktree, land them one at a time through the merge lock, and report which waves closed and which parked
+description: Run every open code-review wave concurrently, each in its own git worktree, land them one at a time through the merge lock onto a per-run integration branch, open a single PR to main, and report which waves closed and which parked
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 license: Apache-2.0
 ---
@@ -8,7 +8,8 @@ license: Apache-2.0
 # Task
 
 Run all open `code-review-plan-waveN` waves in parallel — one isolated git worktree each —
-and land them onto the base branch one at a time. This is the fan-out wrapper around
+and land them one at a time onto a per-run integration branch, then deliver the whole run
+to `main` as a single PR. This is the fan-out wrapper around
 **code-review-run-wave**; that skill remains the authority on how a single wave executes.
 
 This skill has a **hard dependency on the code-review-run-wave skill**: install it too,
@@ -19,16 +20,18 @@ claiming, merging, and recovery rule there applies unchanged here.
 
 - Start every open wave concurrently instead of one at a time
 - Keep each wave's edits, build, and index isolated from the others
-- Serialise the merges so the base branch is only ever mutated by one wave
+- Serialise the merges so the integration branch is only ever mutated by one wave
+- Deliver the run to `main` as one PR, giving the combined result a human review gate
 - Report per-wave outcomes, including which waves parked and how to resume them
 
 ## Preconditions
 
 Check all three before starting. Stop and report if any fails:
 
-1. **The base branch is clean.** `git status --short` in the main checkout is empty.
-   Waves rebase onto this branch; uncommitted work there will be swept into a wave's
-   integration verify or block the rebase.
+1. **`main` is clean and checked out.** `git status --short` in the main checkout is
+   empty. The integration branch is created from `main` and the main checkout stays on
+   it for the whole run; uncommitted work there will be swept into a wave's integration
+   verify or block the rebase.
 2. **No triage is running.** `code-review-triage` mutates task state in bulk and races
    with member status flips. Run it to completion first.
 3. **No stale locks or worktrees.** `git worktree list` shows only the main checkout, or
@@ -36,6 +39,20 @@ Check all three before starting. Stop and report if any fails:
    Clear genuinely stale state per the Recovery section of
    `skills/code-review-run-wave/references/worktree-protocol.md` — never by force-removing
    worktrees or deleting branches that carry commits.
+
+## Step 0 — Create the run integration branch
+
+Waves land on an integration branch, not `main`, so the whole run can be reviewed and
+merged as one PR:
+
+```bash
+git checkout -b code-review/run-$(date +%Y%m%d) main
+```
+
+If the branch name already exists (a same-day earlier run), suffix it: `code-review/run-<date>-2`.
+Record the branch name for Step 5. Runners derive their landing target from whatever the
+main checkout has checked out, per the Worktree Protocol — the PR to `main` is opened only
+after every wave has landed and the combined result has passed `ops verify`.
 
 ## Step 1 — Enumerate open waves
 
@@ -59,7 +76,7 @@ unknown and place it last in the merge order.
 
 Rank waves by how many other waves they share files with, fewest first. Waves that overlap
 nothing rebase cleanly and should land while the others are still working; heavily
-overlapping waves land last, when the base branch has stopped moving under them.
+overlapping waves land last, when the integration branch has stopped moving under them.
 
 Print the plan **before** starting anything: the wave list, each wave's file count, the
 overlap pairs, and the intended merge order. The user should be able to see what is about
@@ -90,6 +107,9 @@ Rules for the fan-out:
 - **Do not merge on a runner's behalf.** Each runner performs its own Step 7 merge under
   the shared lock. Centralising merges here would duplicate the protocol and lose the
   runner's context for conflict resolution.
+- **Never switch the main checkout's branch mid-run.** Runners derive their landing
+  branch from whatever the main checkout has checked out — the Step 0 integration
+  branch. Checking out something else redirects or breaks every subsequent merge.
 
 ## Step 4 — Wait for every runner
 
@@ -101,10 +121,10 @@ If a runner appears stuck, inspect rather than kill it: `git worktree list` show
 its worktree still exists, and `.git/code-review-merge.lock` shows whether a merge is in
 progress.
 
-## Step 5 — Verify the landed result
+## Step 5 — Verify the run and open the PR
 
-After every runner has returned, run the QA gate once on the base branch in the main
-checkout:
+After every runner has returned, run the QA gate once on the integration branch in the
+main checkout:
 
 ```bash
 ops verify
@@ -112,12 +132,32 @@ ops verify
 
 Each wave already ran its own integration verify before its fast-forward, so this is a
 final confirmation that the fully combined result is good. If it fails, the failure belongs
-to the combination of waves rather than to any single one: fix it on the base branch, or
-file a `Triage` task describing it, following the **No leftovers** contract in
+to the combination of waves rather than to any single one: fix it on the integration
+branch, or file a `Triage` task describing it, following the **No leftovers** contract in
 `code-review-run-wave`.
 
 Then commit the accumulated backlog task-file changes from the main checkout as one
-`chore(backlog)` commit.
+`chore(backlog)` commit — it rides the PR, so task-status flips are reviewed alongside
+the code they describe.
+
+Finally, push the integration branch and open the run's single PR:
+
+```bash
+git push -u origin code-review/run-<date>
+gh pr create --base main --head code-review/run-<date> \
+  --title "code-review run <date>: <N> waves" \
+  --body-file <report file>
+```
+
+The PR body should carry the Step 7 report's substance: the wave table, the merge order
+as executed, verify results, and links to any `Triage` tasks filed. Do not merge the PR
+yourself unless the user asks — the PR is the run's human review gate.
+
+After the PR merges (rebase merge preserves the per-wave conventional commits), clean up:
+
+```bash
+git checkout main && git pull && git branch -d code-review/run-<date>
+```
 
 ## Step 6 — Confirm teardown
 
@@ -129,9 +169,10 @@ git worktree list
 git branch --list 'code-review/*'
 ```
 
-Anything left belongs to a **parked** wave and stays. Do not clean it up — the worktree and
-branch are what make that wave resumable. Never force-remove a worktree or `-D` a wave
-branch to tidy the output.
+Anything left besides the run's own integration branch belongs to a **parked** wave and
+stays. Do not clean it up — the worktree and branch are what make that wave resumable.
+Never force-remove a worktree or `-D` a wave branch to tidy the output. The integration
+branch itself stays until its PR merges (see Step 5 for the post-merge cleanup).
 
 ## Step 7 — Report
 
@@ -141,7 +182,9 @@ Print one table plus the follow-ups:
   (`✓`/`✗`/`~` as defined in `code-review-run-wave`), and pre-merge + integration verify
   results
 - merge order as actually executed, and any wave that had to resolve a rebase conflict
-- final base-branch `ops verify` result
+- final integration-branch `ops verify` result
+- the PR: URL, branch name, and a reminder that merging it is the run's human gate
+  (post-merge cleanup in Step 5)
 - for each parked wave: the reason, its branch, its worktree path, and the next action to
   resume it
 - every `Triage` task filed by any runner, by ID

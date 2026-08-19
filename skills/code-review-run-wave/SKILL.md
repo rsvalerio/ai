@@ -8,8 +8,9 @@ license: Apache-2.0
 # Task
 
 Claim a single `code-review-plan-waveN` parent task, apply every member fix **in an
-isolated git worktree**, run the project's QA gates, merge the wave back onto the base
-branch, and close out the wave only when every member task is actually complete.
+isolated git worktree**, run the project's QA gates, land the wave on the run's
+integration branch, and close out the wave only when every member task is actually
+complete. The integration branch ships to `main` as one PR, opened in Step 8.
 
 Waves run in isolation so several can run at once. The full mechanics — naming, claiming,
 the merge lock, and recovery — are in
@@ -71,7 +72,19 @@ backlog task list -a code-review-wave -s 'To Do' --plain
 
 If the list is empty, stop and report "no open waves".
 
-## Step 2 — Claim one wave
+## Step 2 — Prepare the landing branch and claim one wave
+
+**Standalone runs only:** if the main checkout is on `main`, create the run integration
+branch first — the wave lands on it and it ships to `main` as one PR (Step 8):
+
+```bash
+git checkout -b code-review/run-$(date +%Y%m%d)
+```
+
+If a `code-review/run-<date>` branch already exists (another standalone run today), use
+a `-2` suffix. If the main checkout is already on a `code-review/run-*` branch, a
+`code-review-run-waves` fan-out created it — use it and create nothing. Either way the
+main checkout must be clean (`git status --short` empty) before you start.
 
 Pick a wave from the list and view it:
 
@@ -182,15 +195,21 @@ overwrite each other:
 
 ```text
 mode: commit
-output path: /tmp/commit-groups-<waveTaskId>.sh
+output path: commit-script-<waveTaskId>.sh
 ```
 
-Never ask for `pr` mode here — this skill merges the wave branch itself in Step 7.
+Pass the bare filename — commit-script places it inside the worktree's own git dir
+(`git rev-parse --git-dir` resolves to `.git/worktrees/<name>` there), which is already
+distinct per worktree, so concurrent waves cannot overwrite each other.
+
+Never ask for `pr` mode here — this skill merges the wave branch itself in Step 7, onto
+the landing branch, and the run's PR is opened from the integration branch in Step 8. A
+per-wave PR would also break the fan-out, where one PR covers the whole run.
 
 If the skill produces a script and there are changes to commit, run it from the worktree:
 
 ```bash
-cd ../.wave-<waveTaskId> && bash /tmp/commit-groups-<waveTaskId>.sh
+cd ../.wave-<waveTaskId> && bash "$(git rev-parse --git-dir)/commit-script-<waveTaskId>.sh"
 ```
 
 Watch the output for warnings or errors (failed hooks, lint failures, rejected
@@ -259,15 +278,22 @@ mkdir .git/code-review-merge.lock
 Holding the lock:
 
 ```bash
-# 1. rebase the wave onto the current base branch, from the worktree
-cd ../.wave-<waveTaskId> && git rebase main
+# 1. rebase the wave onto the landing branch, from the worktree
+cd ../.wave-<waveTaskId> && git rebase <landing-branch>
 
 # 2. integration verify — the merged result, not the isolated one
 ops verify
 
-# 3. fast-forward the base branch, from the main checkout
+# 3. fast-forward the landing branch, from the main checkout
 git merge --ff-only code-review/<waveTaskId>
 ```
+
+The **landing branch** is the `code-review/run-<date>` integration branch checked out in
+the main checkout — created by `code-review-run-waves` for a fan-out, or by Step 2 for a
+standalone run. Waves never land on `main` directly; the landing branch ships to `main`
+as one PR (Step 8 here, or Step 5 of `code-review-run-waves`). Never switch the main
+checkout to another branch while a wave is in flight — runners derive their rebase target
+and merge destination from it.
 
 Then release the lock — **always**, including on every failure path:
 
@@ -299,7 +325,24 @@ git worktree remove ../.wave-<waveTaskId>
 git branch -d code-review/<waveTaskId>
 ```
 
-Then commit the backlog task-file changes as their own `chore(backlog)` commit.
+Then commit the backlog task-file changes as their own `chore(backlog)` commit on the
+landing branch.
+
+**Standalone runs only — open the run's PR.** A fan-out run does not do this;
+`code-review-run-waves` opens one PR for all its waves after every runner has returned.
+A standalone run owns the whole landing branch, so after the `chore(backlog)` commit:
+
+```bash
+git push -u origin code-review/run-<date>
+gh pr create --base main --head code-review/run-<date> \
+  --title "code-review run <date>: <waveTaskId>" \
+  --body-file <report file>
+```
+
+The PR body carries the Step 9 report's substance (wave, member outcomes, verify
+results, filed tasks). Do not merge the PR yourself unless the user asks — it is the
+run's human review gate. After it merges (rebase merge preserves the conventional
+commits): `git checkout main && git pull && git branch -d code-review/run-<date>`.
 
 **Parked.** If any member task is not `Done`, or the merge did not land, leave the wave
 parent non-done (`In Progress` or `To Do`, matching the remaining work) and append a note
@@ -321,6 +364,8 @@ Print a concise summary:
 - pre-merge `ops verify` result and integration `ops verify` result, separately (pass/fail, and what was fixed if initial runs failed)
 - commit-script outcome: script generated? ran cleanly? any warnings/errors fixed before it succeeded
 - merge outcome: landed, or parked — and if parked, the branch and worktree path to resume from
+- for a standalone run: the run PR's URL and branch; under a fan-out, note that
+  `code-review-run-waves` opens the PR
 - **discharged threads**: for each item from Step 6, one line — either "fixed in-wave: …"
   or "filed TASK-XXXX (Triage): …". If nothing came up, say "none". Never restate an
   item here as an unresolved concern or a question to the user; if you are writing
