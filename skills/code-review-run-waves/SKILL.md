@@ -1,6 +1,6 @@
 ---
 name: code-review-run-waves
-description: Run every open code-review wave concurrently, each in its own git worktree, land them one at a time through the merge lock onto a per-run integration branch, open a single PR to main, and report which waves closed and which parked
+description: Runs every open code-review wave concurrently in isolated git worktrees, lands the run on main as a single PR through a merge lock, and reports which waves closed and which parked
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 license: Apache-2.0
 ---

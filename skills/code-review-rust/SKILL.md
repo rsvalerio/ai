@@ -1,6 +1,6 @@
 ---
 name: code-review-rust
-description: Reviews Rust code against a rule set spanning idioms and ownership, error handling and traits, concurrency and async, performance and unsafe code, OWASP security, test quality and NATS/JetStream usage. Use it as an implementation guardrail while authoring or editing Rust so violations are caught before they ship, or run it as a formal review that files one backlog task per finding.
+description: Reviews Rust code for idioms and ownership, error handling, concurrency and async soundness, performance and unsafe code, OWASP security, test quality, and NATS/JetStream patterns. Use while writing or editing Rust as an implementation guardrail, or run a formal review that files one backlog task per finding.
 allowed-tools: Read Grep Glob Bash(wc *) Bash(ls *) Bash(tree *) Bash(git rev-parse:*) Bash(git log:*) Bash(backlog task:*) Bash(backlog search:*)
 license: Apache-2.0
 ---
