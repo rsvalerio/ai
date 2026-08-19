@@ -20,7 +20,7 @@ A collection of [Agent Skills](https://agentskills.io/specification) for Rust an
 
 ### Option 1: Claude Code Plugin Marketplace
 
-The repository is a plugin marketplace with a single `dev-skills` plugin containing every skill — they reference each other's files (review waves lean on the worktree protocol, rust-meta on the review rule set), so they ship together. Requires Claude Code 2.1.142 or later.
+The repository is a plugin marketplace with a single `dev-skills` plugin containing every skill — they reference each other's files (review waves lean on the worktree protocol, rust-meta on the review rule set), so they ship together.
 
 ```bash
 claude plugin marketplace add rsvalerio/ai
