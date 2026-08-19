@@ -19,16 +19,17 @@ in four ways:
 | Wave selection | Two runners pick the same wave and apply every fix twice |
 
 A worktree per wave gives each wave its own working tree, its own index, and its own
-pre-merge build. Merges are then serialized so only one wave mutates the base branch at
-a time.
+pre-merge build. Merges are then serialized so only one wave mutates the landing branch
+at a time.
 
 ## Naming
 
 | Thing | Pattern | Example |
 |---|---|---|
 | Wave branch | `code-review/<waveTaskId>` | `code-review/TASK-0119` |
+| Landing branch | `code-review/run-<YYYYMMDD>`, checked out in the main checkout — created by `code-review-run-waves` for a fan-out, or by the standalone runner itself | `code-review/run-20260819` |
 | Worktree path | `../.wave-<waveTaskId>` (sibling of the repo, not inside it) | `../.wave-TASK-0119` |
-| Commit script | `/tmp/commit-groups-<waveTaskId>.sh` | `/tmp/commit-groups-TASK-0119.sh` |
+| Commit script | `<git-dir>/commit-script-<waveTaskId>.sh` (the worktree's own git dir) | `.git/worktrees/.wave-TASK-0119/commit-script-TASK-0119.sh` |
 | Merge lock | `.git/code-review-merge.lock` (a directory) | — |
 
 The worktree must be a **sibling** of the repository, never a subdirectory of it.
@@ -94,19 +95,27 @@ rmdir .git/code-review-merge.lock
 Holding the lock, land the wave:
 
 ```bash
-# 1. rebase the wave branch onto the current base branch, from the worktree
-cd ../.wave-<waveTaskId> && git rebase main
+# 1. rebase the wave branch onto the landing branch, from the worktree
+cd ../.wave-<waveTaskId> && git rebase <landing-branch>
 
 # 2. integration verify: the merged result, not the isolated result
 ops verify
 
-# 3. fast-forward the base branch, from the main checkout
+# 3. fast-forward the landing branch, from the main checkout
 git merge --ff-only code-review/<waveTaskId>
 ```
 
+The **landing branch** is the `code-review/run-<YYYYMMDD>` integration branch checked
+out in the main checkout — created by `code-review-run-waves` for a fan-out, or by a
+standalone `code-review-run-wave` run before it claims its wave. Waves never land on
+`main` directly; the landing branch ships to `main` as one PR, opened by whichever
+skill owns the run once all its waves have landed. Never switch the main checkout away
+from the landing branch while waves are in flight — every runner derives its rebase
+target and merge destination from it.
+
 `--ff-only` is deliberate. After a successful rebase the merge must be a fast-forward;
-if git refuses, the base branch moved under you — another wave merged while you held a
-stale rebase. Re-run the rebase rather than falling back to a merge commit.
+if git refuses, the landing branch moved under you — another wave merged while you held
+a stale rebase. Re-run the rebase rather than falling back to a merge commit.
 
 Release the lock as soon as the fast-forward completes or the attempt fails. Never hold
 it across the member-fix phase — only across rebase → integration verify → merge.
@@ -161,7 +170,12 @@ first; it is usually a fix that was applied but never committed. Likewise `git b
 (lowercase) refuses to delete an unmerged branch, where `-D` would discard it silently.
 
 A wave that did not merge keeps its worktree and branch on purpose. Leaving it in place is
-what makes the work resumable.
+what makes the work resumable. The landing branch also outlives the run: it stays until
+its PR merges. This repo squashes PRs to `main`, so the squash commit shares no ancestry
+with the landing branch — `git branch -d` will refuse, and `-D` is correct there because
+the merged PR is the proof the work landed (`git checkout main && git pull && git branch
+-D <landing-branch>`). The `-D` ban in the invariants covers branches that might carry
+unmerged work, not a landing branch whose PR has merged.
 
 ## Recovery
 
@@ -179,7 +193,7 @@ git worktree prune
 
 **An abandoned claim branch (no worktree, no runner).** Confirm all three before touching
 it: `git worktree list` does not show it, the wave task is not `In Progress` under an
-active run, and the branch has no commits you need (`git log main..code-review/<id>`).
+active run, and the branch has no commits you need (`git log <landing-branch>..code-review/<id>`).
 Only then delete the branch to release the claim. If the branch *does* carry commits, it
 is parked work, not an abandoned claim — resume it instead.
 
