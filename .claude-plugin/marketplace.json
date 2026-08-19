@@ -1,5 +1,5 @@
 {
-  "name": "dev-skills",
+  "name": "rsvalerio",
   "description": "Development skills for Rust and frontend work: code review, review-wave orchestration, and commit scripting.",
   "owner": {
     "name": "Rodrigo Valerio",
@@ -7,39 +7,9 @@
   },
   "plugins": [
     {
-      "name": "code-review-rust",
-      "description": "Review Rust for idioms, security, complexity, duplication, test quality, and NATS patterns.",
-      "source": "./skills/code-review-rust"
-    },
-    {
-      "name": "code-review-web",
-      "description": "Review React/TypeScript (Vite) frontends for hooks, types, async, a11y, security, and tests.",
-      "source": "./skills/code-review-web"
-    },
-    {
-      "name": "code-review-triage",
-      "description": "Group triaged backlog findings into semantic review waves with a recorded file scope per wave.",
-      "source": "./skills/code-review-triage"
-    },
-    {
-      "name": "code-review-run-wave",
-      "description": "Run one planned review wave in an isolated git worktree: apply fixes, QA, merge, close.",
-      "source": "./skills/code-review-run-wave"
-    },
-    {
-      "name": "code-review-run-waves",
-      "description": "Run every open review wave concurrently, one worktree each, landing merges via a shared lock.",
-      "source": "./skills/code-review-run-waves"
-    },
-    {
-      "name": "commit-script",
-      "description": "Generate a script that stages grouped files into conventional commits, optionally ending in a pull request.",
-      "source": "./skills/commit-script"
-    },
-    {
-      "name": "rust-meta",
-      "description": "Process external Rust content and integrate new knowledge into code-review-rust.",
-      "source": "./skills/rust-meta"
+      "name": "dev-skills",
+      "description": "Seven coupled skills: Rust and web code review, review-wave triage and execution, commit scripting, and Rust knowledge integration. They reference each other's files, so they ship as one plugin.",
+      "source": "./"
     }
   ]
 }
