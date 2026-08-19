@@ -25,7 +25,7 @@ repo's `.tool-versions` for the same reason:
 
 ```bash
 asdf plugin add claude-code https://github.com/wguilherme/asdf-claude-code.git
-asdf install claude-code 2.1.235 && asdf global claude-code 2.1.235
+asdf install claude-code 2.1.235 && asdf set --home claude-code 2.1.235
 ```
 
 Any recent `claude-code` on PATH also works — the CI pin is for reproducible validation,
