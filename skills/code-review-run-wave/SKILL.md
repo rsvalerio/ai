@@ -74,27 +74,41 @@ If the list is empty, stop and report "no open waves".
 
 ## Step 2 — Prepare the landing branch and claim one wave
 
-**Standalone runs only:** prepare the landing branch before claiming. Exactly one of
-three states may hold — anything else, stop and report:
+**Standalone runs only:** before touching any branch, confirm the main checkout is
+clean (`git status --short` empty) — uncommitted changes ride `git checkout` onto the
+landing branch — and that it is on `main` or a `code-review/run-*` branch. On any
+other branch, stop and report: creating the run branch there would build the run on
+the wrong history.
 
-- **Main checkout on `main`:** create the run integration branch — the wave lands on it
-  and it ships to `main` as one PR (Step 8):
+- **On `main`:** if `code-review/run-$(date +%Y%m%d)` does not exist, create it — the
+  wave lands on it and it ships to `main` as one PR (Step 8):
 
   ```bash
   git checkout -b code-review/run-$(date +%Y%m%d) main
   ```
 
-  If that name already exists, test it before suffixing: it carries unmerged commits
-  from an interrupted run (`git log main..code-review/run-<date>` is non-empty) when
-  you are resuming — check it out and reuse it. Only otherwise take a `-2` suffix for
-  a distinct new run.
-- **Main checkout already on a `code-review/run-*` branch:** a `code-review-run-waves`
-  fan-out or a resumed run owns it — use it and create nothing.
-- **Any other branch:** stop and report — creating the run branch from it would build
-  the run on the wrong history.
+  If it does exist, resolve its run state (below) and follow it.
+- **On a `code-review/run-*` branch:** either a `code-review-run-waves` fan-out just
+  created it (you are one of its runners) or a previous run left it behind. Resolve
+  its run state (below) and follow it.
 
-Record the exact branch name chosen; Step 8 pushes and PRs it. Either way the main
-checkout must be clean (`git status --short` empty) before you start.
+**A run branch's state** is decided by its PR, never by commit ancestry — under this
+repo's squash merges a merged run branch stays outside `main`'s ancestry forever, so
+`git log main..…` would flag it as resumable even after it fully landed:
+
+```bash
+gh pr view <branch> --json state --jq .state 2>/dev/null || echo NONE
+```
+
+- `OPEN` or `NONE` — an active or never-published run (a fan-out's fresh branch is
+  `NONE`): use it — resume where relevant.
+- `MERGED` — a completed run whose cleanup was skipped: delete it
+  (`git branch -D <branch>` — the PR state is the proof it landed) and create a fresh
+  branch for this run.
+- `CLOSED` — closed without merging: stop and report; re-pushing the branch or
+  re-running its waves is the user's call, not this skill's.
+
+Record the exact branch name chosen; Step 8 pushes and PRs it.
 
 Pick a wave from the list and view it:
 
@@ -343,7 +357,7 @@ landing branch.
 A standalone run owns the whole landing branch, so after the `chore(backlog)` commit,
 write the Step 9 report's substance (wave, member outcomes, verify results, filed
 tasks) to a body file first, then push and PR the **recorded landing branch** — the
-exact name chosen in Step 2, suffix included:
+exact name resolved in Step 2:
 
 ```bash
 git push -u origin <landing-branch>

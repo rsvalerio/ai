@@ -43,24 +43,35 @@ Check all three before starting. Stop and report if any fails:
 ## Step 0 — Prepare the run integration branch
 
 Waves land on an integration branch, not `main`, so the whole run can be reviewed and
-merged as one PR. Exactly one of three states may hold — anything else, stop and report:
+merged as one PR. The main checkout must already be clean and on `main` or a
+`code-review/run-*` branch (Preconditions). Resolve which run branch this run uses:
 
-- **Main checkout already on a `code-review/run-*` branch:** a previous run left it
-  behind (parked waves keep it alive). This is a **resume** — confirm it carries
-  unmerged landed commits (`git log main..code-review/run-*` is non-empty), then reuse
-  it and create nothing. Its previously landed waves must stay under the resumed run's
-  PR, not be stranded on a new branch.
-- **Main checkout on `main`:** create the run branch:
+- **On a `code-review/run-*` branch:** a previous run left it behind (parked waves
+  keep it alive). Resolve that branch's run state (below) and follow it.
+- **On `main`:** if `code-review/run-$(date +%Y%m%d)` does not exist, create it:
 
   ```bash
   git checkout -b code-review/run-$(date +%Y%m%d) main
   ```
 
-  If that name already exists, apply the resume test to it: reuse it when it carries
-  unmerged commits from an interrupted run; only otherwise take a `-2` suffix for a
-  distinct new run.
-- **Any other branch:** stop and report — creating the run branch from it would build
-  the run on the wrong history.
+  If it does exist, resolve its run state (below) and follow it.
+
+**A run branch's state** is decided by its PR, never by commit ancestry — under this
+repo's squash merges a merged run branch stays outside `main`'s ancestry forever, so
+`git log main..…` would flag it as resumable even after it fully landed:
+
+```bash
+gh pr view <branch> --json state --jq .state 2>/dev/null || echo NONE
+```
+
+- `OPEN` — an active run: **resume** it. Newly landed waves push onto the same PR.
+- `NONE` — a run that parked before publishing (Step 5 never ran): **resume** it; its
+  previously landed waves must stay under this branch, not be stranded on a new one.
+- `MERGED` — a completed run whose cleanup was skipped: delete the branch
+  (`git branch -D <branch>` — the PR state is the proof it landed) and create a fresh
+  one; the freed name needs no suffix.
+- `CLOSED` — closed without merging: stop and report; re-pushing the branch or
+  re-running its waves is the user's call, not this skill's.
 
 Record the exact branch name chosen — Step 5 pushes and PRs it. Runners derive their
 landing target from whatever the main checkout has checked out, per the Worktree
@@ -160,7 +171,7 @@ the code they describe.
 
 Then write the run report — the substance of Step 7: the wave table, the merge order as
 executed, verify results, links to any `Triage` tasks filed, landed vs parked — to a
-body file. Push the **recorded landing branch** (Step 0, suffix included) and open the
+body file. Push the **recorded landing branch** (Step 0) and open the
 run's single PR:
 
 ```bash
