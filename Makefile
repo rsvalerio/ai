@@ -14,12 +14,12 @@ tool_version = $(shell awk -v t=$(1) '$$1 == t || $$1 ~ "/" t "$$" { print $$2 }
 RUMDL_VERSION := $(call tool_version,rumdl)
 SKILL_VALIDATOR_VERSION := $(call tool_version,skill-validator)
 
-.PHONY: all ci validate lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
+.PHONY: all ci validate validate-marketplace lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
 
 lint-and-validate: lint validate
 
-# Non-mutating gate for CI: structure, formatting and lint rules.
-ci: validate fmt-check lint-check
+# Non-mutating gate for CI: structure, marketplace, formatting and lint rules.
+ci: validate validate-marketplace fmt-check lint-check
 
 # Fail loudly when local tooling has drifted from the versions CI runs.
 check-tools:
@@ -37,6 +37,13 @@ validate:
 	@for skill in $(SKILLS); do \
 		skill-validator validate structure --strict $(SKILLS_DIR)/$$skill/; \
 	done
+
+# The repo root doubles as a Claude Code plugin marketplace (.claude-plugin/
+# marketplace.json), one plugin per skill. claude-code is expected on PATH
+# rather than pinned in .tool-versions: anyone developing skills already runs
+# it, and CI installs its own pinned copy.
+validate-marketplace:
+	@claude plugin validate .
 
 # Homebrew works on macOS and Linuxbrew. Without it, install the pinned releases
 # from github.com/rvcas/rumdl and github.com/agent-ecosystem/skill-validator, or

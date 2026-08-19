@@ -49,6 +49,27 @@ jobs:
       - name: Validate all agent skills
         run: make validate
 
+  marketplace:
+    name: Marketplace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # claude-code stays out of .tool-versions on purpose: mise's registry
+      # does not know the tool, so an entry would fail `mise install` in CI.
+      # The pin below is the one place a version is hardcoded outside
+      # .tool-versions — bump it alongside Claude Code releases. Locally, any
+      # recent claude-code on PATH works (CONTRIBUTING.md has the asdf route).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install pinned claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.235
+
+      - name: Validate the plugin marketplace manifest
+        run: make validate-marketplace
+
   install:
     name: Install
     runs-on: ubuntu-latest

@@ -109,14 +109,23 @@ rumdl fmt skills/code-review-rust/
 
 1. Create `skills/<skill-name>/` with `SKILL.md` (`name`, `description`, `license`).
 2. Optionally add `assets/openai.yaml` and `references/*.md`.
-3. Run `make validate`.
-4. Add the skill to the [README overview](README.md#overview).
+3. Add a plugin entry to `.claude-plugin/marketplace.json` and the skill to the [README overview](README.md#overview).
+4. Run `make validate` and `make validate-marketplace`.
 
 ## Publishing
 
 Prerequisites: `make lint-and-validate` passes.
 
 **Local (Claude Code):** `make link` / `make unlink`.
+
+**Claude Code marketplace:** the repo root is a plugin marketplace (`.claude-plugin/marketplace.json`), one plugin per skill. No `version` fields — installs track the commit SHA, so pushing to `main` *is* the release. Users install with:
+
+```bash
+claude plugin marketplace add rsvalerio/ai
+claude plugin install code-review-rust@dev-skills
+```
+
+Validate the manifest with `make validate-marketplace` before pushing.
 
 **GitHub catalog:** this repo *is* the catalog. Users install with:
 
