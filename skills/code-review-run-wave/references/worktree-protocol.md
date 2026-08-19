@@ -171,8 +171,11 @@ first; it is usually a fix that was applied but never committed. Likewise `git b
 
 A wave that did not merge keeps its worktree and branch on purpose. Leaving it in place is
 what makes the work resumable. The landing branch also outlives the run: it stays until
-its PR merges, then is deleted from the main checkout after updating `main`
-(`git checkout main && git pull && git branch -d code-review/run-<date>`).
+its PR merges. This repo squashes PRs to `main`, so the squash commit shares no ancestry
+with the landing branch — `git branch -d` will refuse, and `-D` is correct there because
+the merged PR is the proof the work landed (`git checkout main && git pull && git branch
+-D <landing-branch>`). The `-D` ban in the invariants covers branches that might carry
+unmerged work, not a landing branch whose PR has merged.
 
 ## Recovery
 

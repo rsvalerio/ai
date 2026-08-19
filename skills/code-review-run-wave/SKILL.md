@@ -74,17 +74,27 @@ If the list is empty, stop and report "no open waves".
 
 ## Step 2 — Prepare the landing branch and claim one wave
 
-**Standalone runs only:** if the main checkout is on `main`, create the run integration
-branch first — the wave lands on it and it ships to `main` as one PR (Step 8):
+**Standalone runs only:** prepare the landing branch before claiming. Exactly one of
+three states may hold — anything else, stop and report:
 
-```bash
-git checkout -b code-review/run-$(date +%Y%m%d)
-```
+- **Main checkout on `main`:** create the run integration branch — the wave lands on it
+  and it ships to `main` as one PR (Step 8):
 
-If a `code-review/run-<date>` branch already exists (another standalone run today), use
-a `-2` suffix. If the main checkout is already on a `code-review/run-*` branch, a
-`code-review-run-waves` fan-out created it — use it and create nothing. Either way the
-main checkout must be clean (`git status --short` empty) before you start.
+  ```bash
+  git checkout -b code-review/run-$(date +%Y%m%d) main
+  ```
+
+  If that name already exists, test it before suffixing: it carries unmerged commits
+  from an interrupted run (`git log main..code-review/run-<date>` is non-empty) when
+  you are resuming — check it out and reuse it. Only otherwise take a `-2` suffix for
+  a distinct new run.
+- **Main checkout already on a `code-review/run-*` branch:** a `code-review-run-waves`
+  fan-out or a resumed run owns it — use it and create nothing.
+- **Any other branch:** stop and report — creating the run branch from it would build
+  the run on the wrong history.
+
+Record the exact branch name chosen; Step 8 pushes and PRs it. Either way the main
+checkout must be clean (`git status --short` empty) before you start.
 
 Pick a wave from the list and view it:
 
@@ -330,19 +340,30 @@ landing branch.
 
 **Standalone runs only — open the run's PR.** A fan-out run does not do this;
 `code-review-run-waves` opens one PR for all its waves after every runner has returned.
-A standalone run owns the whole landing branch, so after the `chore(backlog)` commit:
+A standalone run owns the whole landing branch, so after the `chore(backlog)` commit,
+write the Step 9 report's substance (wave, member outcomes, verify results, filed
+tasks) to a body file first, then push and PR the **recorded landing branch** — the
+exact name chosen in Step 2, suffix included:
 
 ```bash
-git push -u origin code-review/run-<date>
-gh pr create --base main --head code-review/run-<date> \
-  --title "code-review run <date>: <waveTaskId>" \
+git push -u origin <landing-branch>
+gh pr create --base main --head <landing-branch> \
+  --title "code-review run: <waveTaskId>" \
   --body-file <report file>
 ```
 
-The PR body carries the Step 9 report's substance (wave, member outcomes, verify
-results, filed tasks). Do not merge the PR yourself unless the user asks — it is the
-run's human review gate. After it merges (rebase merge preserves the conventional
-commits): `git checkout main && git pull && git branch -d code-review/run-<date>`.
+Append the PR URL to the report once it is open. Do not merge the PR yourself unless
+the user asks — it is the run's human review gate. After it merges, clean up. This
+repo squashes PRs to `main`, so the squash commit shares no ancestry with the landing
+branch: `git branch -d` will refuse, and `-D` is correct here because the merged PR is
+the proof the work landed:
+
+```bash
+git checkout main && git pull && git branch -D <landing-branch>
+```
+
+The `-D` ban two paragraphs up covers wave branches that might carry unmerged work —
+not a landing branch whose PR has merged.
 
 **Parked.** If any member task is not `Done`, or the merge did not land, leave the wave
 parent non-done (`In Progress` or `To Do`, matching the remaining work) and append a note

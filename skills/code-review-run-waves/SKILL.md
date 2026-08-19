@@ -40,19 +40,32 @@ Check all three before starting. Stop and report if any fails:
    `skills/code-review-run-wave/references/worktree-protocol.md` — never by force-removing
    worktrees or deleting branches that carry commits.
 
-## Step 0 — Create the run integration branch
+## Step 0 — Prepare the run integration branch
 
 Waves land on an integration branch, not `main`, so the whole run can be reviewed and
-merged as one PR:
+merged as one PR. Exactly one of three states may hold — anything else, stop and report:
 
-```bash
-git checkout -b code-review/run-$(date +%Y%m%d) main
-```
+- **Main checkout already on a `code-review/run-*` branch:** a previous run left it
+  behind (parked waves keep it alive). This is a **resume** — confirm it carries
+  unmerged landed commits (`git log main..code-review/run-*` is non-empty), then reuse
+  it and create nothing. Its previously landed waves must stay under the resumed run's
+  PR, not be stranded on a new branch.
+- **Main checkout on `main`:** create the run branch:
 
-If the branch name already exists (a same-day earlier run), suffix it: `code-review/run-<date>-2`.
-Record the branch name for Step 5. Runners derive their landing target from whatever the
-main checkout has checked out, per the Worktree Protocol — the PR to `main` is opened only
-after every wave has landed and the combined result has passed `ops verify`.
+  ```bash
+  git checkout -b code-review/run-$(date +%Y%m%d) main
+  ```
+
+  If that name already exists, apply the resume test to it: reuse it when it carries
+  unmerged commits from an interrupted run; only otherwise take a `-2` suffix for a
+  distinct new run.
+- **Any other branch:** stop and report — creating the run branch from it would build
+  the run on the wrong history.
+
+Record the exact branch name chosen — Step 5 pushes and PRs it. Runners derive their
+landing target from whatever the main checkout has checked out, per the Worktree
+Protocol — the PR to `main` is opened only after the run's waves have landed and the
+combined result has passed `ops verify`.
 
 ## Step 1 — Enumerate open waves
 
@@ -133,31 +146,44 @@ ops verify
 Each wave already ran its own integration verify before its fast-forward, so this is a
 final confirmation that the fully combined result is good. If it fails, the failure belongs
 to the combination of waves rather than to any single one: fix it on the integration
-branch, or file a `Triage` task describing it, following the **No leftovers** contract in
-`code-review-run-wave`.
+branch and re-run. **If it cannot be fixed in this run, stop before the push** — file a
+`Triage` task describing it (the **No leftovers** contract in `code-review-run-wave`),
+leave the integration branch unpushed, and report. Never push or open a PR for a result
+that failed verification.
+
+Parked waves do not block the PR — they are simply not in it. The report and the PR body
+must state which waves landed and which parked.
 
 Then commit the accumulated backlog task-file changes from the main checkout as one
 `chore(backlog)` commit — it rides the PR, so task-status flips are reviewed alongside
 the code they describe.
 
-Finally, push the integration branch and open the run's single PR:
+Then write the run report — the substance of Step 7: the wave table, the merge order as
+executed, verify results, links to any `Triage` tasks filed, landed vs parked — to a
+body file. Push the **recorded landing branch** (Step 0, suffix included) and open the
+run's single PR:
 
 ```bash
-git push -u origin code-review/run-<date>
-gh pr create --base main --head code-review/run-<date> \
+git push -u origin <landing-branch>
+gh pr create --base main --head <landing-branch> \
   --title "code-review run <date>: <N> waves" \
   --body-file <report file>
 ```
 
-The PR body should carry the Step 7 report's substance: the wave table, the merge order
-as executed, verify results, and links to any `Triage` tasks filed. Do not merge the PR
-yourself unless the user asks — the PR is the run's human review gate.
+Once the PR is open, append its URL to the report. Do not merge the PR yourself unless
+the user asks — the PR is the run's human review gate.
 
-After the PR merges (rebase merge preserves the per-wave conventional commits), clean up:
+After the PR merges, clean up. This repo squashes PRs to `main`, so the squash commit
+shares no ancestry with the landing branch: `git branch -d` will refuse, and `-D` is
+correct here because the merged PR is the proof the work landed:
 
 ```bash
-git checkout main && git pull && git branch -d code-review/run-<date>
+git checkout main && git pull && git branch -D <landing-branch>
 ```
+
+GitHub deletes the remote branch on merge, so nothing else remains. Squash also means
+the run lands as one commit on `main` — the per-wave conventional commits are preserved
+in the PR, not in `main`'s history.
 
 ## Step 6 — Confirm teardown
 
