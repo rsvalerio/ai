@@ -167,11 +167,17 @@ must state which waves landed and which parked.
 
 Then commit whatever backlog task-file changes are *left* in the main checkout as one
 `chore(backlog)` commit — it rides the PR, so task-status flips are reviewed alongside
-the code they describe. Each runner stages and commits its own wave's task files by path
+the code they describe. Each runner stages and commits its own wave's task files by path,
+serialized under the backlog lock
 (see [Task files are shared mutable state](../code-review-run-wave/references/worktree-protocol.md#task-files-are-shared-mutable-state)),
 so by now this should be a sweep of the remainder — a parked wave's notes, edits you made
-yourself on the base branch — and usually nothing at all. `git add .backlog` is safe here
-and only here: every runner has returned, so no wave is still writing.
+yourself on the base branch — and usually nothing at all.
+
+Run this sweep only after every runner has returned *and* released the backlog lock, so
+all serialized per-wave commits are already in. `git add .backlog` is safe here and only
+here, for exactly that reason: no wave is still writing, and there is no concurrent stager
+left to race. If a runner is still in flight, wait for it — do not sweep around it. The
+lock is uncontended by now; acquiring it here is harmless but buys nothing.
 
 If it sweeps up whole task files that clearly belong to a wave that reported landing, that
 runner skipped its own bookkeeping commit. Note it in the report.

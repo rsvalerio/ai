@@ -97,22 +97,53 @@ contents are exactly what each wave wrote — but three things go wrong:
 **Stage bookkeeping by path, never by directory.** A wave knows exactly which task files
 are its own: its parent, its members, and any `Triage` task it filed. Ask `backlog` where
 each one lives rather than reconstructing the filename — the first line of `task view` is
-the path:
+the path.
+
+Path-scoping alone is not enough. Choosing *which* files to name does not make the naming
+atomic: the main checkout has one index, shared by every wave, so `git add` → inspect →
+`git commit` is a read-modify-write on shared state. Another wave's `git add` can land
+between your check and your commit, and the commit takes its files too — the "Git index"
+row of the table above, reached by a different route. **Stage, verify, and commit under
+one backlog lock**, using the same atomic `mkdir` idiom as [Merging](#merging):
 
 ```bash
+# Acquire — retry in a loop; do not proceed without it.
+until mkdir .git/code-review-backlog.lock 2>/dev/null; do sleep 1; done
+trap 'rmdir .git/code-review-backlog.lock' EXIT   # release on every exit path
+
+git reset -q          # begin from an empty index; the lock makes this safe
+
+# Stage exactly this wave's files, recording the repo-relative path of each.
+expected=()
 for id in <waveTaskId> <memberId>... <filedTriageId>...; do
-  git add "$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
+  path="$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
+  [ -n "$path" ] || { echo "no file resolved for $id" >&2; exit 1; }
+  git add -- "$path"
+  expected+=("$(git ls-files --full-name --cached -- "$path")")
 done
 
-# Nothing but this wave's files may be staged. If anything else is listed,
-# unstage it — it belongs to a wave that is still running.
-git diff --cached --name-only
+# The staged set must equal the expected set exactly. Anything else is another
+# wave's work: abort, do not "unstage the extras" and continue.
+diff <(printf '%s\n' "${expected[@]}" | sort -u) \
+     <(git diff --cached --name-only | sort -u) \
+  || { echo "unexpected paths staged — aborting" >&2; git reset -q; exit 1; }
+
 git commit -m "chore(backlog): close code-review wave <N>"
 ```
 
-An empty staged set here is a symptom, not a no-op: this wave edited its own task files,
-so if none are staged, another runner has already swept them into its commit. Say so in
-the report rather than skipping the commit in silence.
+Release the lock as soon as the commit succeeds or the attempt fails; if you run these as
+separate commands rather than one script, `rmdir` the lock by hand on the failure paths
+too. Hold it only across stage → verify → commit, never across the member-fix phase. It is
+a distinct lock from the merge lock, and no runner holds both at once — bookkeeping happens
+after the wave has landed and released the merge lock.
+
+Abort rather than repair. If the staged set does not match, the discrepancy means a
+concurrent writer, and silently unstaging the extras leaves you racing that same writer on
+the next command.
+
+Under the lock an empty expected set can no longer mean "another runner swept my files".
+It means this wave edited no task files of its own — check that against what the wave
+actually did, and say so in the report rather than committing nothing in silence.
 
 Other waves' modified task files are left unstaged in the working tree on purpose. They
 are not yours to commit, and their own runners will.

@@ -247,7 +247,8 @@ If there are no changes to commit, skip this step.
 checkout (per the isolation rules), so the worktree contains only code and the wave branch
 stays clean. Commit the backlog changes separately from the main checkout as a
 `chore(backlog)` commit once the wave has landed — staged **by path**, never as
-`git add .backlog`, because concurrent waves share that directory. See
+`git add .backlog`, because concurrent waves share that directory, and with stage,
+verify, and commit held under the backlog lock, because they also share one index. See
 [Task files are shared mutable state](references/worktree-protocol.md#task-files-are-shared-mutable-state)
 and Step 8.
 
@@ -353,22 +354,41 @@ git branch -d code-review/<waveTaskId>
 ```
 
 Then commit the backlog task-file changes as their own `chore(backlog)` commit on the
-landing branch — **staging only this wave's own files**:
+landing branch — **staging only this wave's own files, under the backlog lock**:
 
 ```bash
+until mkdir .git/code-review-backlog.lock 2>/dev/null; do sleep 1; done
+trap 'rmdir .git/code-review-backlog.lock' EXIT
+
+git reset -q          # begin from an empty index; the lock makes this safe
+
+expected=()
 for id in <waveTaskId> <memberId>... <filedTriageId>...; do
-  git add "$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
+  path="$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
+  [ -n "$path" ] || { echo "no file resolved for $id" >&2; exit 1; }
+  git add -- "$path"
+  expected+=("$(git ls-files --full-name --cached -- "$path")")
 done
-git diff --cached --name-only    # nothing here may belong to another wave
+
+# The staged set must equal the expected set exactly — abort, do not repair.
+diff <(printf '%s\n' "${expected[@]}" | sort -u) \
+     <(git diff --cached --name-only | sort -u) \
+  || { echo "unexpected paths staged — aborting" >&2; git reset -q; exit 1; }
+
 git commit -m "chore(backlog): close code-review wave <N>"
 ```
 
 `git add .backlog` is wrong here even though it looks equivalent. Every concurrent wave
 writes its task edits into this same checkout, so the directory holds their in-flight work
 too; staging it wholesale attributes their edits to this wave and leaves their own
-bookkeeping commits with nothing to make. If `git diff --cached --name-only` comes back
-empty, another runner has already swept your files into its commit — report that rather
-than skipping in silence. The full reasoning is in
+bookkeeping commits with nothing to make.
+
+The lock is what makes the check mean anything. Naming your own paths does not make
+staging atomic: the main checkout has one index, so without the lock another wave's
+`git add` lands between your check and your commit and rides along. Hold it across stage →
+verify → commit only, release it on every exit path, and never hold it together with the
+merge lock — bookkeeping runs after the wave has landed. If the staged set does not match,
+abort and report; do not unstage the extras and continue. The full reasoning is in
 [Task files are shared mutable state](references/worktree-protocol.md#task-files-are-shared-mutable-state).
 
 **Standalone runs only — open the run's PR.** A fan-out run does not do this;
