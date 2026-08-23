@@ -119,14 +119,23 @@ for id in <waveTaskId> <memberId>... <filedTriageId>...; do
   path="$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
   [ -n "$path" ] || { echo "no file resolved for $id" >&2; exit 1; }
   git add -- "$path"
-  expected+=("$(git ls-files --full-name --cached -- "$path")")
+  # Record only what actually became a *staged change*. A member task file the wave
+  # left unchanged stages nothing and must contribute nothing here; `git ls-files
+  # --cached` would list it anyway (it is tracked) and fail the exact-set check.
+  while IFS= read -r rel; do expected+=("$rel"); done \
+    < <(git diff --cached --name-only -- "$path")
 done
 
 # The staged set must equal the expected set exactly. Anything else is another
 # wave's work: abort, do not "unstage the extras" and continue.
-diff <(printf '%s\n' "${expected[@]}" | sort -u) \
+diff <(printf '%s\n' ${expected[@]+"${expected[@]}"} | sed '/^$/d' | sort -u) \
      <(git diff --cached --name-only | sort -u) \
   || { echo "unexpected paths staged — aborting" >&2; git reset -q; exit 1; }
+
+# Nothing staged means this wave edited no task files of its own -- report it,
+# do not commit an empty bookkeeping commit.
+[ -n "$(git diff --cached --name-only)" ] \
+  || { echo "no task-file changes for this wave -- report, do not commit" >&2; exit 1; }
 
 git commit -m "chore(backlog): close code-review wave <N>"
 ```
