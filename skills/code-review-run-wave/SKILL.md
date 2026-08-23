@@ -246,7 +246,10 @@ If there are no changes to commit, skip this step.
 **Backlog files are not part of this commit.** Task-file changes live in the main
 checkout (per the isolation rules), so the worktree contains only code and the wave branch
 stays clean. Commit the backlog changes separately from the main checkout as a
-`chore(backlog)` commit once the wave has landed.
+`chore(backlog)` commit once the wave has landed — staged **by path**, never as
+`git add .backlog`, because concurrent waves share that directory. See
+[Task files are shared mutable state](references/worktree-protocol.md#task-files-are-shared-mutable-state)
+and Step 8.
 
 ## Step 6 — Discharge every open thread
 
@@ -350,7 +353,23 @@ git branch -d code-review/<waveTaskId>
 ```
 
 Then commit the backlog task-file changes as their own `chore(backlog)` commit on the
-landing branch.
+landing branch — **staging only this wave's own files**:
+
+```bash
+for id in <waveTaskId> <memberId>... <filedTriageId>...; do
+  git add "$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
+done
+git diff --cached --name-only    # nothing here may belong to another wave
+git commit -m "chore(backlog): close code-review wave <N>"
+```
+
+`git add .backlog` is wrong here even though it looks equivalent. Every concurrent wave
+writes its task edits into this same checkout, so the directory holds their in-flight work
+too; staging it wholesale attributes their edits to this wave and leaves their own
+bookkeeping commits with nothing to make. If `git diff --cached --name-only` comes back
+empty, another runner has already swept your files into its commit — report that rather
+than skipping in silence. The full reasoning is in
+[Task files are shared mutable state](references/worktree-protocol.md#task-files-are-shared-mutable-state).
 
 **Standalone runs only — open the run's PR.** A fan-out run does not do this;
 `code-review-run-waves` opens one PR for all its waves after every runner has returned.

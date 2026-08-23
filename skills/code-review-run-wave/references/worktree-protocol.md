@@ -17,6 +17,7 @@ in four ways:
 | Git index | Interleaved `git add` / `git commit` produce commits containing the other wave's files |
 | Commit script path | Both runs write the same file and overwrite each other |
 | Wave selection | Two runners pick the same wave and apply every fix twice |
+| Backlog task files | Every wave edits them in the *same* main checkout, so a blanket `git add .backlog` commits the others' in-flight edits |
 
 A worktree per wave gives each wave its own working tree, its own index, and its own
 pre-merge build. Merges are then serialized so only one wave mutates the landing branch
@@ -78,6 +79,43 @@ collide with every other wave's task edits on merge.
 The useful side effect: the wave branch contains only code, and backlog task files are
 committed separately from the main checkout. Code commits and bookkeeping commits can no
 longer end up mixed in one blob.
+
+### Task files are shared mutable state
+
+The rule above is what keeps *code* isolated. It does the opposite for task files: it
+routes every concurrent wave's `backlog task edit` into the one main checkout, so at any
+moment its `.backlog/tasks/` holds a mix of edits belonging to every wave in flight.
+
+Run literally, `git add .backlog` therefore stages all of them. Nothing is lost — the file
+contents are exactly what each wave wrote — but three things go wrong:
+
+- the bookkeeping commit no longer describes the wave whose message it carries
+- git attributes another wave's task edits to the wrong wave, permanently
+- the wave that *owned* those edits later finds nothing to commit and silently skips its
+  own bookkeeping commit
+
+**Stage bookkeeping by path, never by directory.** A wave knows exactly which task files
+are its own: its parent, its members, and any `Triage` task it filed. Ask `backlog` where
+each one lives rather than reconstructing the filename — the first line of `task view` is
+the path:
+
+```bash
+for id in <waveTaskId> <memberId>... <filedTriageId>...; do
+  git add "$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
+done
+
+# Nothing but this wave's files may be staged. If anything else is listed,
+# unstage it — it belongs to a wave that is still running.
+git diff --cached --name-only
+git commit -m "chore(backlog): close code-review wave <N>"
+```
+
+An empty staged set here is a symptom, not a no-op: this wave edited its own task files,
+so if none are staged, another runner has already swept them into its commit. Say so in
+the report rather than skipping the commit in silence.
+
+Other waves' modified task files are left unstaged in the working tree on purpose. They
+are not yours to commit, and their own runners will.
 
 ## Merging
 

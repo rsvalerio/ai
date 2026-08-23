@@ -165,9 +165,16 @@ that failed verification.
 Parked waves do not block the PR — they are simply not in it. The report and the PR body
 must state which waves landed and which parked.
 
-Then commit the accumulated backlog task-file changes from the main checkout as one
+Then commit whatever backlog task-file changes are *left* in the main checkout as one
 `chore(backlog)` commit — it rides the PR, so task-status flips are reviewed alongside
-the code they describe.
+the code they describe. Each runner stages and commits its own wave's task files by path
+(see [Task files are shared mutable state](../code-review-run-wave/references/worktree-protocol.md#task-files-are-shared-mutable-state)),
+so by now this should be a sweep of the remainder — a parked wave's notes, edits you made
+yourself on the base branch — and usually nothing at all. `git add .backlog` is safe here
+and only here: every runner has returned, so no wave is still writing.
+
+If it sweeps up whole task files that clearly belong to a wave that reported landing, that
+runner skipped its own bookkeeping commit. Note it in the report.
 
 Then write the run report — the substance of Step 7: the wave table, the merge order as
 executed, verify results, links to any `Triage` tasks filed, landed vs parked — to a
