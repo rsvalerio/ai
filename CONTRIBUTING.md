@@ -17,7 +17,19 @@ current, so `check-tools` may tell you to pin it back.
 
 `.tool-versions` pins the versions CI runs. If `check-tools` fails, your local gates are
 not the gates that will run on your pull request — fix that before trusting a green run.
-Bumping a tool means editing `.tool-versions`; nothing else hardcodes a version.
+Bumping a tool means editing `.tool-versions`; nothing else hardcodes a version. The one
+exception is `claude-code`, pinned only in the Marketplace job of
+`.github/workflows/ci.yml` — mise's registry does not know the tool, so a `.tool-versions`
+entry would fail `mise install` in CI. Locally, manage it with asdf instead, outside this
+repo's `.tool-versions` for the same reason:
+
+```bash
+asdf plugin add claude-code https://github.com/wguilherme/asdf-claude-code.git
+asdf install claude-code 2.1.235 && asdf set --home claude-code 2.1.235
+```
+
+Any recent `claude-code` on PATH also works — the CI pin is for reproducible validation,
+not a documented minimum for marketplace plugins.
 
 ## Make a change
 
@@ -29,8 +41,8 @@ make ci               # the exact non-mutating gate CI runs
 ```
 
 Run `make lint` while iterating and `make ci` before pushing. CI runs `fmt-check`,
-`lint-check` and `validate` — all non-mutating, so anything `make lint` would have fixed
-is a failure there instead.
+`lint-check`, `validate` and `validate-marketplace` — all non-mutating, so anything
+`make lint` would have fixed is a failure there instead.
 
 Validation is `--strict`: warnings fail. Common ones are a `description` that reads as a
 keyword list rather than prose, and files placed outside the standard skill layout.
@@ -44,8 +56,9 @@ everything at once.
 
 ## Pull requests
 
-`main` is protected. A pull request needs `Lint`, `Validate` and `Install` green, all
-review threads resolved, and signed commits — set up commit signing before your first PR:
+`main` is protected. A pull request needs `Lint`, `Validate`, `Marketplace` and `Install`
+green, all review threads resolved, and signed commits — set up commit signing before
+your first PR:
 
 ```bash
 git config commit.gpgsign true

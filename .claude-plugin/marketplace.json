@@ -1,0 +1,15 @@
+{
+  "name": "rsvalerio",
+  "description": "Development skills for Rust and frontend work: code review, review-wave orchestration, and commit scripting.",
+  "owner": {
+    "name": "Rodrigo Valerio",
+    "github": "rsvalerio"
+  },
+  "plugins": [
+    {
+      "name": "dev-skills",
+      "description": "Seven coupled skills: Rust and web code review, review-wave triage and execution, commit scripting, and Rust knowledge integration. They reference each other's files, so they ship as one plugin.",
+      "source": "./"
+    }
+  ]
+}

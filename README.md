@@ -18,7 +18,18 @@ A collection of [Agent Skills](https://agentskills.io/specification) for Rust an
 
 ## Installation
 
-### Option 1: Clone the Repository
+### Option 1: Claude Code Plugin Marketplace
+
+The repository is a plugin marketplace with a single `dev-skills` plugin containing every skill — they reference each other's files (review waves lean on the worktree protocol, rust-meta on the review rule set), so they ship together.
+
+```bash
+claude plugin marketplace add rsvalerio/ai
+claude plugin install dev-skills@rsvalerio
+```
+
+Inside a session, `/plugin marketplace add rsvalerio/ai` and `/plugin install dev-skills@rsvalerio` work the same way. Skills are invoked through the plugin namespace — `/dev-skills:code-review-rust` — and track the latest commit on `main`; update with `claude plugin update dev-skills@rsvalerio`.
+
+### Option 2: Clone the Repository
 
 ```bash
 git clone https://github.com/rsvalerio/ai.git
@@ -33,7 +44,7 @@ cp -r skills/* .codex/skills/
 
 For a live symlink into `~/.claude/skills/` while developing this repo, use `make link` (see [AGENTS.md](AGENTS.md)).
 
-### Option 2: Install Individual Skills
+### Option 3: Install Individual Skills
 
 Using [agent-skills-cli](https://lib.rs/crates/agent-skills-cli):
 
@@ -46,7 +57,7 @@ Restart your AI tool after installing so it picks up the new skills.
 ## Requirements
 
 - **AI agent**: Claude Code, OpenAI Codex, Cursor, or another Agent Skills-compatible platform
-- **Developing this repo**: Git, plus `rumdl` and `skill-validator` at the versions pinned in [`.tool-versions`](.tool-versions) — `mise install` gets both, or `make install-tools` via Homebrew. Full workflow in [AGENTS.md](AGENTS.md)
+- **Developing this repo**: Git, plus `rumdl` and `skill-validator` at the versions pinned in [`.tool-versions`](.tool-versions) — `mise install` gets both, or `make install-tools` via Homebrew — and `claude-code` on PATH for `make validate-marketplace` (the asdf route is in [CONTRIBUTING.md](CONTRIBUTING.md)). Full workflow in [AGENTS.md](AGENTS.md)
 
 ## Usage
 
