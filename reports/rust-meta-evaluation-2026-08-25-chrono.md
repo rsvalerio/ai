@@ -7,10 +7,11 @@
 | | Count |
 |---|---|
 | Pieces extracted | 5 |
-| Approved (integrated) | 2 |
-| Rejected | 3 |
+| Approved (integrated) | 3 — P2, P4, P5 |
+| Rejected | 2 — P1, P3 |
 | Needs clarification | 0 |
-| Derived corrections integrated | 4 new rules |
+| Derived corrections integrated | 3 — TIME-4--6 |
+| Rules added in total | 6 |
 
 Rust version compatibility: no rule here depends on an unstable feature or a language feature above the 1.87 ingestion baseline. Crate MSRVs are not all under it, though: `chrono` 0.4.45 needs 1.62 and `jiff` 0.2.35 needs 1.70, but **`time` 0.3.55 declares `rust-version = 1.88.0`** — one release above the baseline. That does not invalidate TIME-1, which recommends `time` only for the UTC-only, low-dependency case, but the MSRV is now stated in the rule so the recommendation cannot silently push a project's toolchain forward. A project pinned to 1.87 takes `time` 0.3.45 (MSRV 1.83, released 2026-01-13), the last release under the baseline. Separately: the 1.87 baseline in [evaluation-criteria.md](../skills/rust-meta/references/evaluation-criteria.md) was last reviewed 2026-03-13 and is due a bump — that is a policy call for the maintainer, not something this ingestion changed.
 
@@ -18,7 +19,7 @@ Rust version compatibility: no rule here depends on an unstable feature or a lan
 
 The gap it exposed is genuine: `code-review-rust` had **no date/time rules at all** — a grep for `chrono`, `SystemTime`, `Instant`, and `timezone` across every rules file returned only incidental hits (`tokio::time::sleep` under CONC-5, timestamp nondeterminism under TEST-30). Every application in scope for this skill handles expiries, schedules, and log timestamps.
 
-So the integration is mostly *derived* rather than *transcribed*: the article supplied the topic and one approvable rule; the other four rules come from correcting its example and closing the domain it opened. That is the honest accounting — this was a prompt, not a teacher.
+So the integration is mostly *derived* rather than *transcribed*: the article supplied the topic and one approvable rule (TIME-1); of the remaining five, TIME-2 and TIME-3 come from correcting its worked example and TIME-4--6 from closing the domain it opened. That is the honest accounting — this was a prompt, not a teacher.
 
 ## Verification performed
 
@@ -88,13 +89,14 @@ Three rules follow from claims the source makes but does not qualify, and were a
 | Unambiguous timestamps at boundaries | TIME-5 (derived) |
 | Injectable clock for testability | TIME-6 (derived) |
 
-### Rejected (3)
+### Rejected (2)
 
 | Piece | Reason |
 |---|---|
-| "Dates are complex" preamble | Too generic — no reviewable content (Makes Sense) |
-| Chrono feature list | Not actionable; the reviewable part (crate choice) absorbed into TIME-1 (Worth Adding) |
-| Manual-rollover code sample as reference material | Contains an incorrect leap-year rule; kept only as the anti-pattern TIME-1 describes |
+| P1 — "Dates are complex" preamble | Too generic — no reviewable content (Makes Sense) |
+| P3 — Chrono feature list | Not actionable; the reviewable part (crate choice) absorbed into TIME-1 (Worth Adding) |
+
+The article's manual-rollover code sample is not counted here: it was never a candidate for integration as reference material (its leap-year rule is wrong — see P2), and it survives only as the anti-pattern TIME-1 describes.
 
 ### Needs clarification (0)
 
