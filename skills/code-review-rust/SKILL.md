@@ -110,6 +110,8 @@ Survey for these signals, then check against the corresponding rules:
 | Workspace crates with diverging dep versions or per-crate lint config | ARCH-11 |
 | Hand-rolled date math (`is_leap_year`, month-length tables, `secs / 86_400`) | TIME-1 |
 | `Local::now()` or `NaiveDateTime` persisted, logged, or serialized | TIME-2, TIME-5 |
+| Datetime `+`/`-` with a fixed-length duration (`TimeDelta::days`, `chrono::Duration::days`, `time::Duration::days`, `jiff::SignedDuration`) where a calendar unit was meant (`Days`/`Months`, `jiff::Span`) | TIME-3 |
+| Unchecked datetime `+` on an untrusted or unbounded operand instead of `checked_add_signed` / `checked_add_days` / `checked_add_months` / `checked_add` | TIME-3, SEC-33 |
 | `Utc::now()` / `SystemTime::now()` subtracted or `duration_since`d to time an operation | TIME-4 |
 | `Utc::now()` / `SystemTime::now()` called inside business logic instead of injected | TIME-6, TEST-16 |
 | `std::thread::sleep` in async | CONC-5 |
