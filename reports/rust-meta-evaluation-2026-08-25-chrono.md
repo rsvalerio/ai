@@ -77,7 +77,7 @@ Three rules follow from claims the source makes but does not qualify, and were a
 
 ## Summary
 
-**Approved and integrated**
+### Approved and integrated (6)
 
 | Piece | Target |
 |---|---|
@@ -88,7 +88,7 @@ Three rules follow from claims the source makes but does not qualify, and were a
 | Unambiguous timestamps at boundaries | TIME-5 (derived) |
 | Injectable clock for testability | TIME-6 (derived) |
 
-**Rejected**
+### Rejected (3)
 
 | Piece | Reason |
 |---|---|
@@ -96,7 +96,9 @@ Three rules follow from claims the source makes but does not qualify, and were a
 | Chrono feature list | Not actionable; the reviewable part (crate choice) absorbed into TIME-1 (Worth Adding) |
 | Manual-rollover code sample as reference material | Contains an incorrect leap-year rule; kept only as the anti-pattern TIME-1 describes |
 
-**Needs clarification**: none.
+### Needs clarification (0)
+
+None.
 
 ## Updated files
 
