@@ -24,7 +24,7 @@ Common Rust anti-patterns that span multiple rule categories. Use these as scan 
 
 - **Hand-rolled calendar math**: manual month-length tables, `year % 4` leap-year checks, or `secs / 86_400` date derivation — wrong at century years, month boundaries, and DST. Fix: use `chrono`/`jiff` (TIME-1)
 - **Naive or local timestamps crossing a boundary**: `Local::now()` or a `NaiveDateTime` persisted, logged, or serialized — the value means something different on every host. Fix: UTC everywhere, `Local` only at display, RFC 3339 on the wire (TIME-2, TIME-5)
-- **Wall clock as a stopwatch**: `Utc::now() - start` to measure elapsed time — NTP adjustments can make it negative. Fix: `Instant::elapsed()` (TIME-4)
+- **Wall clock as a stopwatch**: `Utc::now() - start` or `SystemTime::now().duration_since(start)` to measure elapsed time — NTP adjustments can make it negative or fail the `duration_since`. Fix: `Instant::elapsed()` (TIME-4)
 
 ## Type Safety
 

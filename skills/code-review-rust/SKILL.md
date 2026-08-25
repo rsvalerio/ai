@@ -110,8 +110,8 @@ Survey for these signals, then check against the corresponding rules:
 | Workspace crates with diverging dep versions or per-crate lint config | ARCH-11 |
 | Hand-rolled date math (`is_leap_year`, month-length tables, `secs / 86_400`) | TIME-1 |
 | `Local::now()` or `NaiveDateTime` persisted, logged, or serialized | TIME-2, TIME-5 |
-| `Utc::now()` subtracted from `Utc::now()` to time an operation | TIME-4 |
-| `Utc::now()` called inside business logic instead of injected | TIME-6, TEST-16 |
+| `Utc::now()` / `SystemTime::now()` subtracted or `duration_since`d to time an operation | TIME-4 |
+| `Utc::now()` / `SystemTime::now()` called inside business logic instead of injected | TIME-6, TEST-16 |
 | `std::thread::sleep` in async | CONC-5 |
 | Missing `tokio::time::timeout` on I/O | ASYNC-6 |
 | Hardcoded secrets, weak crypto | SEC-5--10 |
