@@ -10,7 +10,7 @@ Rule IDs are grouped into the following categories (used for reporting and triag
 
 | Category | Rule-ID prefixes | Domain | Detailed rules |
 |----------|------------------|--------|----------------|
-| Idioms & correctness | `OWN`, `ERR`, `TRAIT`, `CONC`, `ASYNC`, `PERF`, `UNSAFE`, `PATTERN`, `VER`, `EDITION` | Ownership, errors, traits, concurrency, async, performance, unsafe, patterns, version-specific features | [rules-core.md](rules-core.md) |
+| Idioms & correctness | `OWN`, `ERR`, `TRAIT`, `CONC`, `ASYNC`, `PERF`, `UNSAFE`, `PATTERN`, `TIME`, `VER`, `EDITION` | Ownership, errors, traits, concurrency, async, performance, unsafe, patterns, date/time correctness, version-specific features | [rules-core.md](rules-core.md) |
 | Structure & readability | `FN`, `READ`, `ARCH`, `API`, `CL` | Complexity, readability, architecture, API design, cognitive load | [rules-structure.md](rules-structure.md) |
 | Duplication | `DUP` | Code duplication (production and test-helper) | [rules-duplication.md](rules-duplication.md) |
 | Security | `SEC` | Security — maps to OWASP Top 10 (see `owasp-2021.md`) | [rules-security.md](rules-security.md) |

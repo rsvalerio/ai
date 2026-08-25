@@ -108,6 +108,10 @@ Survey for these signals, then check against the corresponding rules:
 | `async-trait` macro on types that could use native async fn | ASYNC-10 |
 | `println!` / `eprintln!` in library or service code | READ-8 |
 | Workspace crates with diverging dep versions or per-crate lint config | ARCH-11 |
+| Hand-rolled date math (`is_leap_year`, month-length tables, `secs / 86_400`) | TIME-1 |
+| `Local::now()` or `NaiveDateTime` persisted, logged, or serialized | TIME-2, TIME-5 |
+| `Utc::now()` subtracted from `Utc::now()` to time an operation | TIME-4 |
+| `Utc::now()` called inside business logic instead of injected | TIME-6, TEST-16 |
 | `std::thread::sleep` in async | CONC-5 |
 | Missing `tokio::time::timeout` on I/O | ASYNC-6 |
 | Hardcoded secrets, weak crypto | SEC-5--10 |
@@ -128,7 +132,7 @@ Finish all reviews before running `code-review-triage`, so the resulting waves c
 ## References
 
 - [Rules index](references/rules.md) — Category table, severity scale, design philosophy, and links to all detailed rule references
-- [Core rules](references/rules-core.md) — OWN, ERR, TRAIT, CONC, ASYNC, PERF, UNSAFE, PATTERN, EDITION, VER
+- [Core rules](references/rules-core.md) — OWN, ERR, TRAIT, CONC, ASYNC, PERF, UNSAFE, PATTERN, TIME, EDITION, VER
 - [Structure rules](references/rules-structure.md) — FN, READ, ARCH, API, CL
 - [Duplication rules](references/rules-duplication.md) — DUP
 - [Security rules](references/rules-security.md) — SEC
