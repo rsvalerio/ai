@@ -12,7 +12,7 @@
 | Needs clarification | 0 |
 | Derived corrections integrated | 4 new rules |
 
-Rust version compatibility: nothing here depends on an unstable feature or a language version above the 1.87 ingestion baseline. `chrono` 0.4 has no MSRV concern for this project.
+Rust version compatibility: no rule here depends on an unstable feature or a language feature above the 1.87 ingestion baseline. Crate MSRVs are not all under it, though: `chrono` 0.4.45 needs 1.62 and `jiff` 0.2.35 needs 1.70, but **`time` 0.3.55 declares `rust-version = 1.88.0`** — one release above the baseline. That does not invalidate TIME-1, which recommends `time` only for the UTC-only, low-dependency case, but the MSRV is now stated in the rule so the recommendation cannot silently push a project's toolchain forward. A project pinned to 1.87 takes `time` 0.3.45 (MSRV 1.83, released 2026-01-13), the last release under the baseline. Separately: the 1.87 baseline in [evaluation-criteria.md](../skills/rust-meta/references/evaluation-criteria.md) was last reviewed 2026-03-13 and is due a bump — that is a policy call for the maintainer, not something this ingestion changed.
 
 **Overall assessment.** A weak source with a real gap behind it. The article is beginner-level ("don't hand-roll calendars, use a crate") and its two substantive claims were already thin; more importantly, **its own worked example is an anti-pattern** — `Local::now() + chrono::Duration::days(7)` picks the environment-dependent clock and then does fixed-offset arithmetic where the reader plainly means "a week later on the calendar". The two diverge by an hour across a DST transition, which is precisely the class of bug the article promises the crate removes.
 
@@ -22,11 +22,11 @@ So the integration is mostly *derived* rather than *transcribed*: the article su
 
 ## Verification performed
 
-| Crate | Latest stable | Last release | Verified claim |
-|---|---|---|---|
-| `chrono` | 0.4.45 | 2026-06-04 | maintained; `TimeDelta`/`Days`/`Months`, `checked_add_days`, `to_rfc3339`, `chrono::serde::ts_*` |
-| `jiff` | 0.2.35 | 2026-07-25 | maintained; **still pre-1.0** — the rule was corrected mid-integration from a drafted "1.x" claim |
-| `time` | 0.3.55 | 2026-08-01 | maintained; `now_local()` returns `Err` when the offset is indeterminate (multi-threaded) |
+| Crate | Latest stable | Last release | MSRV | Verified claim |
+|---|---|---|---|---|
+| `chrono` | 0.4.45 | 2026-06-04 | 1.62.0 | maintained; `TimeDelta`/`Days`/`Months`, `checked_add_days`, `to_rfc3339`, `chrono::serde::ts_*` |
+| `jiff` | 0.2.35 | 2026-07-25 | 1.70 | maintained; **still pre-1.0** — the rule was corrected mid-integration from a drafted "1.x" claim |
+| `time` | 0.3.55 | 2026-08-01 | **1.88.0** | maintained; `now_local()` returns `Err` when the offset is indeterminate (multi-threaded). **Above the 1.87 baseline** — see the summary above; 0.3.45 (MSRV 1.83) is the last release under it |
 
 Other facts checked before they were asserted in a rule: `chrono::Duration` → `TimeDelta` rename landed in 0.4.35 with the old name kept as an alias (hence the `std::time::Duration` name collision); RUSTSEC-2020-0159 (`localtime_r` unsoundness) fixed in 0.4.20; `TimeDelta::days` and `DateTime + TimeDelta` panic on out-of-range, `try_days` / `checked_add_signed` / `checked_add_days` return `Option`; `Months` addition saturates to the last valid day of the target month; `LocalResult` is returned by `from_local_datetime` because DST makes some local times ambiguous or nonexistent; `DateTime`'s `Display` impl is space-separated, not RFC 3339.
 
@@ -109,4 +109,8 @@ None.
 | `skills/code-review-rust/references/anti-patterns.md` | New `## Date & Time` section — hand-rolled calendar math, naive/local timestamps crossing a boundary, wall clock as a stopwatch |
 | `skills/code-review-rust/SKILL.md` | Four scan-checklist rows (TIME-1, TIME-2/5, TIME-4, TIME-6) and `TIME` added to the core-rules reference line |
 
-**Follow-up to watch**: `jiff` is pre-1.0 and moving; re-check TIME-1's characterisation of it at the next ingestion, and promote it above `chrono` for new code if it reaches 1.0 with the zoned-arithmetic API intact.
+## Follow-ups to watch
+
+- `jiff` is pre-1.0 and moving; re-check TIME-1's characterisation of it at the next ingestion, and promote it above `chrono` for new code if it reaches 1.0 with the zoned-arithmetic API intact.
+- The `time` crate raises its MSRV freely (1.83 → 1.88 across 0.3.45–0.3.55 in seven months). Re-check the figure in TIME-1 rather than trusting it; it is the one crate of the three that will drift.
+- The 1.87 ingestion baseline is five months past its last review. Bumping it would settle the `time` question by absorbing it.
