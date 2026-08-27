@@ -106,6 +106,14 @@ Survey for these signals, then check against the corresponding rules:
 | `unsafe` blocks | UNSAFE-1--5, UNSAFE-8, SEC-1--4, SEC-34--36 |
 | `lazy_static!` / `once_cell::sync::Lazy` in new code | CONC-10 |
 | `async-trait` macro on types that could use native async fn | ASYNC-10 |
+| Log/event "follow" loop relying on async alone to block at EOF | ASYNC-14 |
+| `while let Some(x) = stream.next().await { … .await }` — serial per-item async work | ASYNC-5, ASYNC-13 |
+| `futures::StreamExt` and `tokio_stream::StreamExt` imported in the same module | ASYNC-13 |
+| `tokio::spawn(...)` whose `JoinHandle` is discarded, or `join`ed with `JoinError` logged as "panicked" | CONC-13, CONC-6 |
+| Shutdown path built on `signal::ctrl_c()` with no `SignalKind::terminate()` arm | CONC-14 |
+| `broadcast` consumer that does not branch on `RecvError::Lagged` | CONC-8 |
+| `timeout(...)` result collapsed with `??` / `.flatten()`, or a bare `Elapsed` propagated to callers | ASYNC-6 |
+| `#[error("...: {0}")]` on a variant whose field is `#[from]` / `#[source]` | ERR-9 |
 | `println!` / `eprintln!` in library or service code | READ-8 |
 | Workspace crates with diverging dep versions or per-crate lint config | ARCH-11 |
 | Hand-rolled date math (`is_leap_year`, month-length tables, `secs / 86_400`) | TIME-1 |
