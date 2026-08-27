@@ -44,6 +44,8 @@ Every behavioural claim below was executed, not assessed by eye.
 | `broadcast` overflow behaviour | capacity 4, 10 sends, then `recv()` | `Err(Lagged(6))` then resumes at message 6 — **silent loss of 6 messages, reported once** |
 | `ctrl_c()` covers shutdown | Sent SIGTERM to a process awaiting only `ctrl_c()` | **Died immediately** — the line after the await never ran |
 | SIGTERM + `CancellationToken` + bounded drain | Same process with a `select!` over `ctrl_c()`/`SignalKind::terminate()` | Cleanup ran, workers observed cancellation, exit 0 |
+| Is a dropped `ctrl_c()` future harmless? | SIGTERM won the `select!`, then sent SIGINT during the drain | **No** — silently swallowed: tokio's process-wide SIGINT handler stays installed, so the signal is neither observed nor fatal and the drain ran to completion |
+| Holding both `Signal` streams through the drain | Same, with `SignalKind::interrupt()` installed at startup | Second interrupt observed — "Ctrl-C again to force quit" becomes implementable |
 | `#[error("…: {0}")]` alongside `#[from]` | Printed via anyhow `{}`, `{:#}`, `{:?}` | **Duplicates** — `{:#}` → `io failed: no such file: no such file`; `{:?}` repeats it under `Caused by:` |
 
 ## Detailed Results
@@ -135,7 +137,7 @@ Every behavioural claim below was executed, not assessed by eye.
   process left to kill. SIGKILL arrives only when the process is *still alive* at the end of the
   grace period, which is the slow-drain failure mode, not the unhandled-signal one.
 - **Extended with three requirements the article omits**, each now a separate finding: propagate the
-  signal to running tasks (`CancellationToken` / `watch` / `JoinSet::shutdown`), bound the drain with a
+  signal to running tasks cooperatively (`CancellationToken` / `watch`), bound the drain with a
   timeout sized below the platform grace period, and release externals explicitly. Windows counterparts
   noted; `.expect()` on handler registration flagged per ERR-5.
 - **Correction applied after review**: an earlier draft of the third requirement claimed `Drop` does not

@@ -70,7 +70,7 @@
   | `tokio::sync::oneshot` | Async | Single request-response or completion signal |
   | `tokio::sync::watch` | Async | Latest-value broadcast (config updates, state) |
 
-  Rule of thumb: `crossbeam` for sync code needing `select!` or bounded backpressure; `tokio::sync` for async code — it integrates with the runtime. "Handles backpressure natively" is true of exactly one of these, so pick deliberately: **bounded `mpsc::channel(n)`** applies real backpressure, because `send().await` parks the producer once the buffer is full; **`mpsc::unbounded_channel()`** has a non-async `send` that always succeeds, so it applies none and grows until memory runs out (CONC-3 — this is the unbounded-queue red flag, and reaching for it to "fix" a slow consumer converts backpressure into an OOM); **`broadcast::channel(n)`** is a bounded **ring buffer** that does not block the sender at all — when a receiver falls behind, the oldest messages are overwritten and that receiver is told after the fact via `Lagged(n)` (see below). `BroadcastStream` inherits exactly this: wrapping it in a `Stream` does not add backpressure (ASYNC-13). So bounded `mpsc` slows the producer down, `broadcast` drops data instead, and unbounded `mpsc` does neither.
+  Rule of thumb: `crossbeam` for sync code needing `select!` or bounded backpressure; `tokio::sync` for async code — it integrates with the runtime. Backpressure, though, is a property of the *individual* channel, not of the crate: bounded `crossbeam::channel` provides it on the sync side, and among the tokio async channels **only bounded `mpsc::channel(n)` does**. Pick deliberately: **bounded `mpsc::channel(n)`** applies real backpressure, because `send().await` parks the producer once the buffer is full; **`mpsc::unbounded_channel()`** has a non-async `send` that never waits for capacity, so it applies none and grows until memory runs out (CONC-3 — this is the unbounded-queue red flag, and reaching for it to "fix" a slow consumer converts backpressure into an OOM). Note that "never waits" is not "never fails": unbounded `send` still returns `Result<(), SendError<T>>` and errors once every receiver is dropped or closed (verified), so the value is handed back exactly as with the bounded sender — what it never does is *slow the producer down*. **`broadcast::channel(n)`** is a bounded **ring buffer** that does not block the sender at all — when a receiver falls behind, the oldest messages are overwritten and that receiver is told after the fact via `Lagged(n)` (see below). `BroadcastStream` inherits exactly this: wrapping it in a `Stream` does not add backpressure (ASYNC-13). So bounded `mpsc` slows the producer down, `broadcast` drops data instead, and unbounded `mpsc` does neither.
 
   **Failure shapes differ per channel, and only one of them is "the receiver went away".** Do not write generic "sends and receives can fail, handle them" code — check the actual signature:
 
@@ -102,27 +102,32 @@
 
   /// Install at startup, before serving traffic, so a registration failure is a
   /// startup error with context rather than a surprise during shutdown.
-  fn install_term_handler() -> Result<Signal> {
-      signal(SignalKind::terminate()).context("installing SIGTERM handler")
+  fn install(kind: SignalKind, what: &'static str) -> Result<Signal> {
+      signal(kind).with_context(|| format!("installing {what} handler"))
   }
 
-  async fn shutdown_signal(term: &mut Signal) {
-      tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = term.recv() => {} }
+  async fn shutdown_signal(int: &mut Signal, term: &mut Signal) {
+      tokio::select! { _ = int.recv() => {}, _ = term.recv() => {} }
   }
 
   #[tokio::main]
   async fn main() -> Result<()> {
-      let mut term = install_term_handler()?;  // fails fast, before anything is served
+      // Both fail fast, before anything is served.
+      let mut int = install(SignalKind::interrupt(), "SIGINT")?;
+      let mut term = install(SignalKind::terminate(), "SIGTERM")?;
       // … start the service …
-      shutdown_signal(&mut term).await;
-      // … cancel, drain, release …
+      shutdown_signal(&mut int, &mut term).await;
+      // … cancel, then drain — both handlers are still alive here, so a second
+      //     interrupt during the drain is observable rather than swallowed …
       Ok(())
   }
   ```
 
+  **Why the interrupt handler is a long-lived `Signal` and not `tokio::signal::ctrl_c()` inside the `select!`.** Two reasons, and the second is the one that bites. First, `ctrl_c()` returns `io::Result<()>`, so a `select!` arm written `_ = tokio::signal::ctrl_c() => {}` discards a registration error that should have been a startup failure. Second, losing the `select!` race **drops** that future — and tokio's process-wide SIGINT handler stays installed, so SIGINT is thereafter neither delivered to a listener nor fatal. Verified: after a SIGTERM won the race, a SIGINT sent during the drain was silently swallowed and the process drained to completion as if nothing arrived. That is the opposite of what an operator hammering Ctrl-C through a slow shutdown expects. Holding both `Signal` streams in `main` keeps them registered for the whole shutdown, which is what makes "press Ctrl-C again to give up on the drain" implementable at all (verified: the second interrupt is observed). `tokio::signal::ctrl_c()` remains the right portable spelling for the simple case — a one-shot wait that is never raced and never needed again — and on Windows it is the only spelling.
+
   `tokio::signal::unix` is `cfg(unix)` and needs tokio's `signal` feature; on Windows the counterparts are `signal::windows::{ctrl_c, ctrl_shutdown, ctrl_close}`. Three further requirements, each of which is a separate finding when missing:
-  - **Propagate, don't just observe.** Receiving the signal in `main` does nothing for tasks already running. Broadcast it — `tokio_util::sync::CancellationToken` (`token.cancelled()` in a `select!` arm on every long-lived task), a `watch::Sender<bool>`, or `JoinSet` + `shutdown()`. CONC-4 has the `select!` shape.
-  - **Bound the drain.** Wrap the "wait for in-flight work" phase in `tokio::time::timeout` and then force-abort; an unbounded drain converts a graceful shutdown into a hang that the orchestrator resolves with SIGKILL anyway. Size the deadline below the platform's grace period (Kubernetes `terminationGracePeriodSeconds`, default 30s).
+  - **Propagate, don't just observe.** Receiving the signal in `main` does nothing for tasks already running. Broadcast it *cooperatively*, so each task reaches its own safe stopping point: `tokio_util::sync::CancellationToken` (`token.cancelled()` in a `select!` arm on every long-lived task) or a `watch::Sender<bool>`. CONC-4 has the `select!` shape. Note `JoinSet::shutdown()` is **not** in this list — it aborts, which is the force-quit step below, not a way to ask tasks to wind down.
+  - **Bound the drain.** Wrap the "wait for in-flight work" phase in `tokio::time::timeout`; an unbounded drain converts a graceful shutdown into a hang that the orchestrator resolves with SIGKILL anyway. Size the deadline below the platform's grace period (Kubernetes `terminationGracePeriodSeconds`, default 30s). Only *after* that deadline expires does force-abort apply — `JoinSet::shutdown()` (abort every task and await it) or `handle.abort()` per task — and everything under "Release externals" about what abort skips applies to whatever it catches mid-flight.
   - **Release externals explicitly.** Connection pools, NATS clients (NATS-7 `drain()`), open writers, and in-memory buffers need flushing on this path. Aborting a task *does* run `Drop` — the future is dropped at its current await point, destroying owned locals and task-local values in scope (verified on tokio 1.53) — but `Drop` is synchronous, so it cannot await. Anything whose release is itself an async operation (a NATS `drain()`, a graceful connection close, a final flush that round-trips) will not happen, and neither will any code positioned *after* the await the task was parked on. Cleanup that must be awaited belongs on the shutdown path itself — signal the task, then let it finish — not in a `Drop` impl and not after the await of a task you are about to abort.
 
   Note what the example does *not* do: `signal()` returns `io::Result<Signal>`, and `.expect()` on it is an ERR-5 finding in a long-running service. Failing to install a SIGTERM handler is worth refusing to start over — but as a propagated startup error carrying context (ERR-4), surfaced before the process accepts traffic, not as a panic buried in a shutdown helper that runs an hour later. Registering at startup rather than at shutdown is the point: a handler installed lazily on the shutdown path can fail at the one moment there is no longer anywhere to report it
