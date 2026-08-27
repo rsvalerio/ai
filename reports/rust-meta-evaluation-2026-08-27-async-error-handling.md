@@ -37,6 +37,7 @@ Every behavioural claim below was executed, not assessed by eye.
 |---|---|---|
 | The six compilable article code samples build | `cargo build` (crates substituted for `reqwest`/`sqlx`) | **Pass** — correct as written; the section 9 snippet is pseudocode and was not counted |
 | "Unawaited tasks may panic silently" | Spawned a panicking task, dropped the handle | **Half true** — default hook *does* print `thread 'tokio-rt-worker' panicked at …` to stderr; but nothing propagates and the process **exits 0** |
+| Does that hold under `panic = "abort"`? | Same binary with `panic = "abort"` in `[profile.dev]` | **No** — process dies at the panic; the `JoinHandle` never resolves and no line after `h.await` runs. CONC-13 is scoped to unwinding builds |
 | `JoinError` == panic | `h.await` on a panicked task vs. an `abort()`ed one | **False** — `is_panic()=true/is_cancelled()=false` vs. `is_panic()=false/is_cancelled()=true`; the article's `"Task panicked: {:?}"` mislabels every cancellation |
 | `timeout` returns `Result<Result<T,E>, Elapsed>` | Compiled the article's match arms | **True** |
 | "Receive errors happen if the sender disappears" | Typed `rx.recv().await` on `tokio::sync::mpsc` | **False for mpsc** — returns `Option<T>`, not `Result`; `None` is normal termination |
@@ -86,6 +87,9 @@ Every behavioural claim below was executed, not assessed by eye.
      `into_panic()` + `resume_unwind` added; cancellation during shutdown is the expected path and must
      not be logged as an error.
   3. Added the legitimate-detached-task carve-out so the rule does not read as "never drop a handle".
+  4. **After review**: scoped the whole rule to `panic = "unwind"`. Under `panic = "abort"` there is no
+     unwind for tokio to catch, so the first task panic kills the process before any `JoinError` exists —
+     the opposite failure mode (loud crash, no supervision possible) rather than the silent one.
 - **Rust version**: tokio 1.x, no MSRV concern.
 - **Target**: `rules-core.md` → **CONC-13** (new; CONC previously ended at 12)
 - **Integration point**: after CONC-12, adjacent to CONC-6 which it cross-references.
@@ -125,8 +129,11 @@ Every behavioural claim below was executed, not assessed by eye.
   no rule said where the shutdown signal comes from.
 - **The article's `shutdown_signal()` is the defect, not the fix.** `ctrl_c()` listens for SIGINT only;
   Kubernetes, Docker, and systemd stop processes with SIGTERM, whose default disposition is immediate
-  death. Verified: the process exited before the line after the await, so no cleanup ran — and the
-  orchestrator SIGKILLs it after the grace period regardless.
+  death. Verified: the process exited before the line after the await, so no cleanup ran. **Corrected
+  after review**: an earlier draft added that the orchestrator "SIGKILLs it after the grace period
+  regardless". That misstates the sequence — an untrapped SIGTERM is already fatal, so there is no
+  process left to kill. SIGKILL arrives only when the process is *still alive* at the end of the
+  grace period, which is the slow-drain failure mode, not the unhandled-signal one.
 - **Extended with three requirements the article omits**, each now a separate finding: propagate the
   signal to running tasks (`CancellationToken` / `watch` / `JoinSet::shutdown`), bound the drain with a
   timeout sized below the platform grace period, and release externals explicitly. Windows counterparts
