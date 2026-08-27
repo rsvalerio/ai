@@ -9,10 +9,16 @@
 | Metric | Count |
 |---|---|
 | Pieces extracted | 9 |
-| Approved | 2 (both as *corrections*, not as stated) |
-| Rejected | 6 |
-| Already expressed | 1 |
+| Approved | 3 — P2, P5 (2 new rules, neither as stated) and P9 (1 enhancement) |
+| Rejected | 5 — P1, P3, P4, P6, P8 |
+| Already expressed | 1 — P7 |
 | Needs clarification | 0 |
+
+Counts are over the 9 distinct pieces and sum to 9. P5 appears in both the approved and the
+rejected tables of the detailed summary below: its *stated* form was rejected (the example does
+not compile, and the corrected version does not tail), while the inverted **correction** became
+ASYNC-14. No piece was approved in the form the article stated it — P2 and P5 were integrated only
+after being inverted, and P9 as an appendix to an existing rule.
 
 **Overall assessment**: **Low source quality; high gap value.** The article's central thesis is factually
 wrong, both of its code examples fail to compile, its marquee example does not do what it claims, and its
@@ -57,8 +63,15 @@ Every claim below was checked against a live toolchain rather than assessed by e
 - **Target**: `rules-core.md` → **ASYNC-13** (new)
 - **Modifications**: substantial. Rewritten around pull semantics, selection by *readiness rather than
   finiteness*, `impl Stream` returns (async counterpart of API-3), `async_stream::stream!`, adapter
-  laziness, backpressure-by-construction, and three verified footguns (the `Unpin` requirement, the
+  laziness, qualified backpressure, and three verified footguns (the `Unpin` requirement, the
   `futures`/`tokio_stream` `StreamExt` collision, the missing `sum`).
+- **Correction applied after review**: an earlier draft stated flatly that a `Stream` *is* backpressure,
+  the pull-shaped alternative to an unbounded channel. That holds only when the source honours demand.
+  A stream that produces on demand (an `AsyncRead`, a paginated fetcher, `async_stream::stream!` awaiting
+  its own work) does throttle its producer; a stream that merely drains a buffer someone else fills —
+  `ReceiverStream` over `mpsc::unbounded_channel`, `BroadcastStream`, any adapter over an external queue —
+  does not bound anything, however slowly it is polled. The bound has to come from the channel (CONC-3,
+  CONC-8). ASYNC-13 now says so, and directs the reader to check where items are produced.
 
 ### P3 — "Iterators for finite collections, Streams for infinite" · REJECTED
 
@@ -117,7 +130,7 @@ Every claim below was checked against a live toolchain rather than assessed by e
 
 ## Summary
 
-### Approved (2)
+### Approved (3 — none as stated)
 
 | Piece | Target | Form |
 |---|---|---|
@@ -125,7 +138,7 @@ Every claim below was checked against a live toolchain rather than assessed by e
 | P5 — async ≠ blocking at EOF | `rules-core.md` ASYNC-14 (new) | Inverted into a defect to flag |
 | P9 — serial work in stream loops | `rules-core.md` ASYNC-5 (enhanced) | Appended to existing rule |
 
-### Rejected (6)
+### Rejected (5 distinct pieces, plus P5's stated form — P5 counts as approved above via its correction)
 
 | Piece | Criterion failed | Reason |
 |---|---|---|

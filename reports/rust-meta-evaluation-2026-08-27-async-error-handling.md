@@ -15,7 +15,9 @@
 | Needs clarification | 0 |
 
 **Overall assessment**: **Sound but shallow source; two genuine gaps found.** Unlike the previous streams
-article, every code sample here compiles and nothing in it is outright false. That is also its limitation:
+article, every code sample intended as compilable code does compile, and nothing in it is outright false.
+(The exception is the section 9 snippet, which is illustrative pseudocode — a module-scope `if let` over an
+undefined `MyError` — and is excluded from that count; see P9.) That is also its limitation:
 sections 1--3 and 9--10 are a restatement of ERR-1/ERR-3/ERR-4/READ-8, which `code-review-rust` already
 covers in more depth than the article does.
 
@@ -33,7 +35,7 @@ Every behavioural claim below was executed, not assessed by eye.
 
 | Claim | Method | Result |
 |---|---|---|
-| All six article code samples compile | `cargo build` (crates substituted for `reqwest`/`sqlx`) | **Pass** — this source's examples are correct as written |
+| The six compilable article code samples build | `cargo build` (crates substituted for `reqwest`/`sqlx`) | **Pass** — correct as written; the section 9 snippet is pseudocode and was not counted |
 | "Unawaited tasks may panic silently" | Spawned a panicking task, dropped the handle | **Half true** — default hook *does* print `thread 'tokio-rt-worker' panicked at …` to stderr; but nothing propagates and the process **exits 0** |
 | `JoinError` == panic | `h.await` on a panicked task vs. an `abort()`ed one | **False** — `is_panic()=true/is_cancelled()=false` vs. `is_panic()=false/is_cancelled()=true`; the article's `"Task panicked: {:?}"` mislabels every cancellation |
 | `timeout` returns `Result<Result<T,E>, Elapsed>` | Compiled the article's match arms | **True** |
@@ -127,8 +129,16 @@ Every behavioural claim below was executed, not assessed by eye.
   orchestrator SIGKILLs it after the grace period regardless.
 - **Extended with three requirements the article omits**, each now a separate finding: propagate the
   signal to running tasks (`CancellationToken` / `watch` / `JoinSet::shutdown`), bound the drain with a
-  timeout sized below the platform grace period, and release externals explicitly because `Drop` does not
-  run for aborted tasks. Windows counterparts noted; `.expect()` on handler registration flagged per ERR-5.
+  timeout sized below the platform grace period, and release externals explicitly. Windows counterparts
+  noted; `.expect()` on handler registration flagged per ERR-5.
+- **Correction applied after review**: an earlier draft of the third requirement claimed `Drop` does not
+  run for aborted tasks. That is false — abort drops the future at its current await point, and `Drop`
+  runs for owned locals *and* task-local values (verified: both guards fired, tokio 1.53). The accurate
+  statement is narrower: `Drop` is synchronous and cannot await, so cleanup that is itself an async
+  operation — a NATS `drain()`, a graceful close, a flush that round-trips — does not happen on abort, and
+  neither does code positioned after the await the task was parked on. The claim that `thread_local!`
+  destructors never run for unjoined threads was dropped from this rule; only the platform-specific and
+  process-exit caveats belong here, and CONC-11 already owns the `thread_local!` lifecycle.
 - **Target**: `rules-core.md` → **CONC-14** (new)
 
 ### P8 — "Handling many futures together (`FuturesUnordered`), inspect each result" · REJECTED
