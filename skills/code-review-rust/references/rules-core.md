@@ -26,7 +26,7 @@
 - **ERR-6.** `Result<Option<T>>` over sentinel values
 - **ERR-7.** Map internal errors to public types at module boundaries; use `map_err()` for simple conversions and `.context()`/`.with_context()` (anyhow) for adding caller-relevant context — this hides implementation details and keeps internal error types private
 - **ERR-8.** `unwrap_or_else` for defaults
-- **ERR-9.** Implement `Error::source()` for error chains — `thiserror`'s `#[from]` and `#[source]` wire it up for you. **Do not then interpolate the source into the `#[error(...)]` message.** `#[error("Request failed: {0}")] Request(#[from] reqwest::Error)` sets both the message *and* the source to the same value, so every chain-walking printer says it twice: `anyhow`'s `{:#}` renders `Request failed: connection refused: connection refused`, and its `{:?}` renders the message followed by a `Caused by:` block repeating it. (Verified on thiserror 2.0 / anyhow 1.0.) The variant's message should say what *this* layer was doing — `#[error("request to the upstream API failed")]` — and let the chain supply the cause. Interpolating a field is correct for data the source does not carry (`#[error("unknown field `{field}`")]`); it is wrong for the source itself. Flag any `#[error]` whose format argument is the same field marked `#[from]`/`#[source]`
+- **ERR-9.** Implement `Error::source()` for error chains — `thiserror`'s `#[from]` and `#[source]` wire it up for you. **Do not then interpolate the source into the `#[error(...)]` message.** `#[error("Request failed: {0}")] Request(#[from] reqwest::Error)` sets both the message *and* the source to the same value, so every chain-walking printer says it twice: `anyhow`'s `{:#}` renders `Request failed: connection refused: connection refused`, and its `{:?}` renders the message followed by a `Caused by:` block repeating it. (Verified on thiserror 2.0 / anyhow 1.0.) The variant's message should say what *this* layer was doing — `#[error("request to the upstream API failed")]` — and let the chain supply the cause. Interpolating a field is correct for data the source does not carry (`` #[error("unknown field `{field}`")] ``); it is wrong for the source itself. Flag any `#[error]` whose format argument is the same field marked `#[from]`/`#[source]`
 - **ERR-10.** Never use `Result<T, String>` — use proper error types
 - **ERR-11.** Panic for bugs, `Result` for expected failure. Panicking macros (`assert!`, `unreachable!`, `panic!`) are for violated *internal* invariants — conditions that are unreachable unless the code itself is wrong. Invalid *external* input (user data, config, network payloads, public-API arguments) must return `Result`; asserting on it converts an expected failure into a crash and conflicts with ERR-2/ERR-10. Specifically:
   - `assert!(cond, "reason")` — internal invariants only; always give the message a reason.
@@ -97,7 +97,10 @@
 - **CONC-14.** Graceful shutdown means the signals the platform actually sends. `tokio::signal::ctrl_c()` alone listens for **SIGINT only**; a container runtime, Kubernetes, and systemd all stop a process with **SIGTERM**, whose default disposition is immediate termination — so a service whose shutdown path is `ctrl_c().await` dies instantly on every real deployment restart and runs none of its cleanup. Verified: a process awaiting only `ctrl_c()` and sent SIGTERM exits before the line after the await. Note the SIGKILL that follows in the orchestrator's sequence is *not* what killed it: SIGKILL is sent only if the process is **still alive** when the grace period expires, which is the failure mode of a service that does trap SIGTERM but drains too slowly (see "Bound the drain" below). An untrapped SIGTERM is already fatal on its own. Handle both signals, and on Unix add SIGHUP if the process is not using it for reload:
 
   ```rust
+  use std::time::Duration;
+
   use anyhow::{Context, Result};
+  use tokio::runtime::Runtime;
   use tokio::signal::unix::{signal, Signal, SignalKind};
 
   /// Install at startup, before serving traffic, so a registration failure is a
@@ -110,15 +113,22 @@
       tokio::select! { _ = int.recv() => {}, _ = term.recv() => {} }
   }
 
-  #[tokio::main]
-  async fn main() -> Result<()> {
-      // Both fail fast, before anything is served.
-      let mut int = install(SignalKind::interrupt(), "SIGINT")?;
-      let mut term = install(SignalKind::terminate(), "SIGTERM")?;
-      // … start the service …
-      shutdown_signal(&mut int, &mut term).await;
-      // … cancel, then drain — both handlers are still alive here, so a second
-      //     interrupt during the drain is observable rather than swallowed …
+  // Not `#[tokio::main]`: `shutdown_timeout` takes `self`, so the runtime has to be
+  // an owned value here for the "Bound the drain" step below to be available at all.
+  fn main() -> Result<()> {
+      let rt = Runtime::new().context("building the tokio runtime")?;
+      rt.block_on(async {
+          // Both fail fast, before anything is served.
+          let mut int = install(SignalKind::interrupt(), "SIGINT")?;
+          let mut term = install(SignalKind::terminate(), "SIGTERM")?;
+          // … start the service …
+          shutdown_signal(&mut int, &mut term).await;
+          // … cancel, then drain — both handlers are still alive here, so a second
+          //     interrupt during the drain is observable rather than swallowed …
+          Ok::<(), anyhow::Error>(())
+      })?;
+      // Bound how long teardown blocks; see "Bound the drain" below for what it does not do.
+      rt.shutdown_timeout(Duration::from_secs(5));
       Ok(())
   }
   ```
@@ -142,9 +152,9 @@
 - **ASYNC-2.** *Retired.* Channel selection is owned by **CONC-8**. For async-vs-sync `Mutex` choice, use `parking_lot::Mutex` / `std::sync::Mutex` when the critical section is short and never crosses `.await`; reach for `tokio::sync::Mutex` only when you must hold the guard across `.await` (see CONC-2)
 - **ASYNC-3.** Bounded channels for backpressure (see also CONC-8 for detailed guidance)
 - **ASYNC-4.** Batch small, fast-completing tasks (e.g., individual DB row inserts) into fewer spawned futures to reduce scheduler overhead; do NOT batch operations that should run independently or have different cancellation requirements — batching unrelated work couples their failure modes
-- **ASYNC-5.** `join_all`/`FuturesUnordered` over serial `.await` in loops. The same defect appears one level up in stream pipelines: `while let Some(x) = s.next().await { work(x).await }` and `.then(…)` run one item at a time regardless of how many are ready — use `StreamExt::buffered` (ordered), `buffer_unordered` (completion order), or `for_each_concurrent` with an explicit concurrency limit, which doubles as the bound that keeps the fan-out from becoming unbounded (CONC-3, ASYNC-13)
+- **ASYNC-5.** `join_all`/`FuturesUnordered` over serial `.await` in loops. The same defect appears one level up in stream pipelines: `while let Some(x) = s.next().await { work(x).await }` and `.then(…)` run one item at a time regardless of how many are ready — use `futures::StreamExt::buffered` (ordered), `buffer_unordered` (completion order), or `for_each_concurrent` with an explicit concurrency limit, which doubles as the bound that keeps the fan-out from becoming unbounded (CONC-3, ASYNC-13). Two mechanics the fix depends on: all three live on `futures::StreamExt` only — `tokio_stream::StreamExt` has none of them, so a module importing that one must switch traits rather than add the second import (ASYNC-13 footgun 2) — and `buffered`/`buffer_unordered` require `Item: Future`, so the stream needs a `.map(work)` first: `s.map(work).buffer_unordered(16)`. `for_each_concurrent(16, work)` takes the closure directly and needs no `.map`
 - **ASYNC-6.** Timeouts + retries + exponential backoff for all external calls. Pattern: wrap with `tokio::time::timeout(dur, fut).await` → on timeout, retry with exponential backoff (`delay * 2^attempt`, cap at max). Use `tokio-retry` crate for production retry logic; hand-roll only for simple cases. Always set a max retry count to avoid infinite loops. Two details the shape of the return type makes easy to get wrong:
-  - **The result nests.** `timeout(dur, fut)` yields `Result<T, Elapsed>` where `T` is the future's own output, so wrapping a fallible call gives `Result<Result<T, E>, Elapsed>` and needs both layers handled: `Ok(Ok(v))` success, `Ok(Err(e))` the operation failed, `Err(_)` it never finished. Collapsing them with `??` or `.flatten()` is fine *only* if the outer `Elapsed` is first mapped into a domain variant (`#[error("upstream timed out after {0:?}")] Timeout(Duration)`) — a bare `Elapsed` propagated to a caller says "deadline expired" with no indication of which deadline (ERR-2, ERR-4).
+  - **The result nests.** `timeout(dur, fut)` yields `Result<T, Elapsed>` where `T` is the future's own output, so wrapping a fallible call gives `Result<Result<T, E>, Elapsed>` and needs both layers handled: `Ok(Ok(v))` success, `Ok(Err(e))` the operation failed, `Err(_)` it never finished. Collapsing them with `??` is fine *only* if the outer `Elapsed` is first mapped into a domain variant (`#[error("upstream timed out after {0:?}")] Timeout(Duration)`) — a bare `Elapsed` propagated to a caller says "deadline expired" with no indication of which deadline (ERR-2, ERR-4) (`Result::flatten` is not the tool here: it is unstable and requires both error types to be identical, which `Result<Result<T, E>, Elapsed>` never satisfies.)
   - **A timeout cancels, it does not roll back.** On expiry the inner future is dropped at whatever `.await` it was parked on; anything it had already done — rows written, messages published, files partly rewritten — stays done, and anything after that await never runs. Treat a timed-out external call as *unknown outcome*, not as failure: retrying it must be idempotent (idempotency key, conditional write, dedup on the consumer), and any cleanup that must happen has to live in a `Drop` impl or outside the timed region, not in code that follows the await.
 - **ASYNC-7.** Use sync code when async adds no value. Async has overhead (future state machines, polling, context switching). Decision: use async for network I/O, concurrent operations, and event-driven flows; use sync for CPU-bound work (via `spawn_blocking`), simple sequential I/O, and operations that don't benefit from concurrency. An `async fn` that never yields is just overhead
 - **ASYNC-8.** Insert `tokio::task::yield_now().await` in compute loops that run for more than ~1--5ms without an `.await` point, to avoid starving other tasks on the runtime; for longer compute (>5ms), prefer `spawn_blocking` (ASYNC-1)

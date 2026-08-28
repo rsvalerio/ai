@@ -112,7 +112,7 @@ Survey for these signals, then check against the corresponding rules:
 | `tokio::spawn(...)` whose `JoinHandle` is discarded, or `join`ed with `JoinError` logged as "panicked" | CONC-13, CONC-6 |
 | Shutdown path built on `signal::ctrl_c()` with no `SignalKind::terminate()` arm | CONC-14 |
 | `broadcast` consumer that does not branch on `RecvError::Lagged` | CONC-8 |
-| `timeout(...)` result collapsed with `??` / `.flatten()`, or a bare `Elapsed` propagated to callers | ASYNC-6 |
+| `timeout(...)` result collapsed with `??`, or a bare `Elapsed` propagated to callers | ASYNC-6 |
 | `#[error("...: {0}")]` on a variant whose field is `#[from]` / `#[source]` | ERR-9 |
 | `println!` / `eprintln!` in library or service code | READ-8 |
 | Workspace crates with diverging dep versions or per-crate lint config | ARCH-11 |
