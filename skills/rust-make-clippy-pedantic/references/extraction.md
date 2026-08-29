@@ -39,11 +39,20 @@ ROOT="$(git rev-parse --show-toplevel)"
 cargo metadata --no-deps --locked --format-version 1 \
   | jq -r --arg root "$ROOT/" '
       .packages[]
+      | select(.manifest_path | startswith($root))
       | [ .id,
           "\(.name)@\(.version)",
           (.manifest_path | ltrimstr($root) | sub("/Cargo\\.toml$"; "")) ]
       | @tsv'
 ```
+
+The `select` is not optional. A workspace can list members that live outside the checkout
+(`path = "../shared"`), and for those `ltrimstr` finds no prefix to strip and hands back the
+absolute path unchanged — which then flows into `**File**:` and `--modified-file` through
+the spanless fallback below, putting `/home/alice/shared/Cargo.toml` into the wave scope
+`code-review-triage` computes. Dropping them here matches Step 4, which already discards
+findings whose span is out of tree; report the count of members skipped this way rather than
+filing against a path the repository does not contain.
 
 Keep name *and* version: two members can share a name across a version bump, and the
 manifest directory alone does not distinguish a renamed package. Registry and git ids
