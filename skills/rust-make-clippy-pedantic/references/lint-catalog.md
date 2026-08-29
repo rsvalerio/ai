@@ -8,7 +8,7 @@ each lint family falls into. Effort classes feed [estimation.md](estimation.md).
 Everything is passed on the command line, after `--`, so the repository is never modified:
 
 ```bash
-cargo clippy --workspace --all-targets --message-format=json --quiet -- \
+cargo clippy --workspace --all-targets --locked --message-format=json --quiet -- \
   -W clippy::pedantic \
   -W clippy::nursery \
   -W clippy::cargo \
@@ -21,6 +21,7 @@ cargo clippy --workspace --all-targets --message-format=json --quiet -- \
 | `-W clippy::nursery` | Newer, less-settled lints. Genuinely useful, occasionally noisy — findings from here carry lower confidence and belong in the `nursery` label |
 | `-W clippy::cargo` | Manifest hygiene: missing metadata, wildcard dependencies, negative feature names |
 | `-A clippy::multiple_crate_versions` | Suppressed: a dependency-graph fact no single task can fix |
+| `--locked` | Cargo fails instead of writing `Cargo.lock`. Both invocations carry it — a lint run that resolves dependencies has modified the tree, which this skill promises not to do |
 
 Deliberately **not** enabled by default:
 
@@ -42,8 +43,7 @@ Every lint maps to one of four classes. The class, not the lint, drives the esti
 A rename or a local rewrite with no design decision. Safe to batch by the dozen.
 
 `redundant_closure_for_method_calls`, `explicit_iter_loop`, `explicit_into_iter_loop`,
-`needless_pass_by_value` (for `Copy` types), `semicolon_if_nothing_returned`,
-`uninlined_format_args`, `unnested_or_patterns`, `manual_let_else`, `map_unwrap_or`,
+`semicolon_if_nothing_returned`, `uninlined_format_args`, `unnested_or_patterns`, `manual_let_else`, `map_unwrap_or`,
 `redundant_else`, `match_same_arms`, `single_match_else`, `implicit_clone`,
 `inefficient_to_string`, `cloned_instead_of_copied`.
 
@@ -52,8 +52,10 @@ A rename or a local rewrite with no design decision. Safe to batch by the dozen.
 Pure prose. Zero behavioural risk, and the ideal content for a first wave — it makes the
 count fall fast without touching semantics.
 
-`missing_errors_doc`, `missing_panics_doc`, `missing_safety_doc`, `doc_markdown`,
-`missing_docs_in_private_items`.
+`missing_errors_doc`, `missing_panics_doc`, `doc_markdown` (all `pedantic`), and
+`missing_safety_doc` (`style`, so it reaches the report as `clippy-default`).
+`missing_docs_in_private_items` is **not** listed: it belongs to `clippy::restriction`,
+which the flag set does not enable, so it cannot appear in a run.
 
 ### Class J — judgement (~15 min per instance)
 
@@ -74,8 +76,26 @@ them out individually in the report.
 `must_use_candidate` (public API — needs a semver review even though each edit is one word),
 `missing_const_for_fn` (nursery — const-correctness ripples through callers),
 `items_after_statements`, `large_enum_variant`, `large_types_passed_by_value`,
-`needless_pass_by_value` (for owned non-`Copy` types), `unused_self`,
-`return_self_not_must_use`.
+`unused_self`, `return_self_not_must_use`.
+
+### Context-qualified lints
+
+A few lints span classes because the same warning means different work depending on where
+it fires. Each gets a decision rule, applied in order, so every instance lands in exactly
+one class:
+
+**`needless_pass_by_value`** — the fix is always the same edit (`T` to `&T` in the
+signature); the cost is the call sites it forces you to touch.
+
+1. The flagged parameter is on a `pub` item reachable from the crate root → **Class S**.
+   The signature is API surface, so the change is semver-visible and the call sites are
+   outside your control.
+2. Otherwise, count call sites with `rg -F '<fn_name>(' --type rust | wc -l`. More than
+   three → **Class S**; three or fewer → **Class M**.
+
+Do not classify this lint on whether the type is `Copy`. Clippy fires it on non-`Copy`
+types by design (`trivially_copy_pass_by_ref` is the `Copy` counterpart), so a
+`Copy`/non-`Copy` split would leave most instances unassigned.
 
 ## Aggregation
 

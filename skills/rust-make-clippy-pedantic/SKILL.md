@@ -1,6 +1,6 @@
 ---
 name: rust-make-clippy-pedantic
-description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, turns every warning into a backlog task labelled pedantic, and reports a high-level effort estimate for clearing them. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
+description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, then files one backlog task per warning, each labelled pedantic, and reports a high-level effort estimate for clearing them. Test-only, generated, and out-of-tree warnings are dropped, and a lint firing more than twenty times in one crate becomes a single aggregate task. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
 allowed-tools: Read Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git stash list:*) Bash(cargo clippy:*) Bash(cargo metadata:*) Bash(cargo --version) Bash(jq:*) Bash(mktemp:*) Bash(backlog task:*) Bash(backlog search:*)
 license: Apache-2.0
 ---
@@ -77,9 +77,16 @@ project's `target/` and its incremental caches are untouched:
 ```bash
 SCRATCH="$(mktemp -d)"
 CARGO_TARGET_DIR="$SCRATCH/target" \
-  cargo clippy --workspace --all-targets --message-format=json --quiet \
+  cargo clippy --workspace --all-targets --locked --message-format=json --quiet \
   > "$SCRATCH/baseline.json" 2> "$SCRATCH/baseline.err"
 ```
+
+`--locked` is part of the non-destructive promise: without it, a missing or stale
+`Cargo.lock` is silently written during dependency resolution, and a run that edits a
+tracked file is exactly what Step 1 verified would not happen. If Cargo refuses with
+`the lock file needs to be updated`, **stop and report it** — refreshing the lock is a
+change to the repository and belongs to the user, not to a lint sweep. The same applies to
+a project that does not commit its lock file at all: say so rather than generating one.
 
 **If this run fails to compile, stop.** A tree that does not build cannot be linted
 meaningfully; report the compiler error and file nothing.
@@ -94,7 +101,7 @@ Same invocation with the strict groups appended as flags after `--`:
 
 ```bash
 CARGO_TARGET_DIR="$SCRATCH/target" \
-  cargo clippy --workspace --all-targets --message-format=json --quiet -- \
+  cargo clippy --workspace --all-targets --locked --message-format=json --quiet -- \
     -W clippy::pedantic \
     -W clippy::nursery \
     -W clippy::cargo \
@@ -122,19 +129,40 @@ Rules for this invocation:
 
 ```bash
 jq -r 'select(.reason == "compiler-message")
-       | .message
-       | select(.code.code? // "" | startswith("clippy::"))
-       | [ (.code.code | ltrimstr("clippy::")),
-           (.spans[]? | select(.is_primary) | "\(.file_name):\(.line_start)"),
-           .message ]
+       | select(.message.code.code? // "" | startswith("clippy::"))
+       | . as $m
+       | ($m.message.spans // [] | map(select(.is_primary)) | first) as $s
+       | [ ($m.message.code.code | ltrimstr("clippy::")),
+           ($m.package_id // "-"),
+           ($m.target.name // "-"),
+           ($s.file_name // "-"),
+           (($s.line_start // 0) | tostring),
+           (($s.column_start // 0) | tostring),
+           ($m.message.message | gsub("[\t\n]"; " ")) ]
        | @tsv' "$SCRATCH/pedantic.json" | sort -u
 ```
 
-The `startswith("clippy::")` filter matters: the same JSON stream carries plain rustc
-warnings (`dead_code`, `unused_variables`, …), which are not Clippy findings and have no
-entry in the lint catalog. Count them and mention the total in the report, but do not file
-them as `PED-` tasks. Stripping the prefix once here keeps `<lint_name>` consistent across
-the task title, the labels, and the `backlog search "clippy::<lint_name>"` duplicate check.
+Every field of that row earns its place:
+
+- **`startswith("clippy::")`** — the same JSON stream carries plain rustc warnings
+  (`dead_code`, `unused_variables`, …), which are not Clippy findings and have no entry in
+  the lint catalog. Count them and mention the total in the report, but do not file them as
+  `PED-` tasks. Stripping the prefix once here keeps `<lint_name>` consistent across the
+  task title, the labels, and the `backlog search "clippy::<lint_name>"` duplicate check.
+- **`package_id` and `target.name`** — the crate and target (lib, bin, test) the diagnostic
+  belongs to. These live on the `compiler-message` record, not inside `.message`, which is
+  why the filter binds `$m` before descending. Without them the `(lint, crate)` aggregation
+  in Step 5 has no crate to key on. `package_id` is opaque but stable; `cargo metadata`
+  maps it to a readable name for the task title.
+- **`column_start`** — two different findings of the same lint on one line are two
+  findings. Keying on `file:line` alone silently collapses them under `sort -u`.
+- **The `// "-"` and `// 0` fallbacks** — a diagnostic with no primary span (a crate-level
+  lint, most `clippy::cargo` findings) must still produce a row. The earlier
+  `.spans[] | select(.is_primary)` form emitted *nothing* for those, which shortened the
+  array and shifted every later column into the wrong field. Fixed arity means a spanless
+  finding is filed against the crate rather than lost.
+- **`gsub` on tabs and newlines** — Clippy messages are multi-line; unescaped they break
+  the TSV into fragments that `sort -u` then treats as separate findings.
 
 Run the same extraction over `baseline.json`. Then, for each pedantic finding:
 
@@ -162,8 +190,15 @@ Check the backlog before writing:
 backlog search "clippy::<lint_name>" --plain
 ```
 
-If an open (not `Done`) task already covers the same lint at the same path, skip it. If it
-is `Done`, file again only if the warning has genuinely regressed.
+The identity of a finding is the full key from Step 4 —
+`(lint, package_id, target, file, line, column)`. If an open (not `Done`) task already
+covers that key, skip it. If it is `Done`, file again only if the warning has genuinely
+regressed. Do not treat two findings as the same because they share a lint and a file:
+`(file, line)` alone merges distinct findings, and the lint alone merges a whole crate.
+
+The one sanctioned exception is the `(lint, crate)` aggregate described in the volume
+guard below, which deliberately covers many keys in one task and records each of them in
+its description.
 
 Then create the task. Use a `"$(cat <<'EOF' ... EOF)"` heredoc for the description — do not
 use `$'...'` ANSI-C quoting, which triggers a safety prompt on every call.

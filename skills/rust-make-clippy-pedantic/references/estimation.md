@@ -37,7 +37,8 @@ Report four things, no more:
 1. **A table by effort class** — instances, raw hours, share of the total.
 2. **A workspace total** in engineer-days (8h), as a range: `low = total × 0.6`,
    `high = total × 1.4`, both rounded to a half day.
-3. **A T-shirt size**, from the midpoint: S < 2 days, M 2–5, L 5–15, XL > 15.
+3. **A T-shirt size**, from the midpoint, in engineer-days: **S** under 2, **M** 2 up to
+   but not including 5, **L** 5 up to and including 15, **XL** above 15.
 4. **The dominant terms** — the two or three lints contributing the most hours, with their
    share. This is the part a reader acts on: it says where a wave should start.
 
