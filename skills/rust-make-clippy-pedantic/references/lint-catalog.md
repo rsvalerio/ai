@@ -90,14 +90,25 @@ signature); the cost is the call sites it forces you to touch.
 1. The flagged parameter is on a `pub` item reachable from the crate root → **Class S**.
    The signature is API surface, so the change is semver-visible and the call sites are
    outside your control.
-2. Otherwise, count call sites — excluding the declaration, which matches the same
-   pattern and would push a three-call-site function over the threshold:
+2. Otherwise, count call sites. Two things make the obvious one-liner wrong: piping into
+   `wc -l` counts matching *lines*, so `f(); f(); f();` on one line counts once, and an
+   unscoped search sweeps in same-named functions from sibling crates. Scope to the
+   defining crate's sources and count matches, then subtract the declaration:
 
    ```bash
-   rg -F '<fn_name>(' --type rust | rg -v '\bfn +<fn_name>\b' | wc -l
+   CRATE_SRC="$(dirname '<manifest_path from cargo metadata>')/src"
+   calls=$(rg -F -o '<fn_name>(' "$CRATE_SRC" | wc -l)
+   decls=$(rg -o '\bfn +<fn_name>\b' "$CRATE_SRC" | wc -l)
+   echo $(( calls - decls ))
    ```
 
    More than three → **Class S**; three or fewer → **Class M**.
+
+   The number is still a heuristic: `rg` matches inside comments, string literals and doc
+   examples, and a method call on an unrelated type shares the name. **Read the matches
+   whenever the count lands at three or four, or whenever any of them sit in a comment or a
+   doc block** — the threshold decides an effort class, and a wrong class quietly skews the
+   estimate for every instance of that lint.
 
 Do not classify this lint on whether the type is `Copy`. Clippy fires it on non-`Copy`
 types by design (`trivially_copy_pass_by_ref` is the `Copy` counterpart), so a

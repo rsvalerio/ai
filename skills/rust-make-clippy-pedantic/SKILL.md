@@ -191,8 +191,9 @@ Check the backlog before writing:
 backlog search "clippy::<lint_name>" --plain
 ```
 
-The identity of a finding is the full row from Step 4: lint, `package_id`, target, file,
-line, column and message together. If an open (not `Done`) task already covers that key,
+The identity of a finding is the full row from Step 4 — lint, package, target, file, line,
+column and message together — with the package **normalized** as
+[extraction.md](references/extraction.md) describes, never the raw `package_id`. If an open (not `Done`) task already covers that key,
 skip it. If it is `Done`, file again only if the warning has genuinely
 regressed. Do not treat two findings as the same because they share a lint and a file:
 `(file, line)` alone merges distinct findings, and the lint alone merges a whole crate. The
@@ -296,8 +297,18 @@ this and stops has succeeded.
 
 **With `--apply`:**
 
-1. **Re-verify the tree is still clean** (`git status --porcelain`) before the first write.
-   The sweep takes minutes; something may have changed underneath it.
+1. **Re-verify that nothing but the backlog changed** before the first write. A plain
+   `git status --porcelain` is now guaranteed dirty — Step 5 just wrote task files under
+   `.backlog/`, which most consumer repos track — so gating on it would abort every
+   `--apply` run. Exclude the backlog and compare against the Step 1 snapshot:
+
+   ```bash
+   git status --porcelain -- . ':(exclude).backlog'   # must still be EMPTY
+   git rev-parse --short HEAD                          # must equal the Step 1 SHA
+   ```
+
+   Anything else appearing here means the tree moved under the sweep; stop and report
+   rather than writing a policy derived from code that is no longer checked out.
 2. **Write the three file kinds** using the templates, editing surgically. Do not reformat
    the manifest, reorder dependencies, or touch anything but the lint tables.
 3. **Choose the level from the sweep's own result** — `warn` when it found anything, `deny`

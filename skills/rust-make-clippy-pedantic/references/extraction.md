@@ -13,8 +13,7 @@ obvious alternative silently corrupts the finding set rather than failing.
 - **`package_id` and `target.name`** — the crate and target (lib, bin, test) the diagnostic
   belongs to. These live on the `compiler-message` record, not inside `.message`, which is
   why the filter binds `$m` before descending. Without them the `(lint, crate)` aggregation
-  in Step 5 has no crate to key on. `package_id` is opaque but stable; `cargo metadata`
-  maps it to a readable name for the task title.
+  in Step 5 has no crate to key on.
 - **`column_start`** — two different findings of the same lint on one line are two
   findings. Keying on `file:line` alone silently collapses them under `sort -u`.
 - **The `// "-"` and `// 0` fallbacks** — a diagnostic with no primary span (a crate-level
@@ -22,6 +21,35 @@ obvious alternative silently corrupts the finding set rather than failing.
   `.spans[] | select(.is_primary)` form emitted *nothing* for those, which shortened the
   array and shifted every later column into the wrong field. Fixed arity means a spanless
   finding is filed against the crate rather than lost.
+
+## Normalize `package_id` before it becomes identity
+
+A raw `package_id` is not a stable key. For a path package Cargo emits the *absolute*
+checkout path — `path+file:///home/alice/proj#my-crate@0.4.1` — so the same repository
+cloned to a different directory, or examined in a `git worktree`, produces a different id
+for the same crate. Used verbatim in the Step 5 identity key, that re-files every finding
+the first time anyone runs the sweep from another location. Cargo also documents the id's
+internal format as an implementation detail subject to change between versions.
+
+Normalize it once, to the package's name and version plus its repo-relative manifest
+directory, and key on that:
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)"
+cargo metadata --no-deps --locked --format-version 1 \
+  | jq -r --arg root "$ROOT/" '
+      .packages[]
+      | [ .id,
+          "\(.name)@\(.version)",
+          (.manifest_path | ltrimstr($root) | sub("/Cargo\\.toml$"; "")) ]
+      | @tsv'
+```
+
+Keep name *and* version: two members can share a name across a version bump, and the
+manifest directory alone does not distinguish a renamed package. Registry and git ids
+(`registry+https://…#regex@1.4.3`) carry no local path and need no rewriting — leave them
+as they are; findings never originate there anyway, since Step 4 discards out-of-tree
+paths.
 
 **Resolve the `-` file placeholder before filing.** It is a marker inside the pipeline, not
 a path: `**File**: \`-\`` tells a reader nothing and `--modified-file "-"` puts a file that

@@ -31,6 +31,7 @@ unused_lifetimes = "warn"
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
 
 # Panics and silent wrap-around in production code. Test code opts out through
 # the `allow-*-in-tests` keys in clippy.toml.
@@ -48,7 +49,14 @@ as_conversions = "warn"
 exit = "warn"
 ```
 
-**`priority = -1` is mandatory on the three group entries.** Cargo rejects a manifest where
+The `cargo` group is there because the sweep enables it (`-W clippy::cargo`). Omitting it
+would leave the applied policy quieter than the run that produced the findings, and Step 7's
+verification — which requires the configured run to reproduce the sweep's finding set —
+would fail on exactly the manifest-hygiene lints this file exists to configure. If the
+sweep suppressed `clippy::multiple_crate_versions`, carry that across as
+`multiple_crate_versions = "allow"` rather than dropping the group.
+
+**`priority = -1` is mandatory on the four group entries.** Cargo rejects a manifest where
 a lint group and an individual lint share a priority — `unwrap_used` sits inside
 `clippy::all`, so without the negative priority the build fails with *"lint `clippy::all`
 has the same priority as `clippy::unwrap_used`"*. The negative value makes the groups apply
@@ -103,9 +111,18 @@ allow-indexing-slicing-in-tests = true
 manifest declares none, omit the key entirely and say so in the report — a guessed floor
 turns `incompatible_msrv` into noise in both directions.
 
-The `allow-*-in-tests` keys are what make the panic-adjacent lints tolerable. They are also
-why Step 4 drops test-only style findings: the policy this step writes would not have fired
-on them in the first place.
+The `allow-*-in-tests` keys are what make the panic-adjacent lints tolerable, and they cover
+exactly four lints: `unwrap_used`, `expect_used`, `panic`, and `indexing_slicing`. For those,
+Step 4's decision to drop test-only findings matches the policy written here — the configured
+run genuinely does not fire on them in test code.
+
+**It does not generalise.** There is no `allow-missing-panics-doc-in-tests` key, or any
+equivalent for the other lints Step 4 excludes from filing; inventing one puts an unknown key
+in `clippy.toml`, which Clippy rejects. A `pub fn` inside a `#[cfg(test)]` module can still
+raise `missing_panics_doc` under the applied policy even though the sweep declined to file
+it. Expect that gap when comparing the counts in Step 7's verification, and close it at the
+call site with `#[allow(clippy::missing_panics_doc, reason = "…")]` if it proves noisy —
+never with a `clippy.toml` key that does not exist.
 
 ## Choosing the level
 
