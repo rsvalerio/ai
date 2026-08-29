@@ -119,9 +119,11 @@ run off your files is the rest of it: `--locked` so Cargo cannot write `Cargo.lo
 scratch `CARGO_TARGET_DIR` so `target/` is untouched, and no `--fix`. Findings are written
 to `.backlog/`, which is the point.
 
-The run finishes by printing the `[workspace.lints.*]` tables and `clippy.toml` that would
-make the strictness permanent. Pass `--apply` to have it write them — the one case where
-the skill edits the repository, and it still never commits.
+The run finishes by printing the `Cargo.toml` lint tables and `clippy.toml` that would make
+the strictness permanent: `[workspace.lints.*]` plus a `[lints] workspace = true` opt-in per
+member for a workspace, or direct `[lints.rust]` / `[lints.clippy]` tables for a single
+crate. Pass `--apply` to have it write them — the only mode that edits checked-in lint
+configuration, though every run writes its findings to `.backlog/`. Neither commits.
 
 ### rust-meta
 
