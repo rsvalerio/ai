@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "dev-skills",
-      "description": "Seven coupled skills: Rust and web code review, review-wave triage and execution, commit scripting, and Rust knowledge integration. They reference each other's files, so they ship as one plugin.",
+      "description": "Eight coupled skills: Rust and web code review, pedantic Clippy sweeps, review-wave triage and execution, commit scripting, and Rust knowledge integration. They reference each other's files, so they ship as one plugin.",
       "source": "./"
     }
   ]

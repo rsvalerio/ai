@@ -14,6 +14,7 @@ A collection of [Agent Skills](https://agentskills.io/specification) for Rust an
 | **code-review-run-wave** | Run one planned wave in an isolated git worktree: apply fixes, QA, merge, close. |
 | **code-review-run-waves** | Run every open wave concurrently (one worktree each); land merges one at a time via a shared lock. |
 | **commit-script** | Analyze git state and generate a script that stages grouped files into conventional commits — optionally on a topic branch that ends in a `gh` pull request. |
+| **rust-make-clippy-pedantic** | Lint a clean Rust checkout at pedantic strength via flags only, file one `pedantic`-labelled backlog task per warning — test-only style findings, generated files and out-of-tree warnings dropped, high-volume lints aggregated per crate — estimate the cleanup, and show (or with `--apply`, write) the matching `Cargo.toml` / `clippy.toml` lint policy. |
 | **rust-meta** | Process external Rust content and integrate new knowledge into `code-review-rust`. |
 
 ## Installation
@@ -105,6 +106,24 @@ claude -p "/code-review-run-wave"     # one wave
 ```
 
 Details: [Worktree Protocol](skills/code-review-run-wave/references/worktree-protocol.md).
+
+### rust-make-clippy-pedantic
+
+- "Run rust-make-clippy-pedantic on this workspace."
+- "How much work is it to get this crate clippy-pedantic clean?"
+- "Configure this workspace for pedantic clippy — show me the config first."
+
+Requires a clean `git status`; the run aborts rather than stashing or pulling. Lint levels
+are configured with `-W` flags after `--` rather than by editing the crate. What keeps the
+run off your files is the rest of it: `--locked` so Cargo cannot write `Cargo.lock`, a
+scratch `CARGO_TARGET_DIR` so `target/` is untouched, and no `--fix`. Findings are written
+to `.backlog/`, which is the point.
+
+The run finishes by printing the `Cargo.toml` lint tables and `clippy.toml` that would make
+the strictness permanent: `[workspace.lints.*]` plus a `[lints] workspace = true` opt-in per
+member for a workspace, or direct `[lints.rust]` / `[lints.clippy]` tables for a single
+crate. Pass `--apply` to have it write them — the only mode that edits checked-in lint
+configuration, though every run writes its findings to `.backlog/`. Neither commits.
 
 ### rust-meta
 
