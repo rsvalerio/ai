@@ -1,16 +1,29 @@
 ---
 name: rust-make-clippy-pedantic
-description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, then files one backlog task per warning, each labelled pedantic, and reports a high-level effort estimate for clearing them. Test-only style findings, generated files, and out-of-tree warnings are dropped, and a lint firing more than twenty times in one crate becomes a single aggregate task. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
-allowed-tools: Read Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git stash list:*) Bash(cargo clippy:*) Bash(cargo metadata:*) Bash(cargo --version) Bash(jq:*) Bash(mktemp:*) Bash(backlog task:*) Bash(backlog search:*)
+description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, then files one backlog task per warning, each labelled pedantic, and reports a high-level effort estimate for clearing them. Test-only style findings, generated files, and out-of-tree warnings are dropped, and a lint firing more than twenty times in one crate becomes a single aggregate task. Passing --apply additionally writes the lint policy into Cargo.toml and clippy.toml; without it the run only shows what those files would contain. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
+allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git stash list:*) Bash(cargo clippy:*) Bash(cargo metadata:*) Bash(cargo --version) Bash(jq:*) Bash(mktemp:*) Bash(backlog task:*) Bash(backlog search:*)
 license: Apache-2.0
 ---
 
 # Make Clippy Pedantic
 
-Raise a Rust project to pedantic-grade linting **without changing a line of it**. The
-aggressive lint levels are passed as command-line flags to `cargo clippy`; no `#![warn(...)]`
-attribute is added to any crate, no `clippy.toml` is written, and `--fix` is never used.
-The output of the run is a set of backlog tasks, one per finding, plus an effort estimate.
+Raise a Rust project to pedantic-grade linting **without changing a line of its source**.
+The aggressive lint levels are passed as command-line flags to `cargo clippy`; no
+`#![warn(...)]` attribute is added to any crate, and `--fix` is never used. The output of
+the run is a set of backlog tasks, one per finding, plus an effort estimate, plus the lint
+configuration that would make the strictness permanent — shown by default, and written to
+`Cargo.toml` and `clippy.toml` only when the run is invoked with `--apply`.
+
+## Invocation
+
+| Argument | Effect |
+|----------|--------|
+| *(none)* | Survey only. Files the findings, prints the report, and **shows** the configuration Step 7 would write without writing it |
+| `--apply` | Everything above, and then writes the lint policy into `Cargo.toml` and `clippy.toml` |
+
+`--apply` is the single exception to this skill's no-writes rule, and it is deliberate: the
+sweep is worthless as a one-off if nothing stops the same warnings coming back. Nothing
+else about the run changes — the same preflight, the same flags, the same tasks.
 
 ## Purpose
 
@@ -22,14 +35,19 @@ The output of the run is a set of backlog tasks, one per finding, plus an effort
 - Create one backlog task per finding via `backlog task create --plain`, every task
   labelled `pedantic`
 - Report what ran, what was filed, and a higher-view work estimate for clearing the backlog
+- Show the `Cargo.toml` and `clippy.toml` lint policy that locks the strictness in, and
+  write it when — and only when — `--apply` was passed
 
 ## Execution Contract (MUST follow)
 
 You are running unattended — nobody is watching to course-correct.
 
-1. **Never mutate the repository.** No `cargo clippy --fix`, no `git stash`, no `git pull`,
-   no lint attributes or `clippy.toml` edits, no `Cargo.toml` changes. Writes go to
-   `.backlog/` (through the `backlog` CLI) and to a scratch directory only.
+1. **Never mutate the repository, except under `--apply`.** No `cargo clippy --fix`, no
+   `git stash`, no `git pull`, no lint attributes, no source edits — ever. Writes go to
+   `.backlog/` (through the `backlog` CLI) and to a scratch directory. The one exception is
+   [Step 7](#step-7--apply-the-lint-policy---apply): with `--apply`, and only then, the run
+   writes `Cargo.toml` and `clippy.toml`. Without the flag those files are printed, never
+   written. Never commit, stage, or push what `--apply` writes.
 2. **Abort — do not adapt — on a dirty tree.** See [Step 1](#step-1--preflight-a-clean-tree).
    Print the blocking condition and stop. Cleaning it up for the user is not in scope.
 3. **Findings are emitted ONLY via `backlog task create --plain`.** A prose list of
@@ -37,7 +55,7 @@ You are running unattended — nobody is watching to course-correct.
 4. **Never ask for confirmation.** You are pre-authorized: findings go straight to
    `backlog task create --plain`.
 5. **The only terminal action is the report** ([Step 6](#step-6--report)), printed after
-   every task creation has succeeded.
+   every task creation has succeeded, followed by Step 7's configuration block or diff.
 6. **On tool failure, retry once, then report the specific error.** Do not silently
    degrade to a text summary.
 
@@ -142,45 +160,10 @@ jq -r 'select(.reason == "compiler-message")
        | @tsv' "$SCRATCH/pedantic.json" | sort -u
 ```
 
-Every field of that row earns its place:
-
-- **`startswith("clippy::")`** — the same JSON stream carries plain rustc warnings
-  (`dead_code`, `unused_variables`, …), which are not Clippy findings and have no entry in
-  the lint catalog. Count them and mention the total in the report, but do not file them as
-  `PED-` tasks. Stripping the prefix once here keeps `<lint_name>` consistent across the
-  task title, the labels, and the `backlog search "clippy::<lint_name>"` duplicate check.
-- **`package_id` and `target.name`** — the crate and target (lib, bin, test) the diagnostic
-  belongs to. These live on the `compiler-message` record, not inside `.message`, which is
-  why the filter binds `$m` before descending. Without them the `(lint, crate)` aggregation
-  in Step 5 has no crate to key on. `package_id` is opaque but stable; `cargo metadata`
-  maps it to a readable name for the task title.
-- **`column_start`** — two different findings of the same lint on one line are two
-  findings. Keying on `file:line` alone silently collapses them under `sort -u`.
-- **The `// "-"` and `// 0` fallbacks** — a diagnostic with no primary span (a crate-level
-  lint, most `clippy::cargo` findings) must still produce a row. The earlier
-  `.spans[] | select(.is_primary)` form emitted *nothing* for those, which shortened the
-  array and shifted every later column into the wrong field. Fixed arity means a spanless
-  finding is filed against the crate rather than lost.
-
-**Resolve the `-` file placeholder before filing.** It is a marker inside the pipeline, not
-a path: `**File**: \`-\`` tells a reader nothing and `--modified-file "-"` puts a file that
-does not exist into the wave scope `code-review-triage` computes. Map the row's
-`package_id` to its manifest and make it repo-relative:
-
-```bash
-ROOT="$(git rev-parse --show-toplevel)"
-cargo metadata --no-deps --locked --format-version 1 \
-  | jq -r --arg root "$ROOT/" '.packages[] | [.id, (.manifest_path | ltrimstr($root))] | @tsv'
-```
-
-A spanless finding is then filed against that crate's `Cargo.toml` — which is genuinely the
-file to edit for a `clippy::cargo` lint — keeping `line 0` to record that the diagnostic
-had no span.
-
-- **The message, verbatim** — `@tsv` already escapes tabs, newlines and backslashes, so a
-  multi-line Clippy message stays one row without any rewriting. Do not `gsub` it: the
-  message is part of the finding's identity (below), and collapsing whitespace throws away
-  the detail that distinguishes two diagnostics sharing a location.
+Every field of that row earns its place, and three of them fix a defect that is invisible
+until it corrupts the output — the rationale, the spanless-path resolution, and the
+`@tsv` escaping guarantee are in [extraction.md](references/extraction.md). Read it before
+changing the pipeline.
 
 Run the same extraction over `baseline.json`. Then, for each pedantic finding:
 
@@ -208,9 +191,9 @@ Check the backlog before writing:
 backlog search "clippy::<lint_name>" --plain
 ```
 
-The identity of a finding is the full row from Step 4 —
-`(lint, package_id, target, file, line, column, message)`. If an open (not `Done`) task already
-covers that key, skip it. If it is `Done`, file again only if the warning has genuinely
+The identity of a finding is the full row from Step 4: lint, `package_id`, target, file,
+line, column and message together. If an open (not `Done`) task already covers that key,
+skip it. If it is `Done`, file again only if the warning has genuinely
 regressed. Do not treat two findings as the same because they share a lint and a file:
 `(file, line)` alone merges distinct findings, and the lint alone merges a whole crate. The
 message belongs in the key too — one lint can report several distinct problems at one span,
@@ -285,11 +268,57 @@ Print, in this order:
    signal, not a quote.
 5. **Suggested next step** — `code-review-triage` to group the new `Triage` tasks into waves.
 
-Finally, verify the filing landed:
+Verify the filing landed:
 
 ```bash
 backlog task list --status 'Triage' --plain
 ```
+
+### Step 7 — Apply the lint policy (`--apply`)
+
+The sweep proves the project *can* be held to a stricter standard; this step is what keeps
+it there, by moving the strictness out of the command line and into checked-in
+configuration. Templates, the level policy, and the gotchas that make a policy silently
+inert live in [apply-config.md](references/apply-config.md) — read it before writing
+anything.
+
+Three files are involved: the root `Cargo.toml` (the `[workspace.lints.*]` tables), every
+member `Cargo.toml` (`[lints] workspace = true`, without which the workspace tables
+configure nothing), and a root `clippy.toml` (thresholds, `msrv` copied from `rust-version`,
+and the `allow-*-in-tests` opt-outs).
+
+**Without `--apply` — the default — write nothing.** Print each file's proposed content in
+full, as a fenced TOML block per file, under a heading that names the path and says whether
+the file would be created or edited. For a file that already exists, show only the block
+that would be added or changed, so the reader sees a diff rather than a re-listing. Then say
+explicitly that nothing was written and that `--apply` would write it. A run that prints
+this and stops has succeeded.
+
+**With `--apply`:**
+
+1. **Re-verify the tree is still clean** (`git status --porcelain`) before the first write.
+   The sweep takes minutes; something may have changed underneath it.
+2. **Write the three file kinds** using the templates, editing surgically. Do not reformat
+   the manifest, reorder dependencies, or touch anything but the lint tables.
+3. **Choose the level from the sweep's own result** — `warn` when it found anything, `deny`
+   only when it found nothing. Denying a workspace that has open findings breaks
+   `cargo build` for everyone on code nobody has fixed yet.
+4. **Verify the policy took effect.** Re-run the Step 2 command with no `-W` flags at all:
+
+   ```bash
+   CARGO_TARGET_DIR="$SCRATCH/target" \
+     cargo clippy --workspace --all-targets --locked --message-format=json --quiet \
+     > "$SCRATCH/applied.json" 2> "$SCRATCH/applied.err"
+   ```
+
+   Extract it exactly as in Step 4. The configuration is correct when this run reproduces
+   the pedantic finding set from Step 3. A count far *below* it means the policy is inert —
+   almost always a member crate missing `[lints] workspace = true`. A manifest error here
+   (`lint group has the same priority as`) means the `priority = -1` entries are wrong. Fix
+   and re-verify; do not report success on an unverified write.
+5. **Report the files touched and stop.** Do not commit, stage, or push — the user reviews
+   the diff. Say plainly that the working tree is now dirty by design, and name the level
+   that was written along with the condition for raising it to `deny`.
 
 ## Finding ID Prefixes
 
@@ -343,8 +372,10 @@ parallel instances cannot corrupt each other. Two caveats:
 
 ## References
 
+- [Extraction](references/extraction.md) — Why the `jq` row is shaped as it is, and the defects each field prevents
 - [Lint catalog](references/lint-catalog.md) — Groups, flag set, and effort class per lint family
 - [Estimation model](references/estimation.md) — Effort classes, rates, and how the higher-view number is built
+- [Applying the lint policy](references/apply-config.md) — `--apply` templates for `Cargo.toml` and `clippy.toml`, level policy, and what not to write
 - [OpenAI agent metadata](assets/openai.yaml) — Optional agent configuration for compatible runtimes
 - `code-review-rust` — Semantic Rust review; this skill is its mechanical counterpart
 - `code-review-triage` — Groups the `Triage` tasks this skill files into waves
