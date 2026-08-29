@@ -14,6 +14,7 @@ A collection of [Agent Skills](https://agentskills.io/specification) for Rust an
 | **code-review-run-wave** | Run one planned wave in an isolated git worktree: apply fixes, QA, merge, close. |
 | **code-review-run-waves** | Run every open wave concurrently (one worktree each); land merges one at a time via a shared lock. |
 | **commit-script** | Analyze git state and generate a script that stages grouped files into conventional commits — optionally on a topic branch that ends in a `gh` pull request. |
+| **rust-make-clippy-pedantic** | Lint a clean Rust checkout at pedantic strength via flags only, file one `pedantic`-labelled backlog task per warning, and estimate the cleanup. |
 | **rust-meta** | Process external Rust content and integrate new knowledge into `code-review-rust`. |
 
 ## Installation
@@ -105,6 +106,14 @@ claude -p "/code-review-run-wave"     # one wave
 ```
 
 Details: [Worktree Protocol](skills/code-review-run-wave/references/worktree-protocol.md).
+
+### rust-make-clippy-pedantic
+
+- "Run rust-make-clippy-pedantic on this workspace."
+- "How much work is it to get this crate clippy-pedantic clean?"
+
+Requires a clean `git status`; the run aborts rather than stashing or pulling. Lint levels
+are passed as `-W` flags after `--`, so the tree is never modified.
 
 ### rust-meta
 

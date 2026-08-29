@@ -20,6 +20,7 @@ This repo is a collection of [Agent Skills](https://agentskills.io/specification
 │   ├── code-review-run-wave/
 │   ├── code-review-run-waves/
 │   ├── commit-script/
+│   ├── rust-make-clippy-pedantic/
 │   └── rust-meta/
 └── LICENSE
 ```
@@ -31,6 +32,7 @@ Skill purposes are listed in the [README overview](README.md#overview). Relation
 - **code-review-run-wave** — claims one open wave, applies fixes in an isolated git worktree, runs QA, merges under a shared lock. Protocol: `skills/code-review-run-wave/references/worktree-protocol.md`.
 - **code-review-run-waves** — fans out across open waves; delegates per-wave work to `code-review-run-wave`.
 - **commit-script** — groups related files into conventional commit scripts. Two modes: `commit` (default, local commits only — what the wave runners use) and `pr` (topic branch + push + `gh pr create`).
+- **rust-make-clippy-pedantic** — mechanical counterpart to `code-review-rust`: runs `cargo clippy` with the strict lint groups passed as flags (never as source edits) over a verified-clean tree, files one `Triage` task per warning labelled `pedantic`, and reports an effort estimate. Feeds `code-review-triage` like the review skills do.
 - **rust-meta** — maps external Rust knowledge into `code-review-rust`.
 
 ### Finding output
