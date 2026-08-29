@@ -1,6 +1,6 @@
 ---
 name: rust-make-clippy-pedantic
-description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, then files one backlog task per warning, each labelled pedantic, and reports a high-level effort estimate for clearing them. Test-only, generated, and out-of-tree warnings are dropped, and a lint firing more than twenty times in one crate becomes a single aggregate task. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
+description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, then files one backlog task per warning, each labelled pedantic, and reports a high-level effort estimate for clearing them. Test-only style findings, generated files, and out-of-tree warnings are dropped, and a lint firing more than twenty times in one crate becomes a single aggregate task. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
 allowed-tools: Read Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git stash list:*) Bash(cargo clippy:*) Bash(cargo metadata:*) Bash(cargo --version) Bash(jq:*) Bash(mktemp:*) Bash(backlog task:*) Bash(backlog search:*)
 license: Apache-2.0
 ---
@@ -138,7 +138,7 @@ jq -r 'select(.reason == "compiler-message")
            ($s.file_name // "-"),
            (($s.line_start // 0) | tostring),
            (($s.column_start // 0) | tostring),
-           ($m.message.message | gsub("[\t\n]"; " ")) ]
+           $m.message.message ]
        | @tsv' "$SCRATCH/pedantic.json" | sort -u
 ```
 
@@ -161,8 +161,26 @@ Every field of that row earns its place:
   `.spans[] | select(.is_primary)` form emitted *nothing* for those, which shortened the
   array and shifted every later column into the wrong field. Fixed arity means a spanless
   finding is filed against the crate rather than lost.
-- **`gsub` on tabs and newlines** — Clippy messages are multi-line; unescaped they break
-  the TSV into fragments that `sort -u` then treats as separate findings.
+
+**Resolve the `-` file placeholder before filing.** It is a marker inside the pipeline, not
+a path: `**File**: \`-\`` tells a reader nothing and `--modified-file "-"` puts a file that
+does not exist into the wave scope `code-review-triage` computes. Map the row's
+`package_id` to its manifest and make it repo-relative:
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)"
+cargo metadata --no-deps --locked --format-version 1 \
+  | jq -r --arg root "$ROOT/" '.packages[] | [.id, (.manifest_path | ltrimstr($root))] | @tsv'
+```
+
+A spanless finding is then filed against that crate's `Cargo.toml` — which is genuinely the
+file to edit for a `clippy::cargo` lint — keeping `line 0` to record that the diagnostic
+had no span.
+
+- **The message, verbatim** — `@tsv` already escapes tabs, newlines and backslashes, so a
+  multi-line Clippy message stays one row without any rewriting. Do not `gsub` it: the
+  message is part of the finding's identity (below), and collapsing whitespace throws away
+  the detail that distinguishes two diagnostics sharing a location.
 
 Run the same extraction over `baseline.json`. Then, for each pedantic finding:
 
@@ -190,11 +208,15 @@ Check the backlog before writing:
 backlog search "clippy::<lint_name>" --plain
 ```
 
-The identity of a finding is the full key from Step 4 —
-`(lint, package_id, target, file, line, column)`. If an open (not `Done`) task already
+The identity of a finding is the full row from Step 4 —
+`(lint, package_id, target, file, line, column, message)`. If an open (not `Done`) task already
 covers that key, skip it. If it is `Done`, file again only if the warning has genuinely
 regressed. Do not treat two findings as the same because they share a lint and a file:
-`(file, line)` alone merges distinct findings, and the lint alone merges a whole crate.
+`(file, line)` alone merges distinct findings, and the lint alone merges a whole crate. The
+message belongs in the key too — one lint can report several distinct problems at one span,
+and dropping it lets the second silently reuse the first one's task. The cost is that a
+reworded message in a newer Clippy reads as a new finding; prefer that over a lost one, and
+close the stale task when it happens.
 
 The one sanctioned exception is the `(lint, crate)` aggregate described in the volume
 guard below, which deliberately covers many keys in one task and records each of them in
