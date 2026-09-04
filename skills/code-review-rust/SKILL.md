@@ -131,6 +131,36 @@ Survey for these signals, then check against the corresponding rules:
 | Tests without assertions *(see TEST-1 scanning guidance — recognize `assert_*` helpers, `#[should_panic]`, and `Result<...>` tests before filing)* | TEST-1, TEST-11 |
 | `#[ignore]` without explanation | TEST-24, TEST-26 |
 | NATS `connect()` without options | NATS-1--8 |
+| `pub use` duplicating a still-public path, `pub use foo::*`, or a crate `prelude` module | API-13 |
+| Public item or module with no doc summary, or a `Result`/panicking/`unsafe` fn with no `# Errors`/`# Panics`/`# Safety` section | API-14 |
+| Newtype over a narrower domain with a public field or an infallible constructor | API-2 |
+| Builder with fallible setters, `set_x()` naming, or a public `FooBuilder::new()` | API-4 |
+| Trait implemented exactly once and passed as `dyn`, or `Arc`/`Box`/`RefCell` in a public signature | API-18 |
+| Associated function with no receiver doing general computation (`Type::helper(x)`) | API-17, ARCH-13 |
+| `Service`/`Manager`/`Factory` type names, or names repeating their module (`foo::FooId`) | API-1 |
+| `static` / `thread_local!` holding correctness-relevant state in a library | CONC-10, SEC-40 |
+| `String`, `Vec`, `Box<T>`, or non-`#[repr(C)]` types passed between Rust dynamic libraries | SEC-40 |
+| `catch_unwind` used to turn a panic into a `Result` or to continue in-process | ERR-15 |
+| `assert!`/`panic!`/`unreachable!` with no message or with no offending value in it | ERR-11 |
+| `unsafe` marked on a merely dangerous (non-UB) function, or `unsafe impl Send/Sync` to silence a bound | UNSAFE-2, UNSAFE-10 |
+| `unsafe` code with no Miri run in CI | UNSAFE-10, ARCH-11 |
+| Attribute macro that changes an item's kind, signature, or `async`-ness, or emits extra named types | MACRO-2 |
+| Proc macro with no separate `_impl` crate, or expansion emitting `::third_party::` paths directly | MACRO-3 |
+| `Vec<String>` / `String` field that is never resized after construction, in a type with many instances | PERF-18 |
+| Long-lived collection built by `push` with no `with_capacity` and no `shrink_to_fit` | PERF-2, PERF-20 |
+| `Arc<Config>` chains dereferenced on a hot path to read one small field | PERF-17 |
+| `format!` inside a log/metric call in an inner loop | PERF-19, READ-12 |
+| `tracing`/`log` call with positional `{}` formatting instead of named structured fields | READ-12 |
+| Magic literal (timeout, capacity, retry count) with no named `const` and no rationale | READ-11 |
+| Docs narrating design decisions, migrations, or "why we picked X over Y" | READ-13 |
+| Test asserting a constant equals its own literal, or recomputing the expected value with the implementation's logic | TEST-32 |
+| Mock constructor, secret accessor, or safety-check bypass not behind `#[cfg(feature = "test-util")]` | TEST-33 |
+| Library performing ad-hoc I/O, clock, or entropy calls with no injection point | TEST-33, API-19, TIME-6 |
+| New crate on an edition older than 2024, or a library with no `rust-version` | EDITION-6, API-15 |
+| Business logic or `#[repr(C)]` types in the core crate of an FFI pair | ARCH-14 |
+| Crate nested inside another crate's directory, or deps declared per-crate instead of in `[workspace.dependencies]` | ARCH-15, ARCH-11 |
+| Hot `async fn` holding large values across `.await`, with no future-size test | ASYNC-15 |
+| CPU loop with `yield_now().await` on every iteration, or none at all | ASYNC-8 |
 | JetStream without resource limits | NATS-9--14 |
 
 ## Concurrency
@@ -142,7 +172,7 @@ Finish all reviews before running `code-review-triage`, so the resulting waves c
 ## References
 
 - [Rules index](references/rules.md) — Category table, severity scale, design philosophy, and links to all detailed rule references
-- [Core rules](references/rules-core.md) — OWN, ERR, TRAIT, CONC, ASYNC, PERF, UNSAFE, PATTERN, TIME, EDITION, VER
+- [Core rules](references/rules-core.md) — OWN, ERR, TRAIT, CONC, ASYNC, PERF, UNSAFE, PATTERN, MACRO, TIME, EDITION, VER
 - [Structure rules](references/rules-structure.md) — FN, READ, ARCH, API, CL
 - [Duplication rules](references/rules-duplication.md) — DUP
 - [Security rules](references/rules-security.md) — SEC
