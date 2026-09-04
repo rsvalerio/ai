@@ -11,15 +11,17 @@ Libraries (Building / Interoperability / Resilience / UX) chapters.
 | Metric | Count |
 |---|---|
 | Guidelines extracted | 90 |
-| Approved — new rules | 38 |
+| Approved — new rules | 33 |
 | Approved — enhancements to existing rules | 19 |
 | Rejected — already expressed | 6 |
 | Rejected — too generic / not actionable | 1 |
 | Rejected — conflicts with existing guidance (user decision, 2026-09-04) | 2 |
 
-Counts sum to 66 integration decisions over 90 source guidelines; the remaining 24 were folded into
-a smaller number of consolidated rules (e.g. six macro guidelines became `MACRO-1--3`, five
-re-export/prelude/leak guidelines became `API-13`) and are itemised in the mapping table below.
+The 33 new rules and 19 enhancements absorb the 81 guidelines that were not rejected; the counts
+differ because related guidelines were consolidated rather than mapped one-to-one — six macro
+guidelines became `MACRO-1--3`, six surface-hygiene guidelines became `API-13`. Every source
+guideline is accounted for in the mapping tables below, and the new-rule count is verifiable
+against the branch as a set difference of rule IDs rather than by reading the table.
 
 **Overall assessment**: **High source quality, high gap value.** Unlike a blog post, this is an
 internally consistent, cross-referenced guideline set from a large Rust deployment, and essentially
@@ -48,7 +50,7 @@ Searched the existing rule set for coverage of each source chapter:
 | Allocation-level perf | `PERF-2`, `PERF-11`, `PERF-15` — nothing on `shrink_to_fit`, boxed DSTs, indirection depth, or telemetry cost |
 | Build-level perf | none — no `target-cpu`, no global allocator |
 
-## Approved — new rules (38)
+## Approved — new rules (33)
 
 | Source guideline(s) | New rule | File |
 |---|---|---|
@@ -112,7 +114,7 @@ Searched the existing rule set for coverage of each source chapter:
 
 Also updated: `references/rules.md` (added the `MACRO` prefix to the category table),
 `references/anti-patterns.md` (three new sections — Macros & Public Surface, Ports from Other
-Languages, Testing — 11 entries), and `SKILL.md` (31 new scan-signal rows; `MACRO` added to the
+Languages, Testing — 11 entries), and `SKILL.md` (30 new scan-signal rows; `MACRO` added to the
 core-rules reference line).
 
 ## Rejected

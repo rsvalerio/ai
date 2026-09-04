@@ -160,7 +160,7 @@ Survey for these signals, then check against the corresponding rules:
 | Business logic or `#[repr(C)]` types in the core crate of an FFI pair | ARCH-14 |
 | Crate nested inside another crate's directory, or deps declared per-crate instead of in `[workspace.dependencies]` | ARCH-15, ARCH-11 |
 | Hot `async fn` holding large values across `.await`, with no future-size test | ASYNC-15 |
-| CPU loop with `yield_now().await` on every iteration, or none at all | ASYNC-8 |
+| CPU-bound loop inside an `async fn` that can run past the yield threshold with no `.await` on the path, or one calling `yield_now().await` every iteration | ASYNC-8 |
 | JetStream without resource limits | NATS-9--14 |
 
 ## Concurrency
