@@ -33,6 +33,26 @@ Common Rust anti-patterns that span multiple rule categories. Use these as scan 
 - **Naive or local timestamps crossing a boundary**: `Local::now()` or a `NaiveDateTime` persisted, logged, or serialized — the value means something different on every host. Fix: UTC everywhere, `Local` only at display, RFC 3339 on the wire (TIME-2, TIME-5)
 - **Wall clock as a stopwatch**: `Utc::now() - start` or `SystemTime::now().duration_since(start)` to measure elapsed time — NTP adjustments can make it negative or fail the `duration_since`. Fix: `Instant::elapsed()` (TIME-4)
 
+## Macros & Public Surface
+
+- **Macro that rewrites the signature**: an attribute macro that adds a parameter, changes the item's kind, or makes a `fn` `async` — the source no longer describes the program. Fix: emit only what the written signature implies; use a function or trait if the transformation is the point (MACRO-2, TRAIT-8)
+- **Item reachable by two public paths**: a compatibility `pub use` left behind by a refactor, so `crate::Connection` and `crate::db::Connection` are the same type with two names in docs, search, and errors. Fix: one public path per item; re-export from a `pub(crate)` module instead (API-13)
+- **Glob re-export or crate `prelude`**: `pub use foo::*` exports whatever is added later and is invisible in a diff; two preludes in one file collide (`E0659`). Fix: enumerate re-exports; fix the module layout instead of papering over it (API-13, ARCH-3)
+- **Newtype that guards nothing**: `pub struct Month(pub u8)` with an infallible constructor — every caller still re-validates, and the public field bypasses the check anyway. Fix: private field, fallible constructor, no infallible `From` (API-2)
+
+## Ports from Other Languages
+
+- **Interface-per-service `dyn Trait`**: a trait implemented exactly once, passed as `Arc<dyn Service>` because the original had an `IService`. Fix: concrete type; escalate to generics, then `dyn`, only when a second implementation actually exists (API-18, ARCH-13)
+- **`Arc` at every level**: reflexively shared nested types, so a hot read chases two or three pointers to reach one field. Fix: embed the data; lift the hot field (PERF-17)
+- **Weasel-word types**: `BookingService`, `ConnectionManager`, `WidgetFactory` — a role every type has. Fix: `Bookings`, `BookingDispatcher`, `WidgetBuilder` (API-1)
+- **Computation parked in an `impl` block**: `Database::check_parameters(p)` with no receiver, because the source language had no free functions. Fix: a module-level `fn` (API-17)
+- **Static as a global singleton in a library**: a registry or counter in a `static`, silently duplicated when two majors of the crate are linked, or per dynamic library. Fix: caller-owned state passed in (CONC-10, SEC-40)
+
+## Testing
+
+- **Tautological test**: `assert_eq!(CONSTANTS, [the same literals])`, or an expected value recomputed with the implementation's own logic — passes by construction and can never fail usefully. Fix: assert a property the value must satisfy (TEST-32)
+- **Un-gated test hooks**: `bypass_certificate_checks()` or a secret accessor compiled into release because it sat behind no `#[cfg(feature = "test-util")]`. Fix: gate every testing affordance behind one clearly named feature (TEST-33)
+
 ## Type Safety
 
 - **Primitive obsession**: Using bare `u32`, `String`, `f64` where a newtype would prevent misuse (mixing user_id with order_id, Celsius with Fahrenheit). Fix: newtype pattern (API-1, API-2)
