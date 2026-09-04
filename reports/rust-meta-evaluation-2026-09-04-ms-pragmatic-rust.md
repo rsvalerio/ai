@@ -66,7 +66,7 @@ Searched the existing rule set for coverage of each source chapter:
 | M-MIMALLOC-APPS, M-TARGET-CPU | `PERF-21` build-level knobs for applications | rules-core |
 | M-UNSAFE | `UNSAFE-10` unsafe needs a reason, Miri, adversarial tests | rules-core |
 | M-UNSOUND | `UNSAFE-11` unsafe vs unsound; module-scoped soundness | rules-core |
-| M-LATEST-EDITION | `EDITION-6` new crates target the latest edition | rules-core |
+| M-LATEST-EDITION | `ARCH-17` new crates target the latest edition | rules-structure |
 | M-DOCUMENTED-MAGIC | `READ-11` magic values are named and justified | rules-structure |
 | M-LOG-STRUCTURED | `READ-12` structured logging with message templates | rules-structure |
 | M-NO-META-DESIGN-DOCUMENTATION | `READ-13` docs describe the end state, not the journey | rules-structure |

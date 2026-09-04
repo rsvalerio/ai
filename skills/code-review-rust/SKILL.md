@@ -156,7 +156,7 @@ Survey for these signals, then check against the corresponding rules:
 | Test asserting a constant equals its own literal, or recomputing the expected value with the implementation's logic | TEST-32 |
 | Mock constructor, secret accessor, or safety-check bypass not behind `#[cfg(feature = "test-util")]` | TEST-33 |
 | Library performing ad-hoc I/O, clock, or entropy calls with no injection point | TEST-33, API-19, TIME-6 |
-| New crate on an edition older than 2024, or a library with no `rust-version` | EDITION-6, API-15 |
+| New crate on an edition older than 2024, or a library with no `rust-version` | ARCH-17, API-15 |
 | Business logic or `#[repr(C)]` types in the core crate of an FFI pair | ARCH-14 |
 | Crate nested inside another crate's directory, or deps declared per-crate instead of in `[workspace.dependencies]` | ARCH-15, ARCH-11 |
 | Hot `async fn` holding large values across `.await`, with no future-size test | ASYNC-15 |
