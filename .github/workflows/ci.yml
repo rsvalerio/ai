@@ -64,7 +64,7 @@ jobs:
       # The pin below is the one place a version is hardcoded outside
       # .tool-versions — bump it alongside Claude Code releases. Locally, any
       # recent claude-code on PATH works (CONTRIBUTING.md has the asdf route).
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
 
