@@ -173,7 +173,7 @@ Survey for these signals, then check against the corresponding rules:
 | `.clone()` or a restructured signature introduced to get past a whole-struct borrow | OWN-13, OWN-8 |
 | The same `Fn`/`FnMut` bound repeated on a struct and each of its `impl` blocks | TRAIT-14, TRAIT-3 |
 | `let _ = <guard-returning call>;`, or `Drop` relied on for durable cleanup | PATTERN-9 |
-| `select!` arm calling `read_exact`/`write_all`/a multi-step local `async fn`, or one of those constructed inside the arm of a loop rather than pinned outside it | ASYNC-16, ASYNC-12 |
+| `select!` arm calling `read_exact`/`read_to_end`/`read_to_string`/`write_all`/a multi-step local `async fn`, or one of those constructed inside the arm of a loop rather than pinned outside it | ASYNC-16, ASYNC-12 |
 | Threads spawned with `'static` clones for a fan-out that joins before the function returns | CONC-15, PERF-10 |
 | Crate with no `unsafe` and no `unsafe_code = "forbid"` in its lints table | UNSAFE-12, ARCH-11 |
 | User-controlled value reaching `Command::arg` with no leading-dash rejection or `--` separator | SEC-13 |
