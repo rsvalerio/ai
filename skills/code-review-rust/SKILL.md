@@ -125,6 +125,14 @@ Survey for these signals, then check against the corresponding rules:
 | `std::thread::sleep` in async | CONC-5 |
 | Missing `tokio::time::timeout` on I/O | ASYNC-6 |
 | Hardcoded secrets, weak crypto | SEC-5--10 |
+| Secret-bearing type with a derived `Serialize`, or a hand-written `Debug` that reads `self.field` instead of destructuring | SEC-5, SEC-21 |
+| `Path::join` / `PathBuf::push` with an externally-supplied segment | SEC-14 |
+| `metadata()` / `exists()` / `is_dir()` on a path followed by an independent open, write, or delete of the same path | SEC-25 |
+| `v[i]`, `&s[a..b]`, or `split_at(n)` where the index comes from parsed, deserialized, or network input | ERR-16, SEC-33 |
+| `as` cast narrowing an integer, or arithmetic on untrusted operands with no `checked_*` / `saturating_*` | SEC-15 |
+| Validated newtype deriving `Deserialize` with no `#[serde(try_from = "…")]` | API-2, SEC-11 |
+| `#[derive(Default)]` on a type whose zero value is not a valid state (ports, capacities, timeouts) | TRAIT-4, API-2 |
+| `bool` field beside an `Option` field it gates (`ssl` / `ssl_cert`) | PATTERN-1 |
 | String concatenation in SQL/commands | SEC-12, SEC-13 |
 | Functions >50 lines, nesting >4, params >5 | FN-1--3 |
 | Identical code blocks 5+ lines | DUP-1--4 |
@@ -161,6 +169,30 @@ Survey for these signals, then check against the corresponding rules:
 | Crate nested inside another crate's directory, or deps declared per-crate instead of in `[workspace.dependencies]` | ARCH-15, ARCH-11 |
 | Hot `async fn` holding large values across `.await`, with no future-size test | ASYNC-15 |
 | CPU-bound loop inside an `async fn` that can run past the yield threshold with no `.await` on the path, or one calling `yield_now().await` every iteration | ASYNC-8 |
+| `&String`, `&Vec<T>`, `&PathBuf`, or `&Box<T>` in a function parameter | OWN-7 |
+| `.clone()` or a restructured signature introduced to get past a whole-struct borrow | OWN-13, OWN-8 |
+| The same `Fn`/`FnMut` bound repeated on a struct and each of its `impl` blocks | TRAIT-14, TRAIT-3 |
+| `let _ = <guard-returning call>;`, or `Drop` relied on for durable cleanup | PATTERN-9 |
+| `select!` arm calling `read_exact`/`read_to_end`/`read_to_string`/`write_all`/a multi-step local `async fn`, or one of those constructed inside the arm of a loop rather than pinned outside it | ASYNC-16, ASYNC-12 |
+| Threads spawned with `'static` clones for a fan-out that joins before the function returns | CONC-15, PERF-10 |
+| Crate with no `unsafe` and no `unsafe_code = "forbid"` in its lints table | UNSAFE-12, ARCH-11 |
+| User-controlled value reaching `Command::arg` with no leading-dash rejection or `--` separator | SEC-13 |
+| `with_capacity`/`read_to_end` sized from a parsed length, or a size limit applied only before decompression | SEC-33 |
+| `canonicalize` used to validate a path that does not exist yet | SEC-14 |
+| `Regex::new` on a user-supplied pattern (no `RegexBuilder` size limits), or inside a loop | SEC-16, CONC-10 |
+| New `build.rs` or proc-macro crate in a lockfile diff, or CI building without `--locked` | SEC-27, SEC-28 |
+| Concurrency primitive implemented by hand (custom lock, lock-free queue, explicit `Ordering`) with no `loom` test | TEST-35, CONC-9 |
+| `Box<dyn Trait>` built only to unify two branches of an `if`/`match` in a `let` | PATTERN-10 |
+| Field or getter returning `Option<T>` that some call sites know is always `Some` | PATTERN-1, API-2 |
+| Fallible function consuming an argument whose error carries no way to get it back | API-21 |
+| Generic parameter or `Send`/`Sync`/`Clone`/`'static` bound the body never needs, or a signature that grew `&str` → `impl AsRef<str>` → multi-bound generic | API-18, ARCH-6 |
+| Trait, enum, or type parameter added for a second implementation that does not exist yet | ARCH-6, TRAIT-9, API-18 |
+| Crate whose standard use requires a builder or option selection first, with no one-call convenience entry point | API-22, API-4 |
+| Lifetime parameter, `Cow`, arena, or `unsafe` introduced to remove an allocation on a startup, config, or error path | PERF-3, PERF-6 |
+| `#![deny(warnings)]` in a crate root | ARCH-18, ARCH-11 |
+| `.as_ptr()` on a `CString` temporary whose pointer the callee retains or writes through, or hand-rolled `strlen`/`copy_nonoverlapping` string conversion | SEC-41 |
+| Exported `*mut` handle borrowed from another handle, or `transmute` to `'static` at an FFI boundary | SEC-42, SEC-24 |
+| `///` example that defines a helper `fn` and asserts inside it | TEST-34, TEST-1 |
 | JetStream without resource limits | NATS-9--14 |
 
 ## Concurrency
