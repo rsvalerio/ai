@@ -173,7 +173,7 @@ Survey for these signals, then check against the corresponding rules:
 | `.clone()` or a restructured signature introduced to get past a whole-struct borrow | OWN-13, OWN-8 |
 | The same `Fn`/`FnMut` bound repeated on a struct and each of its `impl` blocks | TRAIT-14, TRAIT-3 |
 | `let _ = <guard-returning call>;`, or `Drop` relied on for durable cleanup | PATTERN-9 |
-| `select!` arm calling `read_exact`/`write_all`/a multi-step local `async fn`, or constructing its future inside the arm | ASYNC-16, ASYNC-12 |
+| `select!` arm calling `read_exact`/`write_all`/a multi-step local `async fn`, or one of those constructed inside the arm of a loop rather than pinned outside it | ASYNC-16, ASYNC-12 |
 | Threads spawned with `'static` clones for a fan-out that joins before the function returns | CONC-15, PERF-10 |
 | Crate with no `unsafe` and no `unsafe_code = "forbid"` in its lints table | UNSAFE-12, ARCH-11 |
 | User-controlled value reaching `Command::arg` with no leading-dash rejection or `--` separator | SEC-13 |
@@ -190,7 +190,7 @@ Survey for these signals, then check against the corresponding rules:
 | Crate whose standard use requires a builder or option selection first, with no one-call convenience entry point | API-22, API-4 |
 | Lifetime parameter, `Cow`, arena, or `unsafe` introduced to remove an allocation on a startup, config, or error path | PERF-3, PERF-6 |
 | `#![deny(warnings)]` in a crate root | ARCH-18, ARCH-11 |
-| `.as_ptr()` on a `CString` temporary, or hand-rolled `strlen`/`copy_nonoverlapping` string conversion | SEC-41 |
+| `.as_ptr()` on a `CString` temporary whose pointer the callee retains or writes through, or hand-rolled `strlen`/`copy_nonoverlapping` string conversion | SEC-41 |
 | Exported `*mut` handle borrowed from another handle, or `transmute` to `'static` at an FFI boundary | SEC-42, SEC-24 |
 | `///` example that defines a helper `fn` and asserts inside it | TEST-34, TEST-1 |
 | JetStream without resource limits | NATS-9--14 |

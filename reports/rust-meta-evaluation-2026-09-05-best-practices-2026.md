@@ -23,6 +23,7 @@ What it *did* contribute was concentrated in three places the existing rules had
 ## Detailed Results — Approved
 
 ### A1. Cancellation safety is a per-method property of every `select!` arm
+
 - **Extracted**: A future is cancellation-safe if dropping it partway loses no data. `select!` drops every losing branch. `mpsc::Receiver::recv` is safe; `read_exact` is not, because bytes already read are gone.
 - **Status**: **Approved** — fills gap
 - **Reasoning** (Worth Adding): ASYNC-6 covered "a timeout cancels, it does not roll back" and CONC-14 noted that losing a `select!` race drops a future, but nothing stated cancellation safety as a *property to look up per method*, nor listed which tokio methods have it. The failure mode (a stream left mid-message, every later read misaligned) is silent and hard to attribute.
@@ -31,12 +32,14 @@ What it *did* contribute was concentrated in three places the existing rules had
 - **Modifications**: expanded well beyond the source — added the safe/unsafe method inventory (verified against tokio docs), both fixes (`pin!` outside the loop; move to a task), the "future constructed inside the arm restarts it" trap, and a scan signal. Cross-referenced ASYNC-12, ASYNC-6, CONC-8, CONC-14.
 
 ### A2. `#![forbid(unsafe_code)]` in crates that do not need `unsafe`
+
 - **Status**: **Approved** — fills gap
 - **Reasoning**: The UNSAFE section had eleven rules on *writing* unsafe correctly and none on *excluding* it. ARCH-11 lists a `[workspace.lints]` baseline that omits `unsafe_code`.
 - **Target**: `rules-core.md` → Unsafe → **new UNSAFE-12**
-- **Modifications**: added the `forbid`-vs-`deny` distinction the source only implied; distinguished it from the ARCH-18 `#![deny(warnings)]` anti-pattern (a reader could otherwise read the two as contradictory); added the two real costs the source omits — `forbid` also rejects macro-generated `unsafe` from dependencies, and the `unsafe(...)` attribute wrapper edition 2024 requires on `#[no_mangle]` (UNSAFE-7).
+- **Modifications**: added the `forbid`-vs-`deny` distinction the source only implied; distinguished it from the ARCH-18 `#![deny(warnings)]` anti-pattern (a reader could otherwise read the two as contradictory); added the two real costs the source omits — `forbid` applies to the crate being compiled (not to separately compiled dependency code) and so rejects `unsafe` tokens a dependency's macro expands *into* this crate, unless that macro is marked `allow_internal_unsafe`; and the `unsafe(...)` attribute wrapper edition 2024 requires on `#[no_mangle]` (UNSAFE-7).
 
 ### A3. `std::thread::scope` for borrowing stack data in threads
+
 - **Status**: **Approved** — fills gap
 - **Reasoning**: CONC-1 covered `Arc<Mutex<T>>` selection and PERF-10 covered rayon; nothing covered the middle case where `'static` is being satisfied by ceremony rather than by need.
 - **Rust version**: stable since 1.63 ✓
@@ -44,34 +47,40 @@ What it *did* contribute was concentrated in three places the existing rules had
 - **Modifications**: added the disjoint-`chunks_mut`-needs-no-lock point, the panic-propagation-at-join caveat, and the "blocks the caller, so not from async" caveat — none of which the source mentions.
 
 ### A4. Argument injection: a leading `-` survives `Command::arg`
+
 - **Status**: **Approved** — complements SEC-13
 - **Reasoning**: SEC-13 was a single line ("no shell interpolation"). The source's observation that `.arg()` stops *command* injection but not *argument* injection is a real and commonly missed second half.
 - **Target**: `rules-security.md` → SEC-13 (enhanced)
 - **Modifications**: added concrete flags (`--upload-file`, `-e`, `--exec`, `-o`), the `--` separator and `./` prefix fixes, plus two surfaces the source omits: environment inheritance without `.env_clear()` (`LD_PRELOAD`, `PATH`, `IFS`, `BASH_ENV`) and `PATH` resolution of a bare program name.
 
 ### A5. `canonicalize` requires the path to exist — check the parent for paths about to be created
+
 - **Status**: **Approved** — complements SEC-14
 - **Reasoning**: SEC-14 already had strong `Path::join` coverage but assumed the target exists; the create-path case is where the check gets silently dropped or turned into a fail-open (SEC-31).
 - **Target**: `rules-security.md` → SEC-14 (appended)
 - **Modifications**: added the TOCTOU cross-reference to SEC-25, which the source does not make.
 
 ### A6. The `regex` crate is linear-time; classic ReDoS does not apply to it
+
 - **Status**: **Approved** — complements *and corrects the framing of* SEC-16
 - **Reasoning** (Makes Sense + Worth Adding): SEC-16 read "ReDoS: avoid unbounded regex on user input; set size limits" — terse enough that a reviewer could file a false finding against a perfectly safe `regex` matcher. The source correctly notes `regex` guarantees linear time. This is the one place the article improved an existing rule by *narrowing* it.
 - **Target**: `rules-security.md` → SEC-16 (rewritten)
 - **Modifications**: went well beyond the source — named the three risks that *do* apply (untrusted pattern compilation without `RegexBuilder::size_limit`/`dfa_size_limit`; recompiling in a loop, cross-referenced to CONC-10; and `fancy-regex`/PCRE/Oniguruma bindings, which *are* backtracking), and stated explicitly that recommending a rewrite for backtracking ReDoS against `regex` is a false finding.
 
 ### A7. Pre-allocation from an untrusted length
+
 - **Status**: **Approved** — complements SEC-33
 - **Reasoning**: SEC-33 said "bound resource consumption" generically. `Vec::with_capacity(hdr.count)` is the specific shape that looks bounded and is not, and it interacts with PERF-2, which recommends `with_capacity` for *trusted* sizes — worth disambiguating so the two rules do not appear to conflict.
 - **Target**: `rules-security.md` → SEC-33 (expanded)
 - **Modifications**: added the `read_to_end`/`Read::take(limit)` companion case.
 
 ### A8. Decompression ratio: a bounded body is unbounded after inflation
+
 - **Status**: **Approved** — complements SEC-33
 - **Target**: `rules-security.md` → SEC-33 (expanded)
 
 ### A9. Depth limits are not size limits (`serde_json`)
+
 - **Status**: **Approved** — complements SEC-33 and SEC-11
 - **Reasoning**: SEC-11 required "size limits and max nesting depth"; the source's point is sharper — `serde_json`'s default 128-depth cap satisfies the depth half automatically and bounds nothing else, so a flat 100 MB array passes.
 - **Rust version**: verified against serde_json's documented default recursion limit.
@@ -79,30 +88,35 @@ What it *did* contribute was concentrated in three places the existing rules had
 - **Modifications**: added the `#[serde(flatten)]`/untagged backtracking-cost note, not in the source.
 
 ### A10. `build.rs` and proc macros execute at compile time — supply-chain review scope
+
 - **Status**: **Approved** — fills a real gap in SEC-27
 - **Reasoning**: SEC-27 covered advisories and maintenance status but nothing about *when* dependency code runs. The consequence — that `cargo check` and a rust-analyzer save are enough to execute a dev-dependency's build script with CI credentials in scope — invalidates the two most common dismissals ("only a dev-dependency", "we never call it").
 - **Target**: `rules-security.md` → SEC-27 (appended)
 - **Modifications**: added `cargo tree`, typosquat verification (repository link, maintainer, download history — not the name alone), and `cargo vet` as the artifact that makes review reviewable.
 
 ### A11. `--locked` in CI; `cargo auditable` for deployed binaries; `deny.toml` scope
+
 - **Status**: **Approved** — complements SEC-28
 - **Reasoning**: SEC-28 required a committed lockfile, which is half the control — a lockfile every CI job silently re-resolves provides no more assurance than none.
 - **Target**: `rules-security.md` → SEC-28 (appended)
 - **Modifications**: enumerated the `deny.toml` axes (advisories, licenses, duplicates, wildcards, `unknown-registry`/`unknown-git` sources).
 
 ### A12. `[profile.release]`: `lto`, `codegen-units = 1`, `strip`
+
 - **Status**: **Approved** — complements PERF-21
 - **Reasoning**: PERF-5 mentioned LTO only as context for `#[inline]`, and PERF-21 covered allocator and `target-cpu` but not the profile itself.
 - **Target**: `rules-core.md` → PERF-21 (appended)
 - **Modifications**: linked back to PERF-5 (LTO is what makes cross-crate `#[inline]` unnecessary), kept the source's correct "leave `panic = \"unwind\"` alone" point with the CONC-13 reason attached, noted `debug = 1` as the alternative to `strip` where the binary is symbolicated in production, and cross-referenced SEC-15 for `overflow-checks`.
 
 ### A13. `cargo llvm-cov` and `cargo nextest`
+
 - **Status**: **Approved** — TEST-27 enhanced (llvm-cov), **new TEST-36** (nextest)
 - **Reasoning**: TEST-27 recommended `cargo tarpaulin`/`grcov`; `cargo llvm-cov` is the current default choice and TEST-27 was stale. `nextest` earned its own rule because process-per-test changes what the suite can *catch* (aborts attributed to the right test; shared-`static` cross-talk eliminated, TEST-18/CONC-10), not only how fast it runs.
 - **Target**: `rules-tests.md`
 - **Modifications**: added the two limits the source omits — nextest does not run doctests (TEST-34 still needs `cargo test --doc`), and per-process startup makes a suite of very many trivial tests slower.
 
 ### A14. `loom` for concurrent data structures
+
 - **Status**: **Approved** — fills gap
 - **Reasoning**: The rules had Miri (UNSAFE-10, ARCH-11) and property testing (TEST-9) but nothing on interleaving coverage; CONC-9 discusses explicit atomic orderings with no corresponding verification tool.
 - **Target**: `rules-tests.md` → **new TEST-35**
@@ -140,17 +154,20 @@ What it *did* contribute was concentrated in three places the existing rules had
 ## Rejected (factually incorrect)
 
 ### R25. "Since Rust 1.81, a panic escaping an `extern "C"` function aborts the process"
+
 - **Status**: **Rejected** — Still Valid fails
 - **Reasoning**: The abort-on-unwind behaviour for `extern "C"` (and the stabilization of `extern "C-unwind"`) landed in **Rust 1.71**, not 1.81. The existing SEC-39 already states 1.71 correctly. No change made; recorded here so a future ingestion of the same claim is not treated as new.
 
 ## Needs Clarification
 
 ### C1. `cargo geiger` for counting `unsafe` across the dependency tree
+
 - **Makes Sense**: yes in principle — an `unsafe`-density signal for deciding which dependencies deserve a closer read.
 - **Still Valid**: **uncertain**. The crate's maintenance activity has been intermittent and it has historically broken against newer cargo metadata formats. The rules already get most of this value from UNSAFE-12 (crates that forbid `unsafe` are self-declaring) and SEC-27.
 - **Question for the user**: is a dependency-tree `unsafe` census something your review process would act on? If so, confirm `cargo-geiger` still builds against current stable before it goes into a rule; otherwise this stays out.
 
 ### C2. Article's `strip_bom` `Cow` example
+
 - The source's example returns `Cow::Borrowed` in **both** match arms, so it demonstrates nothing about conditional ownership (its `escape_html` example, immediately following, is correct). Not integrated; OWN-4 already covers the pattern. Noted only as a signal about the source's example-checking rigor — the other code samples in the article were spot-checked and are sound.
 
 ## Updated Files

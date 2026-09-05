@@ -1,8 +1,8 @@
 # Rust Meta Evaluation — "Rust Design Patterns" (rust-unofficial)
 
 **Date**: 2026-09-05
-**Source**: `/Users/rsvaleri/projects/patterns/book/pandoc/txt/rust-design-patterns.txt`
-(4 551 lines; the rust-unofficial patterns book, upstream <https://rust-unofficial.github.io/patterns/>,
+**Source**: the rust-unofficial "Rust Design Patterns" book, rendered to plain text locally
+(4 551 lines; upstream <https://rust-unofficial.github.io/patterns/>,
 last news entry 2025-12-14)
 **Shape of source**: a community pattern book — 15 idioms, 14 design patterns (behavioural,
 creational, structural, FFI), 3 anti-patterns, and a functional-programming chapter, each with
