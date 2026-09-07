@@ -28,7 +28,7 @@ This repo is a collection of [Agent Skills](https://agentskills.io/specification
 Skill purposes are listed in the [README overview](README.md#overview). Relationships that matter when editing skills:
 
 - **code-review-rust** / **code-review-web** — formal review and implementation-guardrail engines. Rule categories are indexed in `references/rules.md` and detailed in `references/rules-*.md`.
-- **code-review-triage** — groups `Triage` backlog findings into `code-review-plan-waveN` parents and stamps file scope via `--modified-file` for merge ordering.
+- **code-review-triage** — groups `Triage` backlog findings into `code-review-plan-waveN` parents and stamps file scope via `--modified-file` for merge ordering. A wave is a task labelled `code-review-wave` whose members carry `parent_task_id`; the runners enumerate them with `ops backlog wave list` / `wave members`.
 - **code-review-run-wave** — claims one open wave, applies fixes in an isolated git worktree, runs QA, merges under a shared lock. Protocol: `skills/code-review-run-wave/references/worktree-protocol.md`.
 - **code-review-run-waves** — fans out across open waves; delegates per-wave work to `code-review-run-wave`.
 - **commit-script** — groups related files into conventional commit scripts. Two modes: `commit` (default, local commits only — what the wave runners use) and `pr` (topic branch + push + `gh pr create`).
@@ -37,7 +37,7 @@ Skill purposes are listed in the [README overview](README.md#overview). Relation
 
 ### Finding output
 
-`code-review-rust` and `code-review-web` write one markdown file per finding under `.backlog/tasks/` as `<PREFIX>-<N>-<slug>.md` (YAML frontmatter + body). Parallel skill runs are fine — one file per finding. Every finding must record one `--modified-file` per touched path (repo-root-relative, no line numbers) so triage can compute wave scope and merge order.
+`code-review-rust` and `code-review-web` file one task per finding through `ops backlog task create` — one markdown file under `.backlog/tasks/` as `task-<N> - <slug>.md` (YAML frontmatter + body); the task id prefixes the title. Task files are written only through the CLI: field types and marker layout are load-bearing for the triage and wave skills. Parallel skill runs are fine — one file per finding. Every finding must record one `--modified-file` per touched path (repo-root-relative, no line numbers) so triage can compute wave scope and merge order.
 
 ## Skill Conventions
 

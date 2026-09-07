@@ -14,14 +14,14 @@ scope so waves can later be run in parallel and merged in a sensible order.
 ## Step 1 — Gather triage tasks
 
 ```bash
-backlog task list --status='Triage' --plain
+ops backlog task list --status='Triage' --plain
 ```
 
 For each task ID returned, read the full task body so grouping is based on content, not
 just titles:
 
 ```bash
-backlog task view <taskid> --plain
+ops backlog task view <taskid> --plain
 ```
 
 If a task references code paths, optionally Read/Grep those files to confirm scope overlap
@@ -32,7 +32,7 @@ between tasks.
 Check existing wave tasks so N is monotonically increasing:
 
 ```bash
-backlog task list --plain | grep -i 'code-review-plan-wave'
+ops backlog wave list --plain
 ```
 
 Pick `N = (highest existing wave number) + 1`. If none exist, start at `0`.
@@ -62,7 +62,7 @@ For each group, build the union of the files its members touch:
 
 1. Prefer the machine-readable field. Each finding filed by `code-review-rust` /
    `code-review-web` carries one `--modified-file` entry per file; read them from
-   `backlog task view <taskid> --json`.
+   `ops backlog task view <taskid> --json`.
 2. Fall back to parsing the `**File**: \`<path>:<line>\`` line in the task description for
    older tasks filed before that field existed. Strip the `:<line>` suffix.
 
@@ -73,7 +73,7 @@ Then compute the pairwise overlap between each new group and **every other open 
 in flight:
 
 ```bash
-backlog task list -a code-review-wave --plain
+ops backlog wave list --plain
 ```
 
 This produces, per group, the set of other waves it shares at least one file with.
@@ -84,11 +84,10 @@ For each group, create one parent with `--depends-on` pointing at every member a
 `--modified-file` per file in the group's scope:
 
 ```bash
-backlog task create 'code-review-plan-waveN' \
+ops backlog task create 'code-review-plan-waveN' \
   -d 'code-review-plan-waveN' \
   -s 'To Do' \
   -l code-review-wave \
-  -a code-review-wave \
   --depends-on TASK001,TASK002,TASK003 \
   --modified-file crates/foo/src/lib.rs \
   --modified-file crates/foo/src/error.rs
@@ -96,14 +95,16 @@ backlog task create 'code-review-plan-waveN' \
 
 Use the literal wave number for `N` (e.g. `wave0`, `wave1`). Every wave parent must carry:
 
-- label `code-review-wave` (via `-l code-review-wave` on create, or `--add-label code-review-wave` via `backlog task edit` for backfills)
-- assignee `code-review-wave` — **hardcoded, no `N` suffix** — so waves can be filtered via `backlog task list -a code-review-wave`
+- label `code-review-wave` (via `-l code-review-wave` on create, or `--add-label code-review-wave` via `ops backlog task edit` for backfills) — this label is what makes the task a wave, and what `ops backlog wave list` finds
 - the group's full file scope as repeated `--modified-file` flags
+
+Do **not** put anything in `assignee`. It used to carry the `code-review-wave`
+marker; that moved to the label, and the field is now free for a real person.
 
 Record the overlap set in the task notes so a runner can see it without recomputing:
 
 ```bash
-backlog task edit --append-notes 'Overlaps: TASK-0119 (crates/foo/src/lib.rs)' <waveTaskId>
+ops backlog task edit --append-notes 'Overlaps: TASK-0119 (crates/foo/src/lib.rs)' <waveTaskId>
 ```
 
 If a group overlaps nothing, record `Overlaps: none`.
@@ -116,12 +117,13 @@ Keep the description short — the grouping rationale goes in the task body via 
 For every task that ended up **inside a group**:
 
 ```bash
-backlog task edit -s 'To Do' <taskid>
-backlog task edit -a <wave-task-id-here> <taskid>
+ops backlog task edit -s 'To Do' --parent <waveTaskId> <taskid>
 ```
 
-The assignee is the wave's task ID, which is how membership is discoverable from the child
-side (the wave parent's `Dependencies:` line is the other direction).
+`--parent` sets `parent_task_id`: membership as seen from the child side. The wave
+parent's `--depends-on` list is the same relationship from the other side, and
+`ops backlog wave members <waveTaskId>` reads both, so a wave stays enumerable even if
+one direction is missing.
 
 Tasks that were **not** grouped stay in `Triage`, untouched. Do not move them to `To Do`:
 a task in `To Do` with no wave parent belongs to no wave, will never be picked up by
@@ -146,8 +148,8 @@ to resolve a conflict.
 
 ## Concurrency
 
-Triage is a **single-writer** step. It mutates status and assignee across many tasks at
-once, so it must not run alongside anything else that writes task state:
+Triage is a **single-writer** step. It mutates status and the wave link across many tasks
+at once, so it must not run alongside anything else that writes task state:
 
 - Do not run two triage passes concurrently.
 - Do not run triage while any wave is in progress — `code-review-run-wave` flips member

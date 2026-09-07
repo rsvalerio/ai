@@ -9,7 +9,7 @@ obvious alternative silently corrupts the finding set rather than failing.
   (`dead_code`, `unused_variables`, …), which are not Clippy findings and have no entry in
   the lint catalog. Count them and mention the total in the report, but do not file them as
   `PED-` tasks. Stripping the prefix once here keeps `<lint_name>` consistent across the
-  task title, the labels, and the `backlog search "clippy::<lint_name>"` duplicate check.
+  task title, the labels, and the `ops backlog search "clippy::<lint_name>"` duplicate check.
 - **`package_id` and `target.name`** — the crate and target (lib, bin, test) the diagnostic
   belongs to. These live on the `compiler-message` record, not inside `.message`, which is
   why the filter binds `$m` before descending. Without them the `(lint, crate)` aggregation
