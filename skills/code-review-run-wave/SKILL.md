@@ -177,12 +177,22 @@ For each member task ID, in the order `wave members` returned them:
    Keep the change minimal — no drive-by refactors.
 
 3. Flip the task to `Done` only when the implementation satisfies the whole task,
-   including all acceptance criteria and definition-of-done items. Tick the ones the
-   work actually satisfies, by 1-based index, in the same call:
+   including all acceptance criteria and definition-of-done items — and tick every
+   one of them in the same call, so the closed task records what was satisfied:
 
    ```bash
-   ops backlog task edit -s 'Done' --check-ac 1 --check-ac 2 --check-dod 1 <memberId>
+   ops backlog task edit -s 'Done' \
+     --check-ac <n> [--check-ac <n> ...] \
+     [--check-dod <n> ...] \
+     <memberId>
    ```
+
+   The indexes are 1-based positions in *this* task's own lists, as
+   `ops backlog task view <memberId> --plain` printed them — repeat the flag once per
+   item, and pass `--check-dod` only for a task that has a Definition of Done section.
+   Do not carry indexes over from another task: an index past the end of the list
+   fails the whole call (`no acceptance criterion #3`). A task with an item left
+   unchecked is not `Done` — see below.
 
 If a member task is infeasible, obsolete, deferred, only partially fixed, or has
 leftover acceptance criteria, do **not** mark it `Done`. Append notes explaining the
