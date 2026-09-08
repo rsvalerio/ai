@@ -1,7 +1,7 @@
 ---
 name: code-review-rust
 description: Reviews Rust code for idioms and ownership, error handling, concurrency and async soundness, performance and unsafe code, OWASP security, test quality, and NATS/JetStream patterns. Use while writing or editing Rust as an implementation guardrail, or run a formal review that files one backlog task per finding.
-allowed-tools: Read Grep Glob Bash(wc *) Bash(ls *) Bash(tree *) Bash(git rev-parse:*) Bash(git log:*) Bash(backlog task:*) Bash(backlog search:*)
+allowed-tools: Read Grep Glob Bash(wc *) Bash(ls *) Bash(tree *) Bash(git rev-parse:*) Bash(git log:*) Bash(ops backlog:*)
 license: Apache-2.0
 ---
 
@@ -17,7 +17,7 @@ Review Rust code against all rule categories: idioms, ownership, error handling,
 
 ## Purpose
 
-- Create one backlog task per finding via `backlog task create --plain` command
+- Create one backlog task per finding via `ops backlog task create --plain` command
 - Scan all `.rs` files, `Cargo.toml`, `Cargo.lock`, `tests/`, and configuration files
 - Check every rule category in [rules.md](references/rules.md)
 - Apply the priority order and severity scale defined in [rules.md](references/rules.md#design-philosophy)
@@ -26,19 +26,19 @@ Review Rust code against all rule categories: idioms, ownership, error handling,
 
 You are running unattended — nobody is watching to course-correct. Follow these rules strictly:
 
-1. **Findings are emitted ONLY via `backlog task create --plain`.** Do NOT print findings as prose, markdown, or a summary report in lieu of creating tasks. A text-only report is a failed run. If you identify a finding, the next action is a `backlog task create --plain` call — not text output.
-2. **Never ask for confirmation.** Do not ask "Would you like me to create these tasks?" or pause for approval. You are pre-authorized. Findings → `backlog task create --plain` immediately, no intermediate prompt. Questions to the user = failed run.
+1. **Findings are emitted ONLY via `ops backlog task create --plain`.** Do NOT print findings as prose, markdown, or a summary report in lieu of creating tasks. A text-only report is a failed run. If you identify a finding, the next action is a `ops backlog task create --plain` call — not text output.
+2. **Never ask for confirmation.** Do not ask "Would you like me to create these tasks?" or pause for approval. You are pre-authorized. Findings → `ops backlog task create --plain` immediately, no intermediate prompt. Questions to the user = failed run.
 3. **If you delegate to subagents, you MUST wait for every one to return before finishing.** Never end the turn with subagents still in flight. Collect each subagent's findings and create the backlog tasks yourself — subagents reports as, the parent writes.
-4. **The only terminal action is the summary table** (step 5 below), printed *after* all `backlog task create --plain` calls have succeeded. If you have not created tasks, you are not done.
+4. **The only terminal action is the summary table** (step 5 below), printed *after* all `ops backlog task create --plain` calls have succeeded. If you have not created tasks, you are not done.
 5. **On tool failure, retry or report the specific error.** Do not silently degrade to a text report.
 
 ## Process
 
 1. **Survey** — List all `.rs` files and `Cargo.toml`; identify large files (>300 lines), map module structure and dependencies, enumerate test files and `#[cfg(test)]` modules
 2. **Scan** — Check all rule categories from [rules.md](references/rules.md) against the codebase. For each violation, prepare a finding with rule ID, severity, file location, description, and acceptance criteria
-3. **Deduplicate** — Run `backlog search "<RULE-ID>" --plain` to check for existing tasks with the same finding ID. If one exists and is not marked Done, skip. If Done, create only if the issue has regressed. Group findings that target the same `(file, function)` at different granularity into a single finding with the broadest scope
-4. **Create tasks** — For each finding, run `backlog task create --plain` with the flags below. Use a `"$(cat <<'EOF' ... EOF)"` heredoc for multi-line values (do NOT use `$'...'` ANSI-C quoting — it triggers an `ansi_c_string` safety prompt on every call). User authorized this change on 2026-05-02.
-5. **Summarize** — run `backlog task list --status 'Triage' --plain`
+3. **Deduplicate** — Run `ops backlog search "<RULE-ID>" --plain` to check for existing tasks with the same finding ID. If one exists and is not marked Done, skip. If Done, create only if the issue has regressed. Group findings that target the same `(file, function)` at different granularity into a single finding with the broadest scope
+4. **Create tasks** — For each finding, run `ops backlog task create --plain` with the flags below. Use a `"$(cat <<'EOF' ... EOF)"` heredoc for multi-line values (do NOT use `$'...'` ANSI-C quoting — it triggers an `ansi_c_string` safety prompt on every call).
+5. **Summarize** — run `ops backlog task list --status 'Triage' --plain`
 
 ### Calibration rules (always apply before filing)
 
@@ -54,7 +54,7 @@ Counts from a raw grep are signal, not findings. Before turning a grep count int
 For each finding, run:
 
 ```bash
-backlog task create "<RULE-ID>: <Title>" \
+ops backlog task create "<RULE-ID>: <Title>" \
   -d "$(cat <<'EOF'
 **File**: `<path>:<line>`
 
@@ -78,7 +78,7 @@ Map severity to `--priority`: critical→critical, high→high, medium→medium,
 repo-root-relative and **without** the `:<line>` suffix (`crates/foo/src/lib.rs`, not
 `crates/foo/src/lib.rs:42`). This is the machine-readable twin of the `**File**:` line in
 the description: `code-review-triage` reads it to compute each wave's file scope and merge
-order, and `backlog search --modified-file <path>` finds every finding touching a path. A
+order, and `ops backlog search --modified-file <path>` finds every finding touching a path. A
 finding filed without it is invisible to both.
 
 ## Rule Categories and Severity Scale
@@ -197,7 +197,7 @@ Survey for these signals, then check against the corresponding rules:
 
 ## Concurrency
 
-This skill is read-only on the codebase and creates tasks only via the `backlog` CLI. Multiple instances can run in parallel — each finding gets its own task, so there are no write conflicts.
+This skill is read-only on the codebase and creates tasks only via the `ops backlog` CLI. Multiple instances can run in parallel — each finding gets its own task, so there are no write conflicts.
 
 Finish all reviews before running `code-review-triage`, so the resulting waves capture every finding. Reviews are also safe to run while waves are executing — they only add new `Triage` tasks and never touch wave state — but findings filed mid-wave land in the *next* triage pass, not the current one.
 

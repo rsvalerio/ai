@@ -1,7 +1,7 @@
 ---
 name: rust-meta
 description: Processes external Rust content (URLs, articles, pastes), evaluates it against existing Rust skills and project agents, and integrates approved knowledge into the right files. Use to learn from external sources and keep Rust guidance current.
-allowed-tools: Read Write Grep Glob Bash(find *) Bash(cat *) Bash(head *) Bash(tail *) Bash(wc *) Bash(ls *) Bash(tree *) Bash(backlog *)
+allowed-tools: Read Write Grep Glob Bash(find *) Bash(cat *) Bash(head *) Bash(tail *) Bash(wc *) Bash(ls *) Bash(tree *) Bash(ops backlog:*)
 license: Apache-2.0
 ---
 

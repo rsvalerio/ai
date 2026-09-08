@@ -38,7 +38,7 @@ These three are not optional — violating any one corrupts a concurrently runni
 
 1. **Code edits happen in the wave worktree.** Never edit source files in the main
    checkout while a wave is claimed.
-2. **Every `backlog` command runs from the main checkout.** Task files live inside the
+2. **Every `ops backlog` command runs from the main checkout.** Task files live inside the
    repo; editing them from a worktree puts them on the wave branch, where they collide
    with every other wave.
 3. **The merge lock is held only across rebase → integration verify → merge.** Never
@@ -67,7 +67,7 @@ while fixing" does not cover them.
 From the main checkout:
 
 ```bash
-backlog task list -a code-review-wave -s 'To Do' --plain
+ops backlog wave list -s 'To Do' --plain
 ```
 
 If the list is empty, stop and report "no open waves".
@@ -110,19 +110,25 @@ gh pr view <branch> --json state --jq .state 2>/dev/null || echo NONE
 
 Record the exact branch name chosen; Step 8 pushes and PRs it.
 
-Pick a wave from the list and view it:
+Pick a wave from the list, read it, and enumerate its members:
 
 ```bash
-backlog task view <waveTaskId> --plain
+ops backlog task view <waveTaskId> --plain
+ops backlog wave members <waveTaskId> --plain
 ```
 
-Extract the member task IDs from the `Dependencies:` line, e.g.:
+`wave members` prints the same row shape as `task list`, one member per line:
 
 ```text
-Dependencies: TASK-0120, TASK-0121, TASK-0122, TASK-0123, TASK-0127
+To Do:
+  [HIGH] TASK-0120 - ERR-5: unwrap in the request handler
+  [MEDIUM] TASK-0121 - ERR-8: error loses the path
 ```
 
-Split on commas, trim whitespace.
+Take the task IDs from those rows. Do **not** try to read members out of
+`task view` output — it renders no dependency block. A trailing
+`Missing dependencies: <ids>` line means the wave names tasks that are no longer in
+`tasks/`; note them in the final report and carry on with the rest.
 
 **Claim the wave by creating its worktree.** Branch creation is the claim — it fails if
 another runner already holds this wave:
@@ -139,13 +145,13 @@ Recovery in the [Worktree Protocol](references/worktree-protocol.md#recovery).
 Only after the claim succeeds, flip the wave parent to `In Progress` (main checkout):
 
 ```bash
-backlog task edit -s 'In Progress' <waveTaskId>
+ops backlog task edit -s 'In Progress' <waveTaskId>
 ```
 
 Also record the wave's branch on the task so a parked wave can be found later:
 
 ```bash
-backlog task edit --append-notes 'Branch: code-review/<waveTaskId>' <waveTaskId>
+ops backlog task edit --append-notes 'Branch: code-review/<waveTaskId>' <waveTaskId>
 ```
 
 ## Step 3 — Execute member tasks sequentially
@@ -154,13 +160,13 @@ backlog task edit --append-notes 'Branch: code-review/<waveTaskId>' <waveTaskId>
 serialising avoids conflicts within the wave and makes each build/test cycle attributable
 to one change. (Parallelism happens *between* waves, via worktrees — not within one.)
 
-For each member task ID, in the order they appear in `Dependencies:`:
+For each member task ID, in the order `wave members` returned them:
 
 1. Read the task and flip it to `In Progress` (main checkout):
 
    ```bash
-   backlog task view <memberId> --plain
-   backlog task edit -s 'In Progress' <memberId>
+   ops backlog task view <memberId> --plain
+   ops backlog task edit -s 'In Progress' <memberId>
    ```
 
 2. Before and while applying the fix, use **code-review-rust** as a guardrail: read
@@ -171,12 +177,22 @@ For each member task ID, in the order they appear in `Dependencies:`:
    Keep the change minimal — no drive-by refactors.
 
 3. Flip the task to `Done` only when the implementation satisfies the whole task,
-   including all acceptance criteria and definition-of-done items. Use `--check-ac`
-   / `--check-dod` where they map cleanly:
+   including all acceptance criteria and definition-of-done items — and tick every
+   one of them in the same call, so the closed task records what was satisfied:
 
    ```bash
-   backlog task edit -s 'Done' <memberId>
+   ops backlog task edit -s 'Done' \
+     --check-ac <n> [--check-ac <n> ...] \
+     [--check-dod <n> ...] \
+     <memberId>
    ```
+
+   The indexes are 1-based positions in *this* task's own lists, as
+   `ops backlog task view <memberId> --plain` printed them — repeat the flag once per
+   item, and pass `--check-dod` only for a task that has a Definition of Done section.
+   Do not carry indexes over from another task: an index past the end of the list
+   fails the whole call (`no acceptance criterion #3`). A task with an item left
+   unchecked is not `Done` — see below.
 
 If a member task is infeasible, obsolete, deferred, only partially fixed, or has
 leftover acceptance criteria, do **not** mark it `Done`. Append notes explaining the
@@ -263,7 +279,7 @@ your own bookkeeping. Then discharge each one:
 - **Anything else** → file a `Triage` task (from the main checkout):
 
   ```bash
-  backlog task create "<short title>" \
+  ops backlog task create "<short title>" \
     -d "$(cat <<'EOF'
   **File**: `<path>:<line>`
 
@@ -287,7 +303,7 @@ your own bookkeeping. Then discharge each one:
   finding filed without it degrades the next wave's merge planning.
 
   Use a `"$(cat <<'EOF' … EOF)"` heredoc for multi-line values — not `$'…'` ANSI-C
-  quoting. Run `backlog search "<keyword>" --plain` first and skip filing if an open
+  quoting. Run `ops backlog search "<keyword>" --plain` first and skip filing if an open
   task already covers it.
 
 Filing is cheap and reversible; a concern that exists only in the final report is not
@@ -348,7 +364,7 @@ Re-run the rebase; do not fall back to a merge commit.
 tear down (main checkout):
 
 ```bash
-backlog task edit -s 'Done' <waveTaskId>
+ops backlog task edit -s 'Done' <waveTaskId>
 git worktree remove ../.wave-<waveTaskId>
 git branch -d code-review/<waveTaskId>
 ```
@@ -364,7 +380,7 @@ git reset -q          # begin from an empty index; the lock makes this safe
 
 expected=()
 for id in <waveTaskId> <memberId>... <filedTriageId>...; do
-  path="$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
+  path="$(ops backlog task view "$id" --plain | sed -n '1s/^File: //p')"
   [ -n "$path" ] || { echo "no file resolved for $id" >&2; exit 1; }
   git add -- "$path"
   # Record only what actually became a *staged change*. A member task file the wave

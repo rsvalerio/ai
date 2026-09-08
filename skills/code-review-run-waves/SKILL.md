@@ -81,7 +81,7 @@ combined result has passed `ops verify`.
 ## Step 1 — Enumerate open waves
 
 ```bash
-backlog task list -a code-review-wave -s 'To Do' --plain
+ops backlog wave list -s 'To Do' --plain
 ```
 
 If the list is empty, stop and report "no open waves".
@@ -89,7 +89,7 @@ If the list is empty, stop and report "no open waves".
 For each wave, read its recorded file scope and overlap notes:
 
 ```bash
-backlog task view <waveTaskId> --json
+ops backlog task view <waveTaskId> --json
 ```
 
 `code-review-triage` stamps each wave with one `--modified-file` per file in its scope and

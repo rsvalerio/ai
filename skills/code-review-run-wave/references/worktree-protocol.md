@@ -61,16 +61,16 @@ means a failed claim never leaves a task marked in progress by a run that never 
 
 ## The Main-Checkout Rule
 
-**Code edits happen in the worktree. Every `backlog` command runs from the main
+**Code edits happen in the worktree. Every `ops backlog` command runs from the main
 checkout.**
 
-`backlog` stores tasks as files inside the repository. A worktree holds a *separate copy*
+`ops backlog` stores tasks as files inside the repository. A worktree holds a *separate copy*
 of those files, so task-status edits made from a worktree would ride the wave branch and
 collide with every other wave's task edits on merge.
 
 | Action | Where it runs |
 |---|---|
-| `backlog task view` / `edit` / `create` / `list` / `search` | main checkout |
+| `ops backlog task view` / `edit` / `create` / `list` / `search`, `ops backlog wave …` | main checkout |
 | Reading and editing source files | wave worktree |
 | `ops verify` (pre-merge) | wave worktree |
 | `commit-script` and the generated script | wave worktree |
@@ -83,7 +83,7 @@ longer end up mixed in one blob.
 ### Task files are shared mutable state
 
 The rule above is what keeps *code* isolated. It does the opposite for task files: it
-routes every concurrent wave's `backlog task edit` into the one main checkout, so at any
+routes every concurrent wave's `ops backlog task edit` into the one main checkout, so at any
 moment its `.backlog/tasks/` holds a mix of edits belonging to every wave in flight.
 
 Run literally, `git add .backlog` therefore stages all of them. Nothing is lost — the file
@@ -95,9 +95,9 @@ contents are exactly what each wave wrote — but three things go wrong:
   own bookkeeping commit
 
 **Stage bookkeeping by path, never by directory.** A wave knows exactly which task files
-are its own: its parent, its members, and any `Triage` task it filed. Ask `backlog` where
-each one lives rather than reconstructing the filename — the first line of `task view` is
-the path.
+are its own: its parent, its members, and any `Triage` task it filed. Ask `ops backlog`
+where each one lives rather than reconstructing the filename — the first line of
+`task view` is the path.
 
 Path-scoping alone is not enough. Choosing *which* files to name does not make the naming
 atomic: the main checkout has one index, shared by every wave, so `git add` → inspect →
@@ -116,7 +116,7 @@ git reset -q          # begin from an empty index; the lock makes this safe
 # Stage exactly this wave's files, recording the repo-relative path of each.
 expected=()
 for id in <waveTaskId> <memberId>... <filedTriageId>...; do
-  path="$(backlog task view "$id" --plain | sed -n '1s/^File: //p')"
+  path="$(ops backlog task view "$id" --plain | sed -n '1s/^File: //p')"
   [ -n "$path" ] || { echo "no file resolved for $id" >&2; exit 1; }
   git add -- "$path"
   # Record only what actually became a *staged change*. A member task file the wave
@@ -289,7 +289,7 @@ problem to brute-force.
 
 1. One wave, one branch, one worktree. Never two runners on one wave.
 2. Claim before mutating any task state.
-3. All `backlog` commands from the main checkout; all code edits in the worktree.
+3. All `ops backlog` commands from the main checkout; all code edits in the worktree.
 4. The merge lock is held across rebase → integration verify → merge, and nothing else.
 5. A wave closes `Done` only when every member is `Done` **and** the merge landed.
 6. Never `--force` a worktree removal or `-D` a wave branch to clear an obstacle.

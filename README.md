@@ -58,6 +58,7 @@ Restart your AI tool after installing so it picks up the new skills.
 ## Requirements
 
 - **AI agent**: Claude Code, OpenAI Codex, Cursor, or another Agent Skills-compatible platform
+- **Backlog CLI**: [`ops`](https://github.com/rsvalerio/ops) on PATH — the code-review skills file and read their findings with `ops backlog` (a `.backlog/tasks/` directory in the target repo is all the setup it needs)
 - **Developing this repo**: Git, plus `rumdl` and `skill-validator` at the versions pinned in [`.tool-versions`](.tool-versions) — `mise install` gets both, or `make install-tools` via Homebrew — and `claude-code` on PATH for `make validate-marketplace` (the asdf route is in [CONTRIBUTING.md](CONTRIBUTING.md)). Full workflow in [AGENTS.md](AGENTS.md)
 
 ## Usage

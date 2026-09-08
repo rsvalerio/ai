@@ -1,7 +1,7 @@
 ---
 name: rust-make-clippy-pedantic
 description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, then files one backlog task per warning, each labelled pedantic, and reports a high-level effort estimate for clearing them. Test-only style findings, generated files, and out-of-tree warnings are dropped, and a lint firing more than twenty times in one crate becomes a single aggregate task. Passing --apply additionally writes the lint policy into Cargo.toml and clippy.toml; without it the run only shows what those files would contain. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
-allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git stash list:*) Bash(cargo clippy:*) Bash(cargo metadata:*) Bash(cargo --version) Bash(jq:*) Bash(mktemp:*) Bash(backlog task:*) Bash(backlog search:*)
+allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git stash list:*) Bash(cargo clippy:*) Bash(cargo metadata:*) Bash(cargo --version) Bash(jq:*) Bash(mktemp:*) Bash(ops backlog:*)
 license: Apache-2.0
 ---
 
@@ -32,7 +32,7 @@ else about the run changes — the same preflight, the same flags, the same task
   `-W` flags after `--`, leaving the repository byte-identical
 - Diff the pedantic run against a default-level baseline so pre-existing warnings are
   labelled honestly
-- Create one backlog task per finding via `backlog task create --plain`, every task
+- Create one backlog task per finding via `ops backlog task create --plain`, every task
   labelled `pedantic`
 - Report what ran, what was filed, and a higher-view work estimate for clearing the backlog
 - Show the `Cargo.toml` and `clippy.toml` lint policy that locks the strictness in, and
@@ -44,16 +44,16 @@ You are running unattended — nobody is watching to course-correct.
 
 1. **Never mutate the repository, except under `--apply`.** No `cargo clippy --fix`, no
    `git stash`, no `git pull`, no lint attributes, no source edits — ever. Writes go to
-   `.backlog/` (through the `backlog` CLI) and to a scratch directory. The one exception is
+   `.backlog/` (through the `ops backlog` CLI) and to a scratch directory. The one exception is
    [Step 7](#step-7--apply-the-lint-policy---apply): with `--apply`, and only then, the run
    writes `Cargo.toml` and `clippy.toml`. Without the flag those files are printed, never
    written. Never commit, stage, or push what `--apply` writes.
 2. **Abort — do not adapt — on a dirty tree.** See [Step 1](#step-1--preflight-a-clean-tree).
    Print the blocking condition and stop. Cleaning it up for the user is not in scope.
-3. **Findings are emitted ONLY via `backlog task create --plain`.** A prose list of
+3. **Findings are emitted ONLY via `ops backlog task create --plain`.** A prose list of
    warnings in lieu of tasks is a failed run.
 4. **Never ask for confirmation.** You are pre-authorized: findings go straight to
-   `backlog task create --plain`.
+   `ops backlog task create --plain`.
 5. **The only terminal action is the report** ([Step 6](#step-6--report)), printed after
    every task creation has succeeded, followed by Step 7's configuration block or diff.
 6. **On tool failure, retry once, then report the specific error.** Do not silently
@@ -188,7 +188,7 @@ Discard before filing:
 Check the backlog before writing:
 
 ```bash
-backlog search "clippy::<lint_name>" --plain
+ops backlog search "clippy::<lint_name>" --plain
 ```
 
 The identity of a finding is the full row from Step 4 — lint, package, target, file, line,
@@ -210,7 +210,7 @@ Then create the task. Use a `"$(cat <<'EOF' ... EOF)"` heredoc for the descripti
 use `$'...'` ANSI-C quoting, which triggers a safety prompt on every call.
 
 ```bash
-backlog task create "PED-<lint_name>: <short description>" \
+ops backlog task create "PED-<lint_name>: <short description>" \
   -d "$(cat <<'EOF'
 **Lint**: `clippy::<lint_name>` (<group>, <origin>)
 
@@ -272,7 +272,7 @@ Print, in this order:
 Verify the filing landed:
 
 ```bash
-backlog task list --status 'Triage' --plain
+ops backlog task list --status 'Triage' --plain
 ```
 
 ### Step 7 — Apply the lint policy (`--apply`)
@@ -338,7 +338,7 @@ this and stops has succeeded.
 | `PED-<lint_name>` | One Clippy lint at one location, or one aggregated `(lint, crate)` pair |
 
 The lint name *is* the identifier — it is stable across runs and greppable, which is what
-makes `backlog search "clippy::<lint_name>"` a reliable duplicate check.
+makes `ops backlog search "clippy::<lint_name>"` a reliable duplicate check.
 
 ## Severity Scale
 
@@ -373,7 +373,7 @@ Signals worth calling out explicitly in the report, because they change the esti
 
 ## Concurrency
 
-The skill is read-only on the codebase and writes only through the `backlog` CLI, so
+The skill is read-only on the codebase and writes only through the `ops backlog` CLI, so
 parallel instances cannot corrupt each other. Two caveats:
 
 - Two runs over the same workspace will file the same findings twice — the duplicate check
