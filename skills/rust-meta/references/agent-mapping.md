@@ -11,11 +11,11 @@ Map extracted knowledge to the appropriate location within code-review-rust:
 | **Test quality** (TEST) | Testing strategies, patterns, coverage, flakiness, organization |
 | **NATS** (NATS) | NATS/JetStream patterns, async-nats configuration, consumers, backpressure, observability |
 
-Rule categories are indexed in `code-review-rust/references/rules.md`, with detailed content in `code-review-rust/references/rules-*.md` files. If the user's project uses different skill names or files, map to the closest section.
+Rule categories are indexed in `code-review-rust/references/rules.md`, with one-line summaries in `code-review-rust/references/rules-index.md` and detailed content in `code-review-rust/references/rules/<PREFIX>.md` files. If the user's project uses different skill names or files, map to the closest section.
 
 ## Rule numbering
 
-When adding new rules, use the next available number in the target prefix range. Check the corresponding detailed file (`rules-core.md`, `rules-structure.md`, `rules-duplication.md`, `rules-security.md`, `rules-tests.md`, or `rules-nats.md`) for the current highest number in each prefix.
+When adding new rules, use the next available number in the target prefix range. Check the category's rule file (`references/rules/<PREFIX>.md` — e.g. `rules/ERR.md`, `rules/SEC.md`) for the current highest number in that prefix; `references/rules-index.md` lists every ID on one line each and is the quickest way to find it.
 
 ## Conditional routing
 

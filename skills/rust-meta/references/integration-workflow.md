@@ -4,7 +4,7 @@ Steps for integrating approved items into code-review-rust. This file defines **
 
 ## Pre
 
-- Read the target file in code-review-rust (start with `references/rules.md`, then open the relevant `references/rules-*.md` file)
+- Read the target file in code-review-rust (start with `references/rules.md`, then open the relevant `references/rules/<PREFIX>.md` file)
 - Identify section or location for the new content
 - Match existing formatting and style
 - Understand current knowledge to avoid duplication or conflict
@@ -20,12 +20,17 @@ Steps for integrating approved items into code-review-rust. This file defines **
 
 When integrating, route content to the correct detailed rule file in code-review-rust:
 
-- **Anti-patterns** (what to avoid, common mistakes) → OWN, ERR, CONC, ASYNC, UNSAFE sections in `references/rules-core.md`, or `references/anti-patterns.md` if cross-cutting
-- **Best practices** (idiomatic patterns, recommended approaches) → relevant section in `references/rules-core.md` or `references/rules-structure.md`
-- **Security** (vulnerabilities, insecure patterns, crypto) → `references/rules-security.md`
-- **Code quality** (complexity, readability, architecture, API design) → `references/rules-structure.md`
-- **Testing** (test patterns, coverage, flakiness) → `references/rules-tests.md`
-- **NATS-specific** → `references/rules-nats.md`
+- **Anti-patterns** (what to avoid, common mistakes) → `references/rules/{OWN,ERR,CONC,ASYNC,UNSAFE}.md`, or `references/anti-patterns.md` if cross-cutting
+- **Best practices** (idiomatic patterns, recommended approaches) → the matching category file under `references/rules/` (`OWN`, `ERR`, `TRAIT`, `PERF`, `FN`, `READ`, `ARCH`, `API`, …)
+- **Security** (vulnerabilities, insecure patterns, crypto) → `references/rules/SEC.md`
+- **Code quality** (complexity, readability, architecture, API design) → `references/rules/{FN,READ,ARCH,API,CL}.md`
+- **Testing** (test patterns, coverage, flakiness) → `references/rules/TEST.md`
+- **NATS-specific** → `references/rules/NATS.md`
+
+Every rule added, removed, or renumbered in a `references/rules/<PREFIX>.md` file must also be
+reflected as a one-line entry in `references/rules-index.md`, and any new observable signal
+in `references/scan-checklist.md`. A rule that exists only in the category file is invisible
+to a scan.
 
 ### Merging Strategy
 

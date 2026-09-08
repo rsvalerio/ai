@@ -1,0 +1,37 @@
+# REACT rules
+
+Rules are grounded in the official React docs (react.dev), the React 19 / 19.2 release posts, the React Compiler v1.0 docs (stable Oct 2025), `eslint-plugin-react-hooks` v7, the TypeScript handbook, `typescript-eslint`, and MDN. Where a rule is fully enforced by configured tooling, file only for the unenforced nuance (see [rules.md](../rules.md)).
+
+## React — Hooks & Effects (typical severity: High)
+
+- **REACT-1.** Call hooks only at the top level of a component or custom hook — never in conditions, loops, nested functions, or after an early return. The order of hook calls must be stable across renders. *(Enforced by `react-hooks/rules-of-hooks`; file only when the lint is disabled or absent.)* — react.dev/reference/rules/rules-of-hooks
+- **REACT-2.** Hooks are callable only from React function components and other hooks, not plain functions. — react.dev/reference/rules/rules-of-hooks
+- **REACT-3.** Keep render pure: no side effects, mutation of props/state, subscriptions, or I/O during render. Side effects belong in event handlers or Effects. — react.dev/learn/keeping-components-pure
+- **REACT-4.** Do not silence `react-hooks/exhaustive-deps`. A missing dependency is a stale-closure bug. The correct fixes, in order: (1) move the value into the Effect, (2) wrap a stable callback, (3) extract non-reactive logic into `useEffectEvent` (React 19.2), (4) restructure so the value isn't needed. Disabling the lint with a comment is itself a finding unless the comment proves the dependency is intentionally frozen. — react.dev/learn/removing-effect-dependencies, react.dev/reference/react/useEffectEvent
+- **REACT-5.** Do not use an Effect to compute derived state. If a value can be calculated from existing props/state, compute it during render (optionally `useMemo`) — an Effect that calls `setState` from other state causes an extra render pass and desync. — react.dev/learn/you-might-not-need-an-effect
+- **REACT-6.** Do not put event-specific logic in an Effect. Logic that should run in response to a user action (POST on submit, showing a toast on click) belongs in the event handler, not an Effect keyed on a state change. — react.dev/learn/you-might-not-need-an-effect
+- **REACT-7.** Every Effect that subscribes, opens a connection, starts a timer, or fetches must return a cleanup function. Fetch-in-Effect must guard against races (ignore-stale-result flag or `AbortController`) so a slower earlier request can't overwrite a newer one. Prefer a data library or framework loader over hand-rolled fetch Effects. — react.dev/reference/react/useEffect#fetching-data-with-effects
+  **Scanning guidance:** an Effect with no subscription/timer/listener/fetch needs no cleanup — only flag Effects that acquire something. A fetch Effect that already sets a `cancelled`/`ignore` flag or passes `signal` is compliant; do not file.
+- **REACT-8.** Custom hooks must be named `use*`, be pure in the same sense as components, and exist to share *stateful logic*, not state itself (each call gets independent state). Extract a custom hook when the same effect/state choreography repeats. — react.dev/learn/reusing-logic-with-custom-hooks
+- **REACT-9.** `useRef` is for values that persist across renders without triggering re-render (DOM nodes, timer IDs, mutable instances). Do not read/write `ref.current` during render, and do not use a ref where state is needed (changes won't re-render). — react.dev/reference/react/useRef
+
+## React — Memoization & Compiler (typical severity: Low--Medium)
+
+- **REACT-10.** With **React Compiler v1.0** (stable, Oct 2025) enabled, drop reflexive `useMemo`/`useCallback`/`React.memo` in new code — the compiler memoizes automatically for components that obey the Rules of React. Keep manual memoization only where it still matters: a value used as a **dependency of another hook/Effect**, or one crossing a **strict-equality boundary** (a third-party `memo`'d child, a context value — see PERF-2). When migrating existing code, leave memoization in place until verified. — react.dev/learn/react-compiler, react.dev/reference/react-compiler
+  **Scanning guidance:** only flag *new* reflexive memoization when the Compiler is enabled in the project's build/ESLint config. If the Compiler is not enabled, manual memoization is still the correct tool — do not file REACT-10; evaluate under PERF-1/PERF-2 instead.
+- **REACT-11.** The Compiler only optimizes code that follows the Rules of React (pure render, no prop/state mutation). Code that breaks those rules is silently skipped by the Compiler and is a latent bug — fix the impurity (REACT-3) rather than relying on memoization to paper over it. — react.dev/reference/react-compiler
+
+## React — Components, Keys & State (typical severity: Medium--High)
+
+- **REACT-12.** Give list items a stable, unique `key` derived from data identity (an ID), never the array index for lists that can reorder, insert, or delete — index keys cause state to attach to the wrong row and subtle render bugs. A `key` is acceptable as the array index only for static, append-only lists. — react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key
+- **REACT-13.** In React 19, pass `ref` as a normal prop to function components; `forwardRef` is deprecated. New components should not introduce `forwardRef`. — react.dev/blog (React 19), react.dev/reference/react/forwardRef
+- **REACT-14.** In React 19, render the context object directly as a provider: `<MyContext value={...}>` instead of `<MyContext.Provider value={...}>`. — react.dev/blog (React 19)
+- **REACT-15.** Controlled inputs must pair `value`/`checked` with an `onChange` handler; an input with `value` and no handler is read-only and a bug. Don't switch an input between controlled and uncontrolled across renders (no `value={x ?? undefined}` flip-flop). — react.dev/reference/react-dom/components/input
+- **REACT-16.** Colocate state with the component that uses it; lift state only to the closest common ancestor that actually needs it. Avoid hoisting everything to a top-level "god" component or global store when local state suffices. — react.dev/learn/sharing-state-between-components
+- **REACT-17.** Prefer deriving rendered output from a single source of truth over mirroring props into state (`useState(props.x)`); copied props go stale. If you must seed state from a prop, treat it as initial-only and document it. — react.dev/learn/choosing-the-state-structure
+
+## React — React 19 Forms, Actions & `use()` (typical severity: Medium)
+
+- **REACT-18.** Prefer React 19 Actions (`<form action={fn}>`, `useActionState`, `useFormStatus`, `useOptimistic`) over hand-rolled `isLoading`/`error`/pending plumbing for form submission and async transitions — they handle pending state, errors, and optimistic UI consistently. — react.dev/blog (React 19), react.dev/reference/react/useActionState
+- **REACT-19.** `use()` reads a resource (promise or context) during render but **does not support a promise created inline in render** — the promise must be cached/stable (from a Suspense-enabled data source or hoisted), or it re-fires every render. `use()` may be called conditionally, unlike other hooks. Suspense does not catch data fetched in a `useEffect`. — react.dev/reference/react/use
+- **REACT-20.** React 19 supports rendering `<title>`, `<meta>`, and `<link>` from any component (hoisted to `<head>`); prefer this over manual `document.title` mutation in an Effect for document metadata. — react.dev/blog (React 19)

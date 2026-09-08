@@ -1,6 +1,6 @@
-# Security Rules — SEC
+# SEC rules
 
-Frontend/browser security rules. Each finding maps to an OWASP Top 10:2025 category (see [owasp-2025.md](owasp-2025.md)). Grounded in the OWASP cheat sheets, MDN Web Crypto, W3C WebCrypto, and Vite security docs.
+Frontend/browser security rules. Each finding maps to an OWASP Top 10:2025 category (see [owasp-2025.md](../owasp-2025.md)). Grounded in the OWASP cheat sheets, MDN Web Crypto, W3C WebCrypto, and Vite security docs.
 
 ## Security: XSS & DOM Injection (typical severity: Critical)
 
@@ -42,4 +42,4 @@ Frontend/browser security rules. Each finding maps to an OWASP Top 10:2025 categ
 - **SEC-16.** Do not ship readable source maps to production (or restrict their access); `build.sourcemap` true on a public deploy exposes full source and embedded constants. — vite.dev/config/build-options (build.sourcemap)
 - **SEC-17.** Audit and pin dependencies: run `npm audit`/SCA in CI, commit the lockfile, and review new/transitive packages — a frontend bundle inherits its whole supply chain, a primary attack vector. — owasp.org/Top10/2025, github.com/vitejs/vite/security
 
-> **Real-time security**: socket.io / WebSocket validation, per-action authorization, and message-size/rate limits are covered by RT rules but are security concerns — see [rules-realtime.md](rules-realtime.md) and the OWASP WebSocket Security Cheat Sheet. File those under the RT rule unless the issue is purely a secret/crypto/XSS concern, in which case use the SEC rule.
+> **Real-time security**: socket.io / WebSocket validation, per-action authorization, and message-size/rate limits are covered by RT rules but are security concerns — see [RT.md](RT.md) and the OWASP WebSocket Security Cheat Sheet. File those under the RT rule unless the issue is purely a secret/crypto/XSS concern, in which case use the SEC rule.

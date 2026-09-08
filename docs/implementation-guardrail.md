@@ -43,10 +43,10 @@ treat its `references/rules.md` rules as acceptance criteria for your change.
 
 Do **not** introduce new violations of any rule in:
 
-- `references/rules-core.md` (OWN, ERR, TRAIT, CONC, ASYNC, PERF, UNSAFE, …)
-- `references/rules-security.md` (SEC)
-- `references/rules-tests.md` (TEST)
-- `references/rules-nats.md` (NATS / JetStream)
+- `references/rules/<CATEGORY>.md` — one file per rule prefix (`OWN`, `ERR`, `TRAIT`, `CONC`,
+  `ASYNC`, `PERF`, `UNSAFE`, `SEC`, `TEST`, `NATS`, …). Read only the categories your change
+  touches; `references/rules-index.md` has every rule as a one-liner if you need to find the
+  right category first.
 
 Do **not** file backlog tasks during implementation — the rules apply as
 guardrails only. Reserve `backlog task create` for explicit formal-review
