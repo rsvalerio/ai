@@ -1,4 +1,4 @@
-# NATS and JetStream Rules
+# NATS rules
 
 ## NATS Connection (typical severity: High)
 
@@ -47,4 +47,4 @@
 - **NATS-26.** Enable server-side flow control on push consumers when message rates may exceed consumer processing speed
 - **NATS-27.** Use publish acknowledgements in JetStream (`jetstream.publish(subject, payload).await?.await?` — first await sends, second await confirms server ack) to detect backpressure from the server; handle `Err` (server full / slow) with retry or backoff
 
-> **NATS Security**: TLS, credentials, and secrets concerns are covered by SEC rules. See [nats-security](nats-security.md) for NATS-specific SEC rule mapping.
+> **NATS Security**: TLS, credentials, and secrets concerns are covered by SEC rules. See [nats-security](../nats-security.md) for NATS-specific SEC rule mapping.

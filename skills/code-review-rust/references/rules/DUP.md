@@ -1,4 +1,4 @@
-# Duplication Rules
+# DUP rules
 
 ## Code Duplication (typical severity: Medium--High)
 

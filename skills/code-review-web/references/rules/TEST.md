@@ -1,6 +1,6 @@
-# Test Quality Rules — TEST
+# TEST rules
 
-Grounded in vitest.dev, testing-library.com (esp. Kent C. Dodds, "Common Mistakes with React Testing Library"), and MSW docs. For root-cause explanations of flaky tests see [flakiness-patterns.md](flakiness-patterns.md).
+Grounded in vitest.dev, testing-library.com (esp. Kent C. Dodds, "Common Mistakes with React Testing Library"), and MSW docs. For root-cause explanations of flaky tests see [flakiness-patterns.md](../flakiness-patterns.md).
 
 ## Test Structure & Behavior
 

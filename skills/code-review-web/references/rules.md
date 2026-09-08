@@ -10,19 +10,28 @@ Rule IDs are grouped into the following categories (used for reporting and triag
 
 | Category | Rule-ID prefixes | Domain | Detailed rules |
 |----------|------------------|--------|----------------|
-| React idioms & correctness | `REACT` | Hooks, effects, memoization (Compiler era), Actions/`use()`, components, keys, state | [rules-core.md](rules-core.md) |
-| TypeScript type safety | `TS` | `any`/`unknown`, assertions, strict flags, discriminated unions, branding, exhaustiveness | [rules-core.md](rules-core.md) |
-| Async & error handling | `ASYNC` | Promises, fetch, abort, race conditions, error boundaries, loading/error states | [rules-core.md](rules-core.md) |
-| Performance | `PERF` | Re-renders, context stability, expensive compute, virtualization, code splitting | [rules-core.md](rules-core.md) |
-| Accessibility | `A11Y` | Semantics, ARIA, keyboard, labels/alt text | [rules-core.md](rules-core.md) |
-| Structure & readability | `FN`, `READ`, `ARCH`, `API` | Complexity, readability, architecture, component API design | [rules-structure.md](rules-structure.md) |
-| Duplication | `DUP` | Repeated JSX, logic, fetch, and type definitions | [rules-duplication.md](rules-duplication.md) |
-| Security | `SEC` | XSS, Web Crypto, secrets, network, build — maps to OWASP Top 10 (see `owasp-2025.md`) | [rules-security.md](rules-security.md) |
-| Test quality | `TEST` | Coverage, assertions, query practices, flakiness (Vitest + React Testing Library) | [rules-tests.md](rules-tests.md) |
-| Real-time | `RT` | socket.io-client / WebSocket — see `rules-realtime.md`; security maps to SEC | [rules-realtime.md](rules-realtime.md) |
+| React idioms & correctness | `REACT` | Hooks, effects, memoization (Compiler era), Actions/`use()`, components, keys, state | `rules/REACT.md` |
+| TypeScript type safety | `TS` | `any`/`unknown`, assertions, strict flags, discriminated unions, branding, exhaustiveness | `rules/TS.md` |
+| Async & error handling | `ASYNC` | Promises, fetch, abort, race conditions, error boundaries, loading/error states | `rules/ASYNC.md` |
+| Performance | `PERF` | Re-renders, context stability, expensive compute, virtualization, code splitting | `rules/PERF.md` |
+| Accessibility | `A11Y` | Semantics, ARIA, keyboard, labels/alt text | `rules/A11Y.md` |
+| Structure & readability | `FN`, `READ`, `ARCH`, `API` | Complexity, readability, architecture, component API design | `rules/FN.md`, `rules/READ.md`, `rules/ARCH.md`, `rules/API.md`, `rules/CL.md` |
+| Duplication | `DUP` | Repeated JSX, logic, fetch, and type definitions | `rules/DUP.md` |
+| Security | `SEC` | XSS, Web Crypto, secrets, network, build — maps to OWASP Top 10 (see `owasp-2025.md`) | `rules/SEC.md` |
+| Test quality | `TEST` | Coverage, assertions, query practices, flakiness (Vitest + React Testing Library) | `rules/TEST.md` |
+| Real-time | `RT` | socket.io-client / WebSocket — see `rules/RT.md`; security maps to SEC | `rules/RT.md` |
 | Classification notes | n/a | Severity adjustment and justified-violation guidance | [rules-classification.md](rules-classification.md) |
 
 > Many `REACT`, `TS`, and `ASYNC` rules are partly enforced by `eslint-plugin-react-hooks` v7, `typescript-eslint`, and `tsc --strict`. Those tools are the machine-enforced baseline — file findings only for what the project's configured tooling does not already catch (severity nuance, design smells, unenabled rules). See [SKILL.md](../SKILL.md#relationship-to-eslint--tsc-machine-enforced-baseline).
+
+## How to read the rules
+
+Three tiers, cheapest first — read only as deep as the finding requires:
+
+1. [scan-checklist.md](scan-checklist.md) — observable signal → rule IDs.
+2. [rules-index.md](rules-index.md) — one line per rule, grouped by category.
+3. `rules/<CATEGORY>.md` — full rule text. Required before filing a finding; never file
+   from a one-liner.
 
 ## Severity Scale
 

@@ -1,6 +1,6 @@
 # Frontend Test Flakiness Patterns
 
-Root-cause explanations for the TEST async/determinism rules. Use these to understand *why* each rule exists and to classify root causes when triaging flaky frontend tests. For enforceable mitigations see [rules-tests.md](rules-tests.md).
+Root-cause explanations for the TEST async/determinism rules. Use these to understand *why* each rule exists and to classify root causes when triaging flaky frontend tests. For enforceable mitigations see [rules/TEST.md](rules/TEST.md).
 
 | Pattern | Why it's flaky | Typical severity | Rule |
 |---------|----------------|-----------------|------|

@@ -1,4 +1,4 @@
-# Security Rules
+# SEC rules
 
 ## Security: Memory Safety (typical severity: Critical)
 

@@ -15,7 +15,7 @@ Rule categories are indexed in `code-review-rust/references/rules.md`, with deta
 
 ## Rule numbering
 
-When adding new rules, use the next available number in the target prefix range. Check the corresponding detailed file (`rules-core.md`, `rules-structure.md`, `rules-duplication.md`, `rules-security.md`, `rules-tests.md`, or `rules-nats.md`) for the current highest number in each prefix.
+When adding new rules, use the next available number in the target prefix range. Check the category's rule file (`references/rules/<PREFIX>.md` — e.g. `rules/ERR.md`, `rules/SEC.md`) for the current highest number in that prefix; `references/rules-index.md` lists every ID on one line each and is the quickest way to find it.
 
 ## Conditional routing
 

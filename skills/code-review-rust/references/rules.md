@@ -10,15 +10,24 @@ Rule IDs are grouped into the following categories (used for reporting and triag
 
 | Category | Rule-ID prefixes | Domain | Detailed rules |
 |----------|------------------|--------|----------------|
-| Idioms & correctness | `OWN`, `ERR`, `TRAIT`, `CONC`, `ASYNC`, `PERF`, `UNSAFE`, `PATTERN`, `MACRO`, `TIME`, `VER`, `EDITION` | Ownership, errors, traits, concurrency, async, performance, unsafe, patterns, macro design, date/time correctness, version-specific features | [rules-core.md](rules-core.md) |
-| Structure & readability | `FN`, `READ`, `ARCH`, `API`, `CL` | Complexity, readability, architecture, API design, cognitive load | [rules-structure.md](rules-structure.md) |
-| Duplication | `DUP` | Code duplication (production and test-helper) | [rules-duplication.md](rules-duplication.md) |
-| Security | `SEC` | Security — maps to OWASP Top 10 (see `owasp-2021.md`) | [rules-security.md](rules-security.md) |
-| Test quality | `TEST` | Test coverage, assertions, flakiness, organization | [rules-tests.md](rules-tests.md) |
-| NATS / JetStream | `NATS` | `async-nats` patterns — see `nats-security.md` for security mapping | [rules-nats.md](rules-nats.md) |
+| Idioms & correctness | `OWN`, `ERR`, `TRAIT`, `CONC`, `ASYNC`, `PERF`, `UNSAFE`, `PATTERN`, `MACRO`, `TIME`, `VER`, `EDITION` | Ownership, errors, traits, concurrency, async, performance, unsafe, patterns, macro design, date/time correctness, version-specific features | `rules/OWN.md`, `rules/ERR.md`, `rules/TRAIT.md`, `rules/CONC.md`, `rules/ASYNC.md`, `rules/PERF.md`, `rules/UNSAFE.md`, `rules/PATTERN.md`, `rules/MACRO.md`, `rules/TIME.md`, `rules/VER.md`, `rules/EDITION.md` |
+| Structure & readability | `FN`, `READ`, `ARCH`, `API`, `CL` | Complexity, readability, architecture, API design, cognitive load | `rules/FN.md`, `rules/READ.md`, `rules/ARCH.md`, `rules/API.md`, `rules/CL.md` |
+| Duplication | `DUP` | Code duplication (production and test-helper) | `rules/DUP.md` |
+| Security | `SEC` | Security — maps to OWASP Top 10 (see `owasp-2021.md`) | `rules/SEC.md` |
+| Test quality | `TEST` | Test coverage, assertions, flakiness, organization | `rules/TEST.md` |
+| NATS / JetStream | `NATS` | `async-nats` patterns — see `nats-security.md` for security mapping | `rules/NATS.md` |
 | Classification notes | n/a | Severity adjustment and SEC/UNSAFE mapping guidance | [rules-classification.md](rules-classification.md) |
 
 > `EDITION-*` rules are reference material, not finding-generating — the compiler and `cargo fix --edition` enforce them.
+
+## How to read the rules
+
+Three tiers, cheapest first — read only as deep as the finding requires:
+
+1. [scan-checklist.md](scan-checklist.md) — observable signal → rule IDs.
+2. [rules-index.md](rules-index.md) — one line per rule, grouped by category.
+3. `rules/<CATEGORY>.md` — full rule text. Required before filing a finding; never file
+   from a one-liner.
 
 ## Severity Scale
 

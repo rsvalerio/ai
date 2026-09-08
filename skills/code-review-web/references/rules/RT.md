@@ -1,6 +1,6 @@
-# Real-Time Rules — RT (socket.io-client / WebSocket)
+# RT rules
 
-> RT rules cover client-side real-time collaboration over `socket.io-client` (and raw WebSocket). They are the web analog of a message-bus ruleset. For general async patterns see ASYNC rules; for crypto of broadcast payloads see SEC-5--9. Security-relevant RT findings map to the OWASP WebSocket Security Cheat Sheet and OWASP Top 10:2025 (see [owasp-2025.md](owasp-2025.md)).
+> RT rules cover client-side real-time collaboration over `socket.io-client` (and raw WebSocket). They are the web analog of a message-bus ruleset. For general async patterns see ASYNC rules; for crypto of broadcast payloads see SEC-5--9. Security-relevant RT findings map to the OWASP WebSocket Security Cheat Sheet and OWASP Top 10:2025 (see [owasp-2025.md](../owasp-2025.md)).
 
 ## Real-Time: Inbound Message Safety (typical severity: High--Critical)
 

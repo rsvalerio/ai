@@ -1,4 +1,4 @@
-# Test Quality Rules
+# TEST rules
 
 ## Test Structure
 
@@ -44,13 +44,13 @@
 
 ## Test Async & Concurrency
 
-- **TEST-13.** `#[tokio::test]` + `tokio::time::pause()` for async/time tests (tokio-specific; other runtimes need different approaches — see [flakiness patterns](flakiness-patterns.md))
+- **TEST-13.** `#[tokio::test]` + `tokio::time::pause()` for async/time tests (tokio-specific; other runtimes need different approaches — see [flakiness patterns](../flakiness-patterns.md))
 - **TEST-14.** Use `#[tokio::test(flavor = "multi_thread")]` as a race condition discovery tool — single-threaded flavor serializes tasks and hides data races; multi-threaded flavor exposes ordering-dependent bugs that only manifest under real concurrency
 - **TEST-15.** Deterministic sync points over `sleep`-based waits
 
 ## Test Flakiness Prevention
 
-See [flakiness patterns](flakiness-patterns.md) for detailed explanations and mitigations per pattern. Rules below are the enforceable checklist:
+See [flakiness patterns](../flakiness-patterns.md) for detailed explanations and mitigations per pattern. Rules below are the enforceable checklist:
 
 - **TEST-16.** Fixed seed for random-based tests; production code may use `thread_rng` per SEC-10, but tests must inject a seeded RNG for determinism
 - **TEST-17.** No real network in unit tests; use `wiremock` or test doubles
