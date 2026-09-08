@@ -22,18 +22,19 @@ before filing. A signal with no hits costs nothing further.
 | No error boundary around a subtree that can throw | ASYNC-6 |
 | Context provider value rebuilt every render (new object/array/fn) | PERF-2 |
 | Expensive compute in render body; missing list virtualization; no route/code splitting | PERF-3, PERF-4, PERF-5 |
-| `div`/`span` with `onClick` and no keyboard handling; missing `alt`/label | A11Y-1, A11Y-2 |
+| `div`/`span` with `onClick` and no keyboard handling; missing `alt`/label | A11Y-1, A11Y-2, A11Y-3 |
 | `dangerouslySetInnerHTML` / `innerHTML` with untrusted data | SEC-1, SEC-2 |
 | User-controlled URL in `href`/`src` without scheme allowlist (`javascript:`/`data:`) | SEC-3 |
 | AES-GCM IV reuse; `Math.random` for security values; extractable keys; key/plaintext in logs | SEC-5, SEC-6, SEC-7, SEC-8 |
-| Hardcoded secret/token in source; secret assumed safe behind `VITE_`; capability token in query string | SEC-9, SEC-10, SEC-11 |
-| Unvalidated fetch/WebSocket response shape; sensitive data in `console`/telemetry | SEC-12, SEC-13 |
-| Production source maps; unaudited/unpinned dependencies | SEC-14, SEC-15 |
+| Hardcoded secret/token in source; secret assumed safe behind `VITE_`; capability token in query string | SEC-10, SEC-11, SEC-12 |
+| Unvalidated fetch/WebSocket response shape; sensitive data in `console`/telemetry | SEC-13, SEC-14 |
+| Credentials (`credentials: "include"`, cookies, auth headers) sent to a third-party or untrusted origin | SEC-15 |
+| Production source maps; unaudited/unpinned dependencies | SEC-16, SEC-17 |
 | socket.io inbound message used without validation; authz only at connect; no message/rate bound | RT-1, RT-2, RT-3 |
 | Volatile events not throttled; persisted broadcasts not debounced; no echo dedup | RT-4, RT-5 |
 | Component file >250 lines; fn >50 lines; nesting >4; params >5 | ARCH-1, FN-1, FN-2, FN-3 |
 | `console.log`/`console.debug` left in production code | READ-8 |
 | Mixed concerns (fetch + UI + business logic) in one component; circular imports | ARCH-2, ARCH-5 |
-| Duplicated JSX/logic/fetch/type blocks (3+) | DUP-1, DUP-2, DUP-3 |
+| Duplicated JSX/logic/fetch/type blocks (3+) | DUP-1, DUP-2, DUP-3, DUP-4, DUP-6, DUP-8 |
 | Test without assertion; `getByTestId` where a role query fits; `fireEvent` over `userEvent` | TEST-1, TEST-3, TEST-4 |
 | Security-critical unit (crypto, parsing, auth) with no test | TEST-5, TEST-6 |

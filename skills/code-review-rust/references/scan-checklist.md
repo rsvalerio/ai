@@ -17,7 +17,7 @@ before filing. A signal with no hits costs nothing further.
 | Repeated `to_str().unwrap()` / `to_string_lossy()` on the same path values | API-12 |
 | `HashMap` used as a cache with no size cap, TTL, or eviction | PERF-16, SEC-33 |
 | `Arc<RwLock<T>>` read on every request, replaced wholesale and rarely | CONC-1, CONC-8 |
-| CLI binary with no test that runs it as a command (flags, exit codes, stderr) | TEST-31, READ-8 |
+| CLI binary with no test that runs it as a command (flags, exit codes, stderr) | TEST-31 |
 | `unsafe` blocks | UNSAFE-1--5, UNSAFE-8, SEC-1--4, SEC-34--36 |
 | `lazy_static!` / `once_cell::sync::Lazy` in new code | CONC-10 |
 | `async-trait` macro on types that could use native async fn | ASYNC-10 |

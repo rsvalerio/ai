@@ -15,7 +15,7 @@ Rule IDs are grouped into the following categories (used for reporting and triag
 | Async & error handling | `ASYNC` | Promises, fetch, abort, race conditions, error boundaries, loading/error states | `rules/ASYNC.md` |
 | Performance | `PERF` | Re-renders, context stability, expensive compute, virtualization, code splitting | `rules/PERF.md` |
 | Accessibility | `A11Y` | Semantics, ARIA, keyboard, labels/alt text | `rules/A11Y.md` |
-| Structure & readability | `FN`, `READ`, `ARCH`, `API` | Complexity, readability, architecture, component API design | `rules/FN.md`, `rules/READ.md`, `rules/ARCH.md`, `rules/API.md`, `rules/CL.md` |
+| Structure & readability | `FN`, `READ`, `ARCH`, `API`, `CL` | Complexity, readability, architecture, component API design | `rules/FN.md`, `rules/READ.md`, `rules/ARCH.md`, `rules/API.md`, `rules/CL.md` |
 | Duplication | `DUP` | Repeated JSX, logic, fetch, and type definitions | `rules/DUP.md` |
 | Security | `SEC` | XSS, Web Crypto, secrets, network, build — maps to OWASP Top 10 (see `owasp-2025.md`) | `rules/SEC.md` |
 | Test quality | `TEST` | Coverage, assertions, query practices, flakiness (Vitest + React Testing Library) | `rules/TEST.md` |

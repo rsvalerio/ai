@@ -11,7 +11,7 @@ Map extracted knowledge to the appropriate location within code-review-rust:
 | **Test quality** (TEST) | Testing strategies, patterns, coverage, flakiness, organization |
 | **NATS** (NATS) | NATS/JetStream patterns, async-nats configuration, consumers, backpressure, observability |
 
-Rule categories are indexed in `code-review-rust/references/rules.md`, with detailed content in `code-review-rust/references/rules-*.md` files. If the user's project uses different skill names or files, map to the closest section.
+Rule categories are indexed in `code-review-rust/references/rules.md`, with one-line summaries in `code-review-rust/references/rules-index.md` and detailed content in `code-review-rust/references/rules/<PREFIX>.md` files. If the user's project uses different skill names or files, map to the closest section.
 
 ## Rule numbering
 

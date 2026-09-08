@@ -4,7 +4,7 @@ Steps for integrating approved items into code-review-rust. This file defines **
 
 ## Pre
 
-- Read the target file in code-review-rust (start with `references/rules.md`, then open the relevant `references/rules-*.md` file)
+- Read the target file in code-review-rust (start with `references/rules.md`, then open the relevant `references/rules/<PREFIX>.md` file)
 - Identify section or location for the new content
 - Match existing formatting and style
 - Understand current knowledge to avoid duplication or conflict
