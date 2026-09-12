@@ -1,8 +1,9 @@
 # Web Scan Checklist
 
-Observable signal → rules to check. Grep for the signal; when it hits, read that rule's
-one-liner in [rules-index.md](rules-index.md), then the full rule in `rules/<CATEGORY>.md`
-before filing. A signal with no hits costs nothing further.
+Observable signal → rules to check. Grep for the signal; when it hits, go straight to the
+full rule in `rules/<CATEGORY>.md` and confirm there before filing. The rule IDs below are
+the lookup — `rules/index.md` is not a scan step. A signal with no hits costs nothing
+further.
 
 | Signal | Rules to check |
 |--------|----------------|
