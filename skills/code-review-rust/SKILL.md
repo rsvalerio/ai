@@ -19,7 +19,7 @@ Review Rust code against all rule categories: idioms, ownership, error handling,
 
 - Create one backlog task per finding via `ops backlog task create --plain` command
 - Scan all `.rs` files, `Cargo.toml`, `Cargo.lock`, `tests/`, and configuration files
-- Cover every rule category, working from [scan-checklist.md](references/scan-checklist.md) straight to the rule files it names, reading full rule text only where candidates appear
+- Cover every rule category: work from [scan-checklist.md](references/scan-checklist.md) straight to the rule files it names — full rule text for every live candidate, and for every category in its **Sweep** list whether or not a candidate surfaced
 - Apply the priority order and severity scale defined in [rules.md](references/rules.md#design-philosophy)
 
 ## Loading rules (token discipline)
