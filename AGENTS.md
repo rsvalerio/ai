@@ -12,7 +12,13 @@ This repo is a collection of [Agent Skills](https://agentskills.io/specification
 ├── AGENTS.md                 # This file: contributor / agent instructions
 ├── docs/
 │   └── implementation-guardrail.md  # Consumer activation for guardrail mode
-├── Makefile                  # validate, lint, link/unlink
+├── Makefile                  # validate, lint, link/unlink, eval
+├── scripts/
+│   └── validate-skills.py    # strict skill-validator run + documented allowlist
+├── evals/                    # `claude plugin eval` cases (see Behavioural evals)
+├── .claude-plugin/
+│   ├── marketplace.json      # Marketplace manifest (one `dev-skills` plugin)
+│   └── plugin.json           # Plugin manifest — also what `claude plugin eval` resolves
 ├── skills/                   # One directory per skill
 │   ├── code-review-rust/
 │   ├── code-review-web/
@@ -27,7 +33,7 @@ This repo is a collection of [Agent Skills](https://agentskills.io/specification
 
 Skill purposes are listed in the [README overview](README.md#overview). Relationships that matter when editing skills:
 
-- **code-review-rust** / **code-review-web** — formal review and implementation-guardrail engines. Rules live in three tiers: `references/scan-checklist.md` (signal → rule IDs), `references/rules-index.md` (one line per rule), and `references/rules/<CATEGORY>.md` (full text). `references/rules.md` holds the category table and severity scale. Adding or changing a rule means updating its category file **and** `rules-index.md`; if the rule's observable signal changes, update `scan-checklist.md` too. `rules-index.md` is maintained by hand — its one-liners carry deliberate wording and are not regenerated from the category files.
+- **code-review-rust** / **code-review-web** — formal review and implementation-guardrail engines. Rules live in three tiers: `references/scan-checklist.md` (signal → rule IDs), `references/rules/index.md` (one line per rule), and `references/rules/<CATEGORY>.md` (full text). A **scan** reads tier 1 then tier 3 — tier 2 is not a scan step, because tier 1 already emits rule IDs and tier 3 is what decides a finding. Tier 2 is for resolving an ID you hold without a signal (a backlog task, a `rust-meta` lookup); guardrail mode reads tier 3 alone. Keeping tier 2 out of the scan path is worth ~10,700 tokens a review, and the same again per wave runner. `references/rules.md` holds the category table and severity scale. Adding or changing a rule means updating its category file **and** `rules/index.md`; if the rule's observable signal changes, update `scan-checklist.md` too. `rules/index.md` is maintained by hand — its one-liners carry deliberate wording and are not regenerated from the category files.
 - **code-review-triage** — groups `Triage` backlog findings into `code-review-plan-waveN` parents and stamps file scope via `--modified-file` for merge ordering. A wave is a task labelled `code-review-wave` whose members carry `parent_task_id`; the runners enumerate them with `ops backlog wave list` / `wave members`.
 - **code-review-run-wave** — claims one open wave, applies fixes in an isolated git worktree, runs QA, merges under a shared lock. Protocol: `skills/code-review-run-wave/references/worktree-protocol.md`.
 - **code-review-run-waves** — fans out across open waves; delegates per-wave work to `code-review-run-wave`.
@@ -77,10 +83,12 @@ make lint-and-validate
 
 | Command | Description |
 |---------|-------------|
-| `make validate` | Validate all skills (`skill-validator`) |
+| `make validate` | Validate all skills, strict (`scripts/validate-skills.py`) |
 | `make lint` | Format and lint all skills (`rumdl`) |
 | `make lint-and-validate` | Both gates |
 | `make ci` | Non-mutating CI gate (`validate` + fmt/lint check) |
+| `make validate-rules-index` | Fail if `rules/index.md` and `references/rules/*.md` disagree |
+| `make eval` | Run the behavioural eval suite (`claude plugin eval`, not in `make ci`) |
 | `make check-tools` | Fail if local tooling drifted from `.tool-versions` |
 | `make install-tools` | Install both tools via Homebrew |
 | `make link` | Symlink skills into `~/.claude/skills/` |
@@ -97,6 +105,51 @@ skill-validator validate structure --strict ./skills/code-review-rust
 ```
 
 Checks YAML frontmatter, required `name`/`description`, lowercase-hyphen naming, directory structure, and that `name` matches the parent directory.
+
+`make validate` runs this over every skill through [`scripts/validate-skills.py`](scripts/validate-skills.py), which propagates per-skill failures — a plain shell loop kept only the last skill's exit code, so the gate silently passed while four skills were failing — and carries one allowlist entry:
+
+**`deep nesting detected: references/rules/` (both review skills) is allowed, and cannot be fixed.** Flattening the corpus to `references/rules-<CAT>.md` makes those 21 files counted top-level references and trips a hard error from the same validator (`total reference files: 74055 tokens`), which fails even without `--strict`. The nesting is what keeps ~50k tokens of rule text out of the counted budget; the warning and the error cannot both be satisfied without deleting rules. An allowlist entry that stops firing fails the build, so it cannot rot into a licence to regress.
+
+`references/rules/index.md` lives inside `rules/` for the same reason — as a counted top-level reference it exceeded the validator's 10,000-token-per-file limit. Note what that does and does not achieve: it satisfies the checker, it does not reduce what an agent loads. Splitting the index was the alternative and would have cost the "one place to find any rule" property.
+
+### Rule-index drift
+
+`make validate-rules-index` compares every `**<CAT>-<N>**` id in
+`references/rules/*.md` against `references/rules/index.md`, for both
+`code-review-rust` and `code-review-web`. A rule that lands in a category file
+without an index line is invisible to a scan — the skill silently stops
+enforcing it — and a ghost index line points at a rule that no longer exists.
+Part of `make ci`.
+
+### Behavioural evals
+
+`evals/` holds a small `claude plugin eval` suite: three cases that answer
+"does the skill still fire", not "is the markdown well-formed".
+
+| Case | Asserts |
+|------|---------|
+| `review-rust` | A Rust review request loads `code-review-rust` and reads `references/rules/` |
+| `review-web` | A React/TS request loads `code-review-web`, not the Rust skill |
+| `guardrail-rust` | The verification prompt from [docs/implementation-guardrail.md](docs/implementation-guardrail.md) loads the skill and names a rule id |
+
+Every grader is free (`tool_used` / `regex`), so a run costs agent turns but no
+judge calls. By default each case also runs a no-plugin arm and reports the
+delta — a case that scores the same in both arms is not being carried by the
+skill.
+
+```bash
+make eval                                              # whole suite
+claude plugin eval . --trust-plugin --case review-web  # one case
+```
+
+Deliberately **not** in `make ci`: it is non-deterministic and needs
+credentials. Run it before a release and after a Claude Code or model bump.
+Results land in `evals/results/` (gitignored).
+
+Scope limit worth keeping in mind: these cover description-driven auto-load,
+which `docs/implementation-guardrail.md` calls best-effort by design. The
+consumer-side `CLAUDE.md` / `AGENTS.md` directive is the actual contract and is
+not exercised here.
 
 ### Markdown linting
 
@@ -120,7 +173,7 @@ Prerequisites: `make lint-and-validate` passes.
 
 **Local (Claude Code):** `make link` / `make unlink`.
 
-**Claude Code marketplace:** the repo root is a plugin marketplace (`.claude-plugin/marketplace.json`) exposing a single `dev-skills` plugin that contains every skill — they reference each other's files, so they are not installable separately. No `version` field — installs track the commit SHA, so pushing to `main` *is* the release. Users install with:
+**Claude Code marketplace:** the repo root is a plugin marketplace (`.claude-plugin/marketplace.json`) exposing a single `dev-skills` plugin that contains every skill — they reference each other's files, so they are not installable separately. No `version` field in `.claude-plugin/plugin.json` — installs track the commit SHA, so pushing to `main` *is* the release. `claude plugin validate` warns about the missing version; that warning is expected and does not fail `make ci`. The manifest exists so `claude plugin eval .` can resolve the plugin and run its no-plugin baseline arm. Users install with:
 
 ```bash
 claude plugin marketplace add rsvalerio/ai
