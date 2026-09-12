@@ -71,11 +71,17 @@ validate-rules-index:
 	@fail=0; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	for skill in $(RULE_SKILLS); do \
 		refs=$(SKILLS_DIR)/$$skill/references; \
+		if [ ! -d $$refs/rules ] || [ ! -f $$refs/rules/index.md ]; then \
+			echo "$$skill: expected $$refs/rules/ and $$refs/rules/index.md"; fail=1; continue; \
+		fi; \
 		find $$refs/rules -name '*.md' ! -name 'index.md' -exec \
 			grep -ohE '[*][*][A-Z]+-[0-9]+[.]?[*][*]' {} + \
 			| tr -d '*' | sed 's/[.]$$//' | sort -u > $$tmp/rules; \
 		grep -ohE '[*][*][A-Z]+-[0-9]+[.]?[*][*]' $$refs/rules/index.md \
 			| tr -d '*' | sed 's/[.]$$//' | sort -u > $$tmp/index; \
+		if [ ! -s $$tmp/rules ] || [ ! -s $$tmp/index ]; then \
+			echo "$$skill: parsed no rule ids — check the '**<CAT>-<N>**' format"; fail=1; continue; \
+		fi; \
 		missing=$$(comm -23 $$tmp/rules $$tmp/index | tr '\n' ' '); \
 		ghost=$$(comm -13 $$tmp/rules $$tmp/index | tr '\n' ' '); \
 		if [ -n "$$missing" ]; then \

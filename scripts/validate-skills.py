@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Run skill-validator over every skill and fail on anything not allowlisted.
 
+Every immediate directory under skills/ is validated, not only those that already
+contain a SKILL.md: filtering on SKILL.md would let a skill directory missing its
+manifest pass by being skipped, which is the same silent-pass bug this script exists
+to remove.
+
 `skill-validator --strict` exits 1 on warnings as well as errors, but the loop it
 replaces in the Makefile discarded every per-skill exit code except the last one,
 so `make validate` reported success while four skills were failing. This script
@@ -36,7 +41,10 @@ ALLOWED: set[tuple[str, str]] = {
 
 
 def main() -> int:
-    skills = sorted(p for p in SKILLS_DIR.iterdir() if (p / "SKILL.md").is_file())
+    skills = sorted(p for p in SKILLS_DIR.iterdir() if p.is_dir())
+    if not skills:
+        print(f"no skill directories under {SKILLS_DIR}", file=sys.stderr)
+        return 1
     failed: list[str] = []
     stale = set(ALLOWED)
 
