@@ -170,11 +170,13 @@ For each member task ID, in the order `wave members` returned them:
    ops backlog task edit -s 'In Progress' <memberId>
    ```
 
-2. Before and while applying the fix, use **code-review-rust** as a guardrail: the rule
-   ID names the file (`ERR-5` → `references/rules/ERR.md`), read once per category rather
-   than per member, nothing else (see Hard requirements). Apply the fix **inside the wave
-   worktree**. Respect repo conventions (`CLAUDE.md`) and the task's acceptance criteria.
-   Keep the change minimal — no drive-by refactors.
+2. Before and while applying the fix, apply the guardrail skill for the member's own
+   domain — **code-review-rust** for Rust, **code-review-web** for frontend. The rule ID
+   names both: `ERR-5` → that skill's `references/rules/ERR.md`, `REACT-3` → only
+   `code-review-web` has `rules/REACT.md`. Read once per category, nothing else (see Hard
+   requirements). Apply the fix **inside the wave worktree**. Respect repo conventions
+   (`CLAUDE.md`) and the task's acceptance criteria. Keep the change minimal — no
+   drive-by refactors.
 
 3. Flip the task to `Done` only when the implementation satisfies the whole task,
    including all acceptance criteria and definition-of-done items — and tick every
@@ -378,24 +380,10 @@ attributes their work to your wave), and the lock is what makes the exact-set ch
 anything — without it another wave's `git add` lands between your check and your commit.
 If the staged set does not match, abort and report; do not unstage the extras and continue.
 
-**Standalone runs only — open the run's PR.** A fan-out run does not do this;
-`code-review-run-waves` opens one PR for all its waves after every runner has returned.
-A standalone run owns the whole landing branch, so after the `chore(backlog)` commit,
-write the Step 9 report's substance (wave, member outcomes, verify results, filed
-tasks) to a body file first, then push and PR the **recorded landing branch** — the
-exact name resolved in Step 2:
-
-```bash
-git push -u origin <landing-branch>
-gh pr create --base main --head <landing-branch> \
-  --title "code-review run: <waveTaskId>" \
-  --body-file <report file>
-```
-
-Append the PR URL to the report once it is open. Do not merge the PR yourself unless
-the user asks — it is the run's human review gate. Cleaning up the landing branch after
-its PR merges is the one sanctioned `-D`, and
-[Teardown](references/worktree-protocol.md#teardown) explains why.
+**Standalone runs only — open the run's PR.** A fan-out run does not: `code-review-run-waves`
+PRs all its waves once every runner returns. Procedure (report body file, push, `gh pr
+create` on the landing branch recorded in Step 2, and the one sanctioned `-D` afterwards):
+[Opening the Run PR](references/worktree-protocol.md#opening-the-run-pr-standalone-runs-only).
 
 **Parked.** If any member task is not `Done`, or the merge did not land, leave the wave
 parent non-done (`In Progress` or `To Do`, matching the remaining work) and append a note
