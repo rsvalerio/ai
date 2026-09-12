@@ -14,12 +14,12 @@ tool_version = $(shell awk -v t=$(1) '$$1 == t || $$1 ~ "/" t "$$" { print $$2 }
 RUMDL_VERSION := $(call tool_version,rumdl)
 SKILL_VALIDATOR_VERSION := $(call tool_version,skill-validator)
 
-.PHONY: all ci validate validate-marketplace lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
+.PHONY: all ci validate validate-marketplace validate-rules eval lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
 
-lint-and-validate: lint validate validate-marketplace
+lint-and-validate: lint validate validate-marketplace validate-rules
 
 # Non-mutating gate for CI: structure, marketplace, formatting and lint rules.
-ci: validate validate-marketplace fmt-check lint-check
+ci: validate validate-marketplace validate-rules fmt-check lint-check
 
 # Fail loudly when local tooling has drifted from the versions CI runs.
 check-tools:
@@ -33,10 +33,12 @@ check-tools:
 	fi
 	@echo "tooling matches $(TOOL_VERSIONS)"
 
+# A plain `for` loop here discarded every skill's exit code except the last one,
+# so the gate reported success while skills were failing. scripts/validate-skills.py
+# runs the same --strict check, propagates failures, and carries one documented
+# allowlist entry (see the script).
 validate:
-	@for skill in $(SKILLS); do \
-		skill-validator validate structure --strict $(SKILLS_DIR)/$$skill/; \
-	done
+	@python3 scripts/validate-skills.py
 
 # The repo root doubles as a Claude Code plugin marketplace (.claude-plugin/
 # marketplace.json), one plugin per skill. claude-code is expected on PATH
@@ -57,6 +59,21 @@ install-tools:
 	@brew install rumdl
 	@brew install agent-ecosystem/tap/skill-validator
 	@$(MAKE) --no-print-directory check-tools
+
+# The review skills load rules in three tiers, and rules/index.md is maintained
+# by hand (AGENTS.md explains why). A rule that lands in references/rules/<CAT>.md
+# without an index line is invisible to a scan — the skill silently stops
+# enforcing it, and nothing else in `make ci` notices. Compare the two ID sets.
+validate-rules:
+	@python3 scripts/validate-rules.py
+
+# Behavioural gate: do the skills still trigger? `claude plugin eval` runs each
+# case twice (plugin loaded / not loaded) and reports the delta. Every grader in
+# evals/ is free — tool_used only — so this costs agent runs, not judge calls.
+# Deliberately not part of `make ci`: it is non-deterministic and needs
+# credentials. Run it before a release and after a Claude Code model bump.
+eval:
+	@claude plugin eval . --trust-plugin --no-publish
 
 lint:
 	@rumdl fmt $(MARKDOWN)

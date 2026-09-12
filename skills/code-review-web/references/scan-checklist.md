@@ -1,8 +1,9 @@
 # Web Scan Checklist
 
-Observable signal → rules to check. Grep for the signal; when it hits, read that rule's
-one-liner in [rules-index.md](rules-index.md), then the full rule in `rules/<CATEGORY>.md`
-before filing. A signal with no hits costs nothing further.
+Observable signal → rules to check. Grep for the signal; when it hits, go straight to the
+full rule in `rules/<CATEGORY>.md` and confirm there before filing. The rule IDs below are
+the lookup — `rules/index.md` is not a scan step. A signal with no hits costs nothing
+further.
 
 | Signal | Rules to check |
 |--------|----------------|
@@ -38,3 +39,16 @@ before filing. A signal with no hits costs nothing further.
 | Duplicated JSX/logic/fetch/type blocks (3+) | DUP-1, DUP-2, DUP-3, DUP-4, DUP-6, DUP-8 |
 | Test without assertion; `getByTestId` where a role query fits; `fireEvent` over `userEvent` | TEST-1, TEST-3, TEST-4 |
 | Security-critical unit (crypto, parsing, auth) with no test | TEST-5, TEST-6 |
+
+## Sweep — categories with no signal
+
+The table above cannot reach these categories: their rules have no observable signal to
+grep for, so no row names them and a signal-driven scan never opens their files. Read each
+one once, after the signal walk, and judge it against the code you surveyed.
+
+- [`rules/API.md`](rules/API.md) — component and hook API-shape rules — judged over a whole signature, not a token
+- [`rules/CL.md`](rules/CL.md) — clarity and comment rules — no grep-able signal; the violation is prose
+
+Keep this list and the table complementary: a category belongs in exactly one of them. Give
+a category a real signal row and remove it from here — `make validate-rules` fails on a
+category that appears in both, or in neither.

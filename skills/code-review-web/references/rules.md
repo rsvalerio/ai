@@ -29,7 +29,7 @@ Rule IDs are grouped into the following categories (used for reporting and triag
 Three tiers, cheapest first — read only as deep as the finding requires:
 
 1. [scan-checklist.md](scan-checklist.md) — observable signal → rule IDs.
-2. [rules-index.md](rules-index.md) — one line per rule, grouped by category.
+2. [rules/index.md](rules/index.md) — one line per rule, grouped by category.
 3. `rules/<CATEGORY>.md` — full rule text. Required before filing a finding; never file
    from a one-liner.
 

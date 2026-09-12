@@ -19,13 +19,14 @@ for the first time; this file assumes it.
 
 ## Hard requirements
 
-While implementing wave member fixes, you **must** read and follow the **code-review-rust**
-skill in **implementation guardrail** mode: read `skills/code-review-rust/SKILL.md`
-(especially Applicability) and the relevant sections of `skills/code-review-rust/references/rules.md`
-and its scan checklist so fixes do not introduce new violations against those rules.
-For frontend changes, use **code-review-web** the same way.
-Fixing triaged backlog items without this guardrail often clears old findings but creates
-new ones, repeating triage and review.
+Member fixes **must** follow **code-review-rust** in **implementation guardrail** mode
+(**code-review-web** for frontend) — without it a wave clears old findings and creates new
+ones, repeating triage and review.
+
+**Read only the rule files the wave needs.** Members are titled `<RULE-ID>: <Title>`, so
+the wave names its own categories: read `references/rules/<PREFIX>.md` per distinct prefix,
+usually one or two files. Never the scan checklist or `rules/index.md` — those find rules
+from raw code, and a wave starts from IDs. Every runner pays this read, once per wave.
 
 Unless the user explicitly asked for a formal review during this wave, do **not** create
 new backlog tasks for issues you notice while fixing: treat `code-review-rust` rules as
@@ -137,10 +138,10 @@ another runner already holds this wave:
 git worktree add ../.wave-<waveTaskId> -b code-review/<waveTaskId>
 ```
 
-If this fails with `fatal: a branch named 'code-review/<waveTaskId>' already exists`, the
-wave is already claimed. Pick a different wave; if none remain, stop and report that the
-wave is in flight elsewhere. Do **not** delete the branch to force the claim — see
-Recovery in the [Worktree Protocol](references/worktree-protocol.md#recovery).
+A `fatal: a branch named 'code-review/<waveTaskId>' already exists` means the wave is
+already claimed — pick another, and never delete the branch to force the claim. Full
+rules, including genuinely abandoned claims:
+[Claiming a Wave](references/worktree-protocol.md#claiming-a-wave).
 
 Only after the claim succeeds, flip the wave parent to `In Progress` (main checkout):
 
@@ -169,12 +170,13 @@ For each member task ID, in the order `wave members` returned them:
    ops backlog task edit -s 'In Progress' <memberId>
    ```
 
-2. Before and while applying the fix, use **code-review-rust** as a guardrail: read
-   applicable rule categories and the scan checklist in
-   `skills/code-review-rust/references/rules.md` for the code you touch (errors, async,
-   security, tests, NATS, etc.). Apply the fix described by the task **inside the wave
-   worktree**. Respect repo conventions (`CLAUDE.md`) and the task's acceptance criteria.
-   Keep the change minimal — no drive-by refactors.
+2. Before and while applying the fix, apply the guardrail skill for the member's own
+   domain — **code-review-rust** for Rust, **code-review-web** for frontend. The rule ID
+   names both: `ERR-5` → that skill's `references/rules/ERR.md`, `REACT-3` → only
+   `code-review-web` has `rules/REACT.md`. Read once per category, nothing else (see Hard
+   requirements). Apply the fix **inside the wave worktree**. Respect repo conventions
+   (`CLAUDE.md`) and the task's acceptance criteria. Keep the change minimal — no
+   drive-by refactors.
 
 3. Flip the task to `Done` only when the implementation satisfies the whole task,
    including all acceptance criteria and definition-of-done items — and tick every
@@ -332,12 +334,10 @@ ops verify
 git merge --ff-only code-review/<waveTaskId>
 ```
 
-The **landing branch** is the `code-review/run-<date>` integration branch checked out in
-the main checkout — created by `code-review-run-waves` for a fan-out, or by Step 2 for a
-standalone run. Waves never land on `main` directly; the landing branch ships to `main`
-as one PR (Step 8 here, or Step 5 of `code-review-run-waves`). Never switch the main
-checkout to another branch while a wave is in flight — runners derive their rebase target
-and merge destination from it.
+The **landing branch** is the one recorded in Step 2. Waves never land on `main` directly;
+it ships to `main` as one PR (Step 8 here, or Step 5 of `code-review-run-waves`). Never
+switch the main checkout to another branch while a wave is in flight — runners derive
+their rebase target and merge destination from it.
 
 Then release the lock — **always**, including on every failure path:
 
@@ -345,11 +345,9 @@ Then release the lock — **always**, including on every failure path:
 rmdir .git/code-review-merge.lock
 ```
 
-If the rebase conflicts, resolve it in the worktree; you have both sides there. Never
-resolve by discarding the other wave's hunk — that wave already merged and passed
-integration verify, so overwriting it silently reverts completed work. If the resolution
-is not obvious, `git rebase --abort` restores the branch untouched, and the wave parks
-(Step 8).
+If the rebase conflicts, see
+[Handling a Rebase Conflict](references/worktree-protocol.md#handling-a-rebase-conflict).
+The one rule to carry in your head: never resolve by discarding the other wave's hunk.
 
 If integration `ops verify` fails, fix it on the wave branch, re-verify, and retry. A
 wave that passes pre-merge and fails integration is a normal outcome — it is exactly the
@@ -370,78 +368,22 @@ git branch -d code-review/<waveTaskId>
 ```
 
 Then commit the backlog task-file changes as their own `chore(backlog)` commit on the
-landing branch — **staging only this wave's own files, under the backlog lock**:
-
-```bash
-until mkdir .git/code-review-backlog.lock 2>/dev/null; do sleep 1; done
-trap 'rmdir .git/code-review-backlog.lock' EXIT
-
-git reset -q          # begin from an empty index; the lock makes this safe
-
-expected=()
-for id in <waveTaskId> <memberId>... <filedTriageId>...; do
-  path="$(ops backlog task view "$id" --plain | sed -n '1s/^File: //p')"
-  [ -n "$path" ] || { echo "no file resolved for $id" >&2; exit 1; }
-  git add -- "$path"
-  # Record only what actually became a *staged change*. A member task file the wave
-  # left unchanged stages nothing and must contribute nothing here; `git ls-files
-  # --cached` would list it anyway (it is tracked) and fail the exact-set check.
-  while IFS= read -r rel; do expected+=("$rel"); done \
-    < <(git diff --cached --name-only -- "$path")
-done
-
-# The staged set must equal the expected set exactly — abort, do not repair.
-diff <(printf '%s\n' ${expected[@]+"${expected[@]}"} | sed '/^$/d' | sort -u) \
-     <(git diff --cached --name-only | sort -u) \
-  || { echo "unexpected paths staged — aborting" >&2; git reset -q; exit 1; }
-
-# Nothing staged means this wave edited no task files of its own -- report it,
-# do not commit an empty bookkeeping commit.
-[ -n "$(git diff --cached --name-only)" ] \
-  || { echo "no task-file changes for this wave -- report, do not commit" >&2; exit 1; }
-
-git commit -m "chore(backlog): close code-review wave <N>"
-```
-
-`git add .backlog` is wrong here even though it looks equivalent. Every concurrent wave
-writes its task edits into this same checkout, so the directory holds their in-flight work
-too; staging it wholesale attributes their edits to this wave and leaves their own
-bookkeeping commits with nothing to make.
-
-The lock is what makes the check mean anything. Naming your own paths does not make
-staging atomic: the main checkout has one index, so without the lock another wave's
-`git add` lands between your check and your commit and rides along. Hold it across stage →
-verify → commit only, release it on every exit path, and never hold it together with the
-merge lock — bookkeeping runs after the wave has landed. If the staged set does not match,
-abort and report; do not unstage the extras and continue. The full reasoning is in
+landing branch, **staging only this wave's own files, under the backlog lock**. The exact
+sequence — acquire, `git reset -q`, resolve each task file's path through
+`ops backlog task view`, verify the staged set matches exactly, commit, release — is in
 [Task files are shared mutable state](references/worktree-protocol.md#task-files-are-shared-mutable-state).
+Run it from there rather than from memory; the checks in it are the point.
 
-**Standalone runs only — open the run's PR.** A fan-out run does not do this;
-`code-review-run-waves` opens one PR for all its waves after every runner has returned.
-A standalone run owns the whole landing branch, so after the `chore(backlog)` commit,
-write the Step 9 report's substance (wave, member outcomes, verify results, filed
-tasks) to a body file first, then push and PR the **recorded landing branch** — the
-exact name resolved in Step 2:
+Two things that section settles and are easy to get wrong: `git add .backlog` is never
+correct here (concurrent waves write their task edits into this same checkout, so it
+attributes their work to your wave), and the lock is what makes the exact-set check mean
+anything — without it another wave's `git add` lands between your check and your commit.
+If the staged set does not match, abort and report; do not unstage the extras and continue.
 
-```bash
-git push -u origin <landing-branch>
-gh pr create --base main --head <landing-branch> \
-  --title "code-review run: <waveTaskId>" \
-  --body-file <report file>
-```
-
-Append the PR URL to the report once it is open. Do not merge the PR yourself unless
-the user asks — it is the run's human review gate. After it merges, clean up. This
-repo squashes PRs to `main`, so the squash commit shares no ancestry with the landing
-branch: `git branch -d` will refuse, and `-D` is correct here because the merged PR is
-the proof the work landed:
-
-```bash
-git checkout main && git pull && git branch -D <landing-branch>
-```
-
-The `-D` ban two paragraphs up covers wave branches that might carry unmerged work —
-not a landing branch whose PR has merged.
+**Standalone runs only — open the run's PR.** A fan-out run does not: `code-review-run-waves`
+PRs all its waves once every runner returns. Procedure (report body file, push, `gh pr
+create` on the landing branch recorded in Step 2, and the one sanctioned `-D` afterwards):
+[Opening the Run PR](references/worktree-protocol.md#opening-the-run-pr-standalone-runs-only).
 
 **Parked.** If any member task is not `Done`, or the merge did not land, leave the wave
 parent non-done (`In Progress` or `To Do`, matching the remaining work) and append a note

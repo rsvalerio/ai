@@ -169,7 +169,8 @@ Then commit whatever backlog task-file changes are *left* in the main checkout a
 `chore(backlog)` commit — it rides the PR, so task-status flips are reviewed alongside
 the code they describe. Each runner stages and commits its own wave's task files by path,
 serialized under the backlog lock
-(see [Task files are shared mutable state](../code-review-run-wave/references/worktree-protocol.md#task-files-are-shared-mutable-state)),
+(see "Task files are shared mutable state" in
+`skills/code-review-run-wave/references/worktree-protocol.md`),
 so by now this should be a sweep of the remainder — a parked wave's notes, edits you made
 yourself on the base branch — and usually nothing at all.
 

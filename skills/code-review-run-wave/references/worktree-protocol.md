@@ -255,6 +255,27 @@ the merged PR is the proof the work landed (`git checkout main && git pull && gi
 -D <landing-branch>`). The `-D` ban in the invariants covers branches that might carry
 unmerged work, not a landing branch whose PR has merged.
 
+## Opening the Run PR (standalone runs only)
+
+A fan-out run never does this: `code-review-run-waves` opens one PR covering all its
+waves once every runner has returned. A standalone run owns the whole landing branch, so
+it publishes its own.
+
+After the `chore(backlog)` commit, write the report's substance — wave, member outcomes,
+both `ops verify` results, filed `Triage` tasks — to a body file first, then push and PR
+the **recorded landing branch**, the exact name resolved when the run started:
+
+```bash
+git push -u origin <landing-branch>
+gh pr create --base main --head <landing-branch> \
+  --title "code-review run: <waveTaskId>" \
+  --body-file <report file>
+```
+
+Append the PR URL to the report once it is open. Do not merge the PR yourself unless the
+user asks — it is the run's human review gate. Cleaning up the landing branch after its
+PR merges is the one sanctioned `-D`; see [Teardown](#teardown).
+
 ## Recovery
 
 **A parked wave (merge failed, worktree still present).** The branch holds the committed
