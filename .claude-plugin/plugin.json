@@ -1,0 +1,10 @@
+{
+  "name": "dev-skills",
+  "description": "Eight coupled skills: Rust and web code review, pedantic Clippy sweeps, review-wave triage and execution, commit scripting, and Rust knowledge integration. They reference each other's files, so they ship as one plugin.",
+  "author": {
+    "name": "Rodrigo Valerio",
+    "url": "https://github.com/rsvalerio"
+  },
+  "homepage": "https://github.com/rsvalerio/ai",
+  "license": "Apache-2.0"
+}

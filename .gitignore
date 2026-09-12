@@ -22,3 +22,6 @@ Cargo.lock
 agent-skills
 agent-skills-cli
 rumdl
+
+# plugin eval run output (report.html + aggregate-result.json per run)
+evals/results/
