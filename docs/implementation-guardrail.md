@@ -39,7 +39,8 @@ alwaysApply: false
 
 Before making non-trivial changes to Rust code, read the `code-review-rust` Agent
 Skill (typically installed at `~/.claude/skills/code-review-rust/SKILL.md`) and
-treat its `references/rules.md` rules as acceptance criteria for your change.
+treat the rules in its `references/rules/<CATEGORY>.md` files as acceptance criteria for
+your change.
 
 Do **not** introduce new violations of any rule in:
 
@@ -83,7 +84,8 @@ Run `cargo fmt`, `cargo clippy --all-targets --workspace -- -D warnings`, and
 
 When editing Rust code, follow the rules in the `code-review-rust` Agent Skill
 (<https://github.com/rsvalerio/ai/tree/main/skills/code-review-rust>). The
-full rule index is at `references/rules.md`.
+rules are in `references/rules/<CATEGORY>.md`, one file per prefix, with a one-line
+index of every rule at `references/rules/index.md`.
 
 Treat each rule as an acceptance criterion, not a post-hoc check. Run
 `cargo fmt`, `cargo clippy --all-targets --workspace -- -D warnings`, and
@@ -118,8 +120,9 @@ without the skill installed, these apply unconditionally:
 - **TEST-1** — Every test has at least one meaningful assertion. Empty bodies
   and assertion-free tests are not tests.
 
-Full rule catalog (when installed): see the `code-review-rust` skill's
-`references/rules.md`.
+Full rules (when installed): see the `code-review-rust` skill's
+`references/rules/<CATEGORY>.md`, or `references/rules/index.md` for every rule as a
+one-liner.
 ```
 
 The vendored list is the binding contract; the skill is deeper guidance. Update the subset when canonical rules in `code-review-rust` change.
@@ -140,5 +143,6 @@ The vendored list is the binding contract; the skill is deeper guidance. Update 
 ## See also
 
 - [`code-review-rust` skill](../skills/code-review-rust/SKILL.md)
-- [`references/rules.md`](../skills/code-review-rust/references/rules.md) — rule index
+- [`references/rules/index.md`](../skills/code-review-rust/references/rules/index.md) — every rule as a one-liner
+- [`references/rules.md`](../skills/code-review-rust/references/rules.md) — category table, severity scale, design philosophy
 - [Agent Skills specification](https://agentskills.io/specification)
