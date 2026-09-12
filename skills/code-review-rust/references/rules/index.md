@@ -4,7 +4,7 @@ One line per rule — enough to decide whether a rule is in play. Before filing 
 read that rule's full text (rationale, examples, scanning guidance, exceptions) in the
 category file linked from its heading. Never file a finding from the index line alone.
 
-## OWN — Ownership & Borrowing (typical severity: Medium--High) · [rules/OWN.md](rules/OWN.md) (4 KB)
+## OWN — Ownership & Borrowing (typical severity: Medium--High) · [rules/OWN.md](OWN.md) (4 KB)
 
 - **OWN-1** Prefer `&T` over `&mut T`; smallest scope possible.
 - **OWN-2** *Retired.* Do not reuse this ID for new rules; old findings may reference it.
@@ -20,7 +20,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **OWN-12** Implement `Deref` only for transparent wrappers and smart pointers; never use it to simulate OOP inheritance …
 - **OWN-13** When the borrow checker rejects code because the *whole* struct is borrowed to reach one field, split the struct rather than reaching for `.clone()` (OWN-8).
 
-## ERR — Error Handling (typical severity: High) · [rules/ERR.md](rules/ERR.md) (12 KB)
+## ERR — Error Handling (typical severity: High) · [rules/ERR.md](ERR.md) (12 KB)
 
 - **ERR-1** Propagate with `?`; handle or propagate, never both; similarly, log at the handling site only — propagating an error and also logging it creates duplicate log entries
 - **ERR-2** Define domain error enums; document which variants each public function may return and under what conditions.
@@ -39,7 +39,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **ERR-15** `std::panic::catch_unwind` is a last resort, and continuing after it is a defect on its own.
 - **ERR-16** Indexing panics; the fallible accessor does not.
 
-## TRAIT — Traits & Generics (typical severity: Low--Medium) · [rules/TRAIT.md](rules/TRAIT.md) (8 KB)
+## TRAIT — Traits & Generics (typical severity: Low--Medium) · [rules/TRAIT.md](TRAIT.md) (8 KB)
 
 - **TRAIT-1** `From`/`Into` for conversions
 - **TRAIT-2** `impl Trait` in return position for flexibility; in 2024 edition, all lifetimes are captured by default (use `+ use<>` to opt out)
@@ -56,7 +56,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **TRAIT-13** Public types should be `Send`, and so should the futures they produce, unless the crate deliberately targets a single-threaded runtime and says so.
 - **TRAIT-14** A bound repeated across a struct, its `impl` blocks, and its signatures should be *named*, not just reformatted.
 
-## CONC — Concurrency (typical severity: High--Critical) · [rules/CONC.md](rules/CONC.md) (24 KB)
+## CONC — Concurrency (typical severity: High--Critical) · [rules/CONC.md](CONC.md) (24 KB)
 
 - **CONC-1** Choose the right shared ownership primitive: `Arc<T>` for immutable shared state; `Arc<RwLock<T>>` when reads dominate and writes are rare; `Arc<Mutex<T>>` for occasional writes …
 - **CONC-2** Hold locks briefly; never across `.await`
@@ -74,7 +74,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **CONC-14** Graceful shutdown means the signals the platform actually sends.
 - **CONC-15** For parallelism that ends inside the current function, `std::thread::scope` (stable since Rust 1.63) lets the spawned threads borrow local data directly …
 
-## ASYNC — Async (typical severity: Medium--High) · [rules/ASYNC.md](rules/ASYNC.md) (18 KB)
+## ASYNC — Async (typical severity: Medium--High) · [rules/ASYNC.md](ASYNC.md) (18 KB)
 
 - **ASYNC-1** `spawn_blocking` for CPU-heavy work
 - **ASYNC-2** *Retired.* Channel selection is owned by **CONC-8**.
@@ -93,7 +93,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **ASYNC-15** Declare `async fn foo()` rather than `fn foo() -> impl Future<Output = …>` — it reads normally, needs no wrapping `async {}` block in the body, and is what callers expect.
 - **ASYNC-16** Every future in a `tokio::select!` arm must be cancellation-safe, and that is a per-method property you have to look up rather than infer.
 
-## PERF — Performance (typical severity: Medium) · [rules/PERF.md](rules/PERF.md) (16 KB)
+## PERF — Performance (typical severity: Medium) · [rules/PERF.md](PERF.md) (16 KB)
 
 - **PERF-1** Avoid premature `.collect()` — keep data as iterators through chains and collect only at the final consumption point; unnecessary intermediate collections waste allocations and defeat lazy evaluation.
 - **PERF-2** `Vec::with_capacity()` when size known — eliminates reallocations in hot paths.
@@ -117,7 +117,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **PERF-20** Call `shrink_to_fit()` on large, long-lived collections built by growth.
 - **PERF-21** Two build-level knobs apply to **applications** (they are ignored for libraries, which do not control the final build) and are worth setting deliberately once rather than chasing in code.
 
-## UNSAFE — Unsafe (typical severity: High--Critical) · [rules/UNSAFE.md](rules/UNSAFE.md) (7 KB)
+## UNSAFE — Unsafe (typical severity: High--Critical) · [rules/UNSAFE.md](UNSAFE.md) (7 KB)
 
 - **UNSAFE-1** Small `unsafe` blocks; document invariants with `// SAFETY:` comments.
 - **UNSAFE-2** `unsafe fn` only if every call requires upholding invariants — and specifically invariants whose violation is **undefined behaviour**.
@@ -132,7 +132,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **UNSAFE-11** Distinguish *unsafe* from *unsound*, because the review question differs.
 - **UNSAFE-12** A crate that does not need `unsafe` should say so mechanically: `unsafe_code = "forbid"` in the crate's `[lints.rust]` table …
 
-## PATTERN — Advanced Patterns (typical severity: Low--Medium) · [rules/PATTERN.md](rules/PATTERN.md) (7 KB)
+## PATTERN — Advanced Patterns (typical severity: Low--Medium) · [rules/PATTERN.md](PATTERN.md) (7 KB)
 
 - **PATTERN-1** Typestate pattern for state machines.
 - **PATTERN-2** Phantom types for zero-cost guarantees
@@ -145,13 +145,13 @@ category file linked from its heading. Never file a finding from the index line 
 - **PATTERN-9** Rust has no `finally`; the equivalent is a value whose `Drop` runs the cleanup, and a *guard* is that value plus mediated access to what it protects …
 - **PATTERN-10** A `dyn Trait` value that only has to live for the current scope does not need a `Box`.
 
-## MACRO — Macros (typical severity: Low--Medium) · [rules/MACRO.md](rules/MACRO.md) (4 KB)
+## MACRO — Macros (typical severity: Low--Medium) · [rules/MACRO.md](MACRO.md) (4 KB)
 
 - **MACRO-1** A macro is what you write when you have run out of language, and Rust gives you a lot of language — so a macro needs a reason that traits, generics, or a plain function could not satisfy (TRAIT-8).
 - **MACRO-2** A macro must not lie about what it expands to.
 - **MACRO-3** Structure macro crates so they are testable and so their expansions resolve.
 
-## TIME — Date & Time (typical severity: Medium--High) · [rules/TIME.md](rules/TIME.md) (9 KB)
+## TIME — Date & Time (typical severity: Medium--High) · [rules/TIME.md](TIME.md) (9 KB)
 
 - **TIME-1** Never hand-roll calendar arithmetic.
 - **TIME-2** Compute, store, compare, and log in UTC (`Utc::now()`); convert to `Local` only at the point of display.
@@ -160,7 +160,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **TIME-5** Keep timestamps unambiguous at every boundary.
 - **TIME-6** Do not read the clock in the middle of business logic — `Utc::now()`, `SystemTime::now()`, `Local::now()`, `Zoned::now()`, `Instant::now()` for a decision rather than a measurement …
 
-## EDITION — Rust 2024 Edition Reference · [rules/EDITION.md](rules/EDITION.md) (1 KB)
+## EDITION — Rust 2024 Edition Reference · [rules/EDITION.md](EDITION.md) (1 KB)
 
 - **EDITION-1** Reserved keyword: `gen` (for future generators); use raw identifier `r#gen` if needed
 - **EDITION-2** In **return position** (`-> impl Trait`), Rust 2024 captures all in-scope lifetimes and type parameters by default; use `+ use<'a, T>` to state the captures explicitly and narrow them.
@@ -168,7 +168,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **EDITION-4** Shortened temporary lifetimes: `if let` temporaries drop at branch end, not statement end
 - **EDITION-5** Apply edition migration fixes before updating `edition = "2024"` in Cargo.toml
 
-## VER — Version-Specific Features (typical severity: Low) · [rules/VER.md](rules/VER.md) (2 KB)
+## VER — Version-Specific Features (typical severity: Low) · [rules/VER.md](VER.md) (2 KB)
 
 - **VER-1** `RwLockWriteGuard::downgrade()` (stable since Rust 1.92): converts write lock to read lock atomically; use when you need to modify data then continue reading without releasing the lock …
 - **VER-4** `Mutex::clear_poison` and `RwLock::clear_poison` (stable since Rust 1.77): explicitly reset a poisoned lock after recovering from a panic, instead of unwrapping `PoisonError` or recreating the lock.
@@ -178,7 +178,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **VER-8** `NonZero<T>` unified generic (stable since Rust 1.79): replaces individual `NonZeroU8`, `NonZeroU32`, etc. with a single generic.
 - **VER-9** `core::range` Copy range types (stable since Rust 1.96): `core::range::Range`, `RangeFrom`, `RangeInclusive` implement `IntoIterator` instead of `Iterator`, so the range value is plain `Copy` data …
 
-## FN — Functions & Structure (typical severity: Medium--High) · [rules/FN.md](rules/FN.md) (3 KB)
+## FN — Functions & Structure (typical severity: Medium--High) · [rules/FN.md](FN.md) (3 KB)
 
 - **FN-1** Functions ≤50 lines. Each function should operate at a single abstraction level — extract low-level details into named helpers rather than mixing orchestration with bit manipulation or I/O. Context may justify exceptions (state machines, exhaustive match arms, DSL builders)
 - **FN-2** Nesting ≤4 levels; use early returns/guards.
@@ -190,7 +190,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **FN-8** DRY: see DUP-1--10 for thresholds and refactoring guidance.
 - **FN-9** Explicit dependencies; no implicit state
 
-## READ — Readability · [rules/READ.md](rules/READ.md) (7 KB)
+## READ — Readability · [rules/READ.md](READ.md) (7 KB)
 
 - **READ-1** Prefer clarity over cleverness: explicit > implicit, familiar patterns > obscure features, readability > brevity
 - **READ-2** Break dense expressions into named intermediate variables
@@ -206,7 +206,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **READ-12** Log structured events with named fields and a message *template*, not a preformatted string.
 - **READ-13** Documentation describes the end state, not the journey that produced it.
 
-## ARCH — Architecture & Modules · [rules/ARCH.md](rules/ARCH.md) (15 KB)
+## ARCH — Architecture & Modules · [rules/ARCH.md](ARCH.md) (15 KB)
 
 - **ARCH-1** No god objects or god modules; split by responsibility.
 - **ARCH-2** At module boundaries, depend on traits for decoupling and testability; within a module, start concrete until abstraction is justified (see TRAIT-9 for when to extract traits)
@@ -227,7 +227,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **ARCH-17** A **new** crate or workspace should be created on the latest stable edition (2024 at the time of writing); the `resolver` key is implied by the edition and not needed.
 - **ARCH-18** Never write `#![deny(warnings)]` in the source.
 
-## API — API Design (typical severity: Medium) · [rules/API.md](rules/API.md) (25 KB)
+## API — API Design (typical severity: Medium) · [rules/API.md](API.md) (25 KB)
 
 - **API-1** Expressive type names (`TemperatureCelsius`, not `f64`) — expressive, but **short**: Rust convention is that identifiers compound at most two short words …
 - **API-2** Newtype pattern: wrap primitives for type safety (`UserId(u32)`, `Email(String)`) to prevent argument order mistakes; zero-cost abstraction.
@@ -252,7 +252,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **API-21** A fallible function that *consumes* an argument must hand it back in the error.
 - **API-22** Give the dominant use case a one-call entry point.
 
-## CL — Cognitive Load · [rules/CL.md](rules/CL.md) (4 KB)
+## CL — Cognitive Load · [rules/CL.md](CL.md) (4 KB)
 
 - **CL-1** *Retired* — folded into **READ-1** ("prefer clarity over cleverness").
 - **CL-2** *Retired* — folded into **READ-2** (named intermediate variables).
@@ -260,7 +260,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **CL-4** Prefer familiar patterns over obscure language features — use well-known Rust idioms over exotic type-level programming unless it buys a compile-time guarantee …
 - **CL-5** Balance structural complexity with cognitive load — when the two conflict, use the decision heuristic below.
 
-## DUP — Code Duplication (typical severity: Medium--High) · [rules/DUP.md](rules/DUP.md) (2 KB)
+## DUP — Code Duplication (typical severity: Medium--High) · [rules/DUP.md](DUP.md) (2 KB)
 
 - **DUP-1** Flag identical code blocks of 5+ lines (direct copy-paste, same match branches); threshold is configurable — lower for critical code, higher for generated or boilerplate-heavy modules
 - **DUP-2** Flag 3+ functions with similar structure differing only in types, literals, or field names; threshold is configurable per project
@@ -273,7 +273,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **DUP-9** Context matters: some duplication is better than the wrong abstraction; don't DRY prematurely
 - **DUP-10** Test code has a higher duplication tolerance than production code; prefer clarity over DRY in tests.
 
-## SEC — SEC · [rules/SEC.md](rules/SEC.md) (29 KB)
+## SEC — SEC · [rules/SEC.md](SEC.md) (29 KB)
 
 ### Security: Memory Safety (typical severity: Critical)
 
@@ -350,7 +350,7 @@ category file linked from its heading. Never file a finding from the index line 
 
 - **SEC-37** Fuzz security-critical parsing and deserialization code with fuzzing tools; prioritize code that handles untrusted input, protocol parsing, and format conversion
 
-## TEST — TEST · [rules/TEST.md](rules/TEST.md) (15 KB)
+## TEST — TEST · [rules/TEST.md](TEST.md) (15 KB)
 
 ### Test Structure
 
@@ -381,7 +381,7 @@ category file linked from its heading. Never file a finding from the index line 
 
 ### Test Async & Concurrency
 
-- **TEST-13** `#[tokio::test]` + `tokio::time::pause()` for async/time tests (tokio-specific; other runtimes need different approaches — see [flakiness patterns](flakiness-patterns.md))
+- **TEST-13** `#[tokio::test]` + `tokio::time::pause()` for async/time tests (tokio-specific; other runtimes need different approaches — see [flakiness patterns](../flakiness-patterns.md))
 - **TEST-14** Use `#[tokio::test(flavor = "multi_thread")]` as a race condition discovery tool — single-threaded flavor serializes tasks and hides data races …
 - **TEST-15** Deterministic sync points over `sleep`-based waits
 
@@ -412,7 +412,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **TEST-35** Concurrent data structures need interleaving coverage, which ordinary tests do not provide: a test that spawns two threads and asserts the result exercises whichever interleaving the scheduler happened to pick, and passing it a thousand times says nothing about the one ordering that breaks.
 - **TEST-36** `cargo nextest` runs each test in its own process, which changes what the suite can catch as well as how fast it runs: a test that aborts, segfaults …
 
-## NATS — NATS · [rules/NATS.md](rules/NATS.md) (4 KB)
+## NATS — NATS · [rules/NATS.md](NATS.md) (4 KB)
 
 ### NATS Connection (typical severity: High)
 

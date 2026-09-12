@@ -28,7 +28,7 @@ When integrating, route content to the correct detailed rule file in code-review
 - **NATS-specific** → `references/rules/NATS.md`
 
 Every rule added, removed, or renumbered in a `references/rules/<PREFIX>.md` file must also be
-reflected as a one-line entry in `references/rules-index.md`, and any new observable signal
+reflected as a one-line entry in `references/rules/index.md`, and any new observable signal
 in `references/scan-checklist.md`. A rule that exists only in the category file is invisible
 to a scan.
 

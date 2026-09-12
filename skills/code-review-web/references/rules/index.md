@@ -4,7 +4,7 @@ One line per rule — enough to decide whether a rule is in play. Before filing 
 read that rule's full text (rationale, examples, scanning guidance, exceptions) in the
 category file linked from its heading. Never file a finding from the index line alone.
 
-## REACT — REACT · [rules/REACT.md](rules/REACT.md) (7 KB)
+## REACT — REACT · [rules/REACT.md](REACT.md) (7 KB)
 
 ### React — Hooks & Effects (typical severity: High)
 
@@ -38,7 +38,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **REACT-19** `use()` reads a resource (promise or context) during render but **does not support a promise created inline in render** — the promise must be cached/stable …
 - **REACT-20** React 19 supports rendering `<title>`, `<meta>`, and `<link>` from any component (hoisted to `<head>`); prefer this over manual `document.title` mutation in an Effect for document metadata.
 
-## TS — TS · [rules/TS.md](rules/TS.md) (4 KB)
+## TS — TS · [rules/TS.md](TS.md) (4 KB)
 
 ### TypeScript — Type Safety (typical severity: Medium--High)
 
@@ -58,7 +58,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **TS-11** Add a `default` branch that assigns the value to `never` when switching over a discriminated union …
 - **TS-12** Enable strict typing in `tsconfig`: `"strict": true` at minimum, and prefer also enabling `noUncheckedIndexedAccess` (array/index access returns `T | undefined`) and `exactOptionalPropertyTypes` …
 
-## ASYNC — Async & Error Handling (typical severity: High) · [rules/ASYNC.md](rules/ASYNC.md) (3 KB)
+## ASYNC — Async & Error Handling (typical severity: High) · [rules/ASYNC.md](ASYNC.md) (3 KB)
 
 - **ASYNC-1** No floating promises — every promise in statement position must be awaited, `.catch()`-ed, or explicitly `void`-ed; a dropped promise swallows rejections silently.
 - **ASYNC-2** Do not misuse promises where a non-promise is expected — a promise in an `if`/`&&`/ternary condition is always truthy …
@@ -68,7 +68,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **ASYNC-6** Wrap subtrees that can throw during render (lazy components, `use()` of a rejected promise, third-party widgets) in an error boundary so one failure doesn't blank the whole app …
 - **ASYNC-7** Render explicit loading and error states for every async operation; don't leave the UI blank or stuck on the previous value while a request is in flight or after it fails.
 
-## PERF — Performance (typical severity: Low--Medium) · [rules/PERF.md](rules/PERF.md) (2 KB)
+## PERF — Performance (typical severity: Low--Medium) · [rules/PERF.md](PERF.md) (2 KB)
 
 - **PERF-1** Avoid needless re-renders: hoist expensive computation out of the render path or `useMemo` it; don't recreate large objects/handlers passed to memoized children every render …
 - **PERF-2** Keep context provider `value` referentially stable — pass a memoized object/array, not a fresh literal each render — or every consumer re-renders on every provider render.
@@ -76,14 +76,14 @@ category file linked from its heading. Never file a finding from the index line 
 - **PERF-4** Virtualize long lists (windowing) rather than rendering thousands of DOM nodes; large unvirtualized lists tank scroll performance and memory.
 - **PERF-5** Code-split heavy or route-level components with `React.lazy()` + dynamic `import()` and a `<Suspense>` fallback so the initial bundle stays small …
 
-## A11Y — Accessibility (typical severity: Medium) · [rules/A11Y.md](rules/A11Y.md) (2 KB)
+## A11Y — Accessibility (typical severity: Medium) · [rules/A11Y.md](A11Y.md) (2 KB)
 
 - **A11Y-1** Use semantic elements (`<button>`, `<a>`, `<nav>`, `<label>`) over `<div>`/`<span>` with click handlers; a clickable `<div>` is not focusable or keyboard-operable by default.
 - **A11Y-2** Provide text alternatives and labels: `alt` on `<img>` (empty `alt=""` for decorative), an associated `<label>` or `aria-label` for every form control, and accessible names for icon-only buttons.
 - **A11Y-3** Pair pointer interactions with keyboard support: an element with `onClick` that isn't a native button/link needs `onKeyDown` (Enter/Space) and focus management …
 - **A11Y-4** Use ARIA only to fill gaps native HTML can't, and use it correctly — invalid/contradictory ARIA is worse than none.
 
-## FN — Functions & Structure (typical severity: Medium--High) · [rules/FN.md](rules/FN.md) (2 KB)
+## FN — Functions & Structure (typical severity: Medium--High) · [rules/FN.md](FN.md) (2 KB)
 
 - **FN-1** Functions/components ≤50 lines of logic, operating at a single abstraction level — extract low-level details …
 - **FN-2** Nesting ≤4 levels; use early returns/guard clauses.
@@ -92,7 +92,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **FN-5** Keep cyclomatic complexity ≤10 (McCabe).
 - **FN-6** Components should do one thing.
 
-## READ — Readability (typical severity: Low--Medium) · [rules/READ.md](rules/READ.md) (2 KB)
+## READ — Readability (typical severity: Low--Medium) · [rules/READ.md](READ.md) (2 KB)
 
 - **READ-1** Prefer clarity over cleverness: explicit > implicit, familiar React/TS patterns > obscure type-level gymnastics, readability > brevity.
 - **READ-2** Break dense expressions into named intermediate variables; name the steps of long array-method chains …
@@ -103,7 +103,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **READ-7** Use consistent patterns for similar problems across the codebase (one fetch/error pattern, one way to read config, one toast/notification path).
 - **READ-8** No `console.log`/`console.debug`/`console.info` in production (non-test) code — leftover logs leak data and clutter the console.
 
-## ARCH — Architecture & Modules (typical severity: Medium) · [rules/ARCH.md](rules/ARCH.md) (2 KB)
+## ARCH — Architecture & Modules (typical severity: Medium) · [rules/ARCH.md](ARCH.md) (2 KB)
 
 - **ARCH-1** No god components or god modules.
 - **ARCH-2** Separate concerns: keep data fetching (API clients), business logic (pure functions / hooks), and presentation (components) distinct.
@@ -114,7 +114,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **ARCH-7** Be deliberate with barrel files (`index.ts` re-exports): they ease imports but can create cycles and defeat tree-shaking when overused.
 - **ARCH-8** Keep `tsconfig` project references and `include`/`exclude` honest — app code, node/config code, and tests should resolve to the right config …
 
-## API — Component API Design (typical severity: Medium) · [rules/API.md](rules/API.md) (1 KB)
+## API — Component API Design (typical severity: Medium) · [rules/API.md](API.md) (1 KB)
 
 - **API-1** Design narrow, well-typed component props: required vs optional explicit, no `any`/`object` prop types, discriminated-union props for variant components instead of many optional flags (mirrors TS-5).
 - **API-2** Avoid deep prop drilling (passing a prop through 3+ intermediate components that don't use it) — lift to context or compose with `children`/render props.
@@ -122,11 +122,11 @@ category file linked from its heading. Never file a finding from the index line 
 - **API-4** Keep prop and callback names predictable and consistent (`onChange`, `onSelect`, `value`, `disabled`); match the conventions of the underlying DOM/library elements the component wraps.
 - **API-5** Type imperative handles and external APIs precisely (e.g. an Excalidraw `ExcalidrawImperativeAPI` stored in a ref/state) rather than `any`; surface only the methods callers need.
 
-## CL — Cognitive Load · [rules/CL.md](rules/CL.md) (1 KB)
+## CL — Cognitive Load · [rules/CL.md](CL.md) (1 KB)
 
 - **CL-1** Default to reducing cognitive load, especially in high-churn application code and mixed-experience teams.
 
-## DUP — Code Duplication (typical severity: Medium--High) · [rules/DUP.md](rules/DUP.md) (2 KB)
+## DUP — Code Duplication (typical severity: Medium--High) · [rules/DUP.md](DUP.md) (2 KB)
 
 - **DUP-1** Flag identical or near-identical code blocks of 5+ lines (copy-pasted logic, repeated JSX subtrees).
 - **DUP-2** Flag 3+ functions/components with the same structure differing only in literals, field names, or types — candidates for a generic helper, a shared component with props, or a custom hook.
@@ -139,7 +139,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **DUP-9** Context matters: a little duplication is better than a premature or wrong abstraction.
 - **DUP-10** Test code has higher duplication tolerance than production code (see TEST-12); prefer clarity over DRY in tests.
 
-## SEC — SEC · [rules/SEC.md](rules/SEC.md) (7 KB)
+## SEC — SEC · [rules/SEC.md](SEC.md) (7 KB)
 
 ### Security: XSS & DOM Injection (typical severity: Critical)
 
@@ -173,7 +173,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **SEC-16** Do not ship readable source maps to production (or restrict their access); `build.sourcemap` true on a public deploy exposes full source and embedded constants.
 - **SEC-17** Audit and pin dependencies: run `npm audit`/SCA in CI, commit the lockfile, and review new/transitive packages — a frontend bundle inherits its whole supply chain, a primary attack vector.
 
-## TEST — TEST · [rules/TEST.md](rules/TEST.md) (5 KB)
+## TEST — TEST · [rules/TEST.md](TEST.md) (5 KB)
 
 ### Test Structure & Behavior
 
@@ -203,7 +203,7 @@ category file linked from its heading. Never file a finding from the index line 
 
 - **TEST-16** Track coverage of critical paths (Vitest `--coverage` via v8/istanbul) but treat coverage as a gap-finder, not a quality proof — combine with meaningful assertions (TEST-1, TEST-11).
 
-## RT — RT · [rules/RT.md](rules/RT.md) (3 KB)
+## RT — RT · [rules/RT.md](RT.md) (3 KB)
 
 ### Real-Time: Inbound Message Safety (typical severity: High--Critical)
 

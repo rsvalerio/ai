@@ -45,7 +45,7 @@ Do **not** introduce new violations of any rule in:
 
 - `references/rules/<CATEGORY>.md` — one file per rule prefix (`OWN`, `ERR`, `TRAIT`, `CONC`,
   `ASYNC`, `PERF`, `UNSAFE`, `SEC`, `TEST`, `NATS`, …). Read only the categories your change
-  touches; `references/rules-index.md` has every rule as a one-liner if you need to find the
+  touches; `references/rules/index.md` has every rule as a one-liner if you need to find the
   right category first.
 
 Do **not** file backlog tasks during implementation — the rules apply as
