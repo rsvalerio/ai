@@ -110,3 +110,17 @@ further.
 | Exported `*mut` handle borrowed from another handle, or `transmute` to `'static` at an FFI boundary | SEC-42, SEC-24 |
 | `///` example that defines a helper `fn` and asserts inside it | TEST-34, TEST-1 |
 | JetStream without resource limits | NATS-9--14 |
+
+## Sweep — categories with no signal
+
+The table above cannot reach these categories: their rules have no observable signal to
+grep for, so no row names them and a signal-driven scan never opens their files. Read each
+one once, after the signal walk, and judge it against the code you surveyed.
+
+- [`rules/CL.md`](rules/CL.md) — clarity and comment rules — no grep-able signal; the violation is prose
+- [`rules/EDITION.md`](rules/EDITION.md) — edition and toolchain migration rules — apply to the crate, not to a line
+- [`rules/VER.md`](rules/VER.md) — version-gated API rules — the signal is what the code does *not* yet use
+
+Keep this list and the table complementary: a category belongs in exactly one of them. Give
+a category a real signal row and remove it from here — `make validate-rules` fails on a
+category that appears in both, or in neither.

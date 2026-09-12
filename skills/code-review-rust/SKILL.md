@@ -30,7 +30,7 @@ before the first grep.
 
 | Tier | File | When to read |
 |------|------|--------------|
-| 1 | [scan-checklist.md](references/scan-checklist.md) | Start of every scan. Observable signal → rule IDs. |
+| 1 | [scan-checklist.md](references/scan-checklist.md) | Start of every scan. Observable signal → rule IDs, plus a **Sweep** list of categories that have no signal and must be read once regardless. |
 | 2 | [rules/index.md](references/rules/index.md) | **Not part of a scan.** One line per rule, for looking up a rule you have an ID for but no signal — e.g. resolving an ID carried by a backlog task. A scan skips it: tier 1 already named the IDs, and tier 3 is what decides the finding. |
 | 3 | `references/rules/<CATEGORY>.md` | The scan's second and last read. Only for a category with live candidates. Full rationale, examples, exceptions, and scanning guidance. **Required reading before filing a finding against a rule** — never file from a tier-2 one-liner. |
 
@@ -57,7 +57,7 @@ You are running unattended — nobody is watching to course-correct. Follow thes
 ## Process
 
 1. **Survey** — List all `.rs` files and `Cargo.toml`; identify large files (>300 lines), map module structure and dependencies, enumerate test files and `#[cfg(test)]` modules
-2. **Scan** — Walk [scan-checklist.md](references/scan-checklist.md) signal by signal. For every signal that hits, open `references/rules/<CATEGORY>.md` for the rule IDs it named and confirm against the full rule text. Do not read `rules/index.md` — tier 1 already gave you the IDs. Categories with no hits and no relevant code need no rule file read. For each violation, prepare a finding with rule ID, severity, file location, description, and acceptance criteria
+2. **Scan** — Walk [scan-checklist.md](references/scan-checklist.md) signal by signal. For every signal that hits, open `references/rules/<CATEGORY>.md` for the rule IDs it named and confirm against the full rule text. Do not read `rules/index.md` — tier 1 already gave you the IDs. Then work the checklist's **Sweep** list: those categories have no signal, so nothing above opens them, and skipping them silently drops their rules from the review. Categories with no hits and no relevant code need no rule file read. For each violation, prepare a finding with rule ID, severity, file location, description, and acceptance criteria
 3. **Deduplicate** — Run `ops backlog search "<RULE-ID>" --plain` to check for existing tasks with the same finding ID. If one exists and is not marked Done, skip. If Done, create only if the issue has regressed. Group findings that target the same `(file, function)` at different granularity into a single finding with the broadest scope
 4. **Create tasks** — For each finding, run `ops backlog task create --plain` with the flags below. Use a `"$(cat <<'EOF' ... EOF)"` heredoc for multi-line values (do NOT use `$'...'` ANSI-C quoting — it triggers an `ansi_c_string` safety prompt on every call).
 5. **Summarize** — run `ops backlog task list --status 'Triage' --plain`

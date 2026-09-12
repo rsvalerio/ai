@@ -14,12 +14,12 @@ tool_version = $(shell awk -v t=$(1) '$$1 == t || $$1 ~ "/" t "$$" { print $$2 }
 RUMDL_VERSION := $(call tool_version,rumdl)
 SKILL_VALIDATOR_VERSION := $(call tool_version,skill-validator)
 
-.PHONY: all ci validate validate-marketplace validate-rules-index eval lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
+.PHONY: all ci validate validate-marketplace validate-rules eval lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
 
-lint-and-validate: lint validate validate-marketplace validate-rules-index
+lint-and-validate: lint validate validate-marketplace validate-rules
 
 # Non-mutating gate for CI: structure, marketplace, formatting and lint rules.
-ci: validate validate-marketplace validate-rules-index fmt-check lint-check
+ci: validate validate-marketplace validate-rules fmt-check lint-check
 
 # Fail loudly when local tooling has drifted from the versions CI runs.
 check-tools:
@@ -64,35 +64,8 @@ install-tools:
 # by hand (AGENTS.md explains why). A rule that lands in references/rules/<CAT>.md
 # without an index line is invisible to a scan — the skill silently stops
 # enforcing it, and nothing else in `make ci` notices. Compare the two ID sets.
-RULE_SKILLS := code-review-rust code-review-web
-
-# comm needs sorted files; process substitution is bashism, and make runs /bin/sh.
-validate-rules-index:
-	@fail=0; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
-	for skill in $(RULE_SKILLS); do \
-		refs=$(SKILLS_DIR)/$$skill/references; \
-		if [ ! -d $$refs/rules ] || [ ! -f $$refs/rules/index.md ]; then \
-			echo "$$skill: expected $$refs/rules/ and $$refs/rules/index.md"; fail=1; continue; \
-		fi; \
-		find $$refs/rules -name '*.md' ! -name 'index.md' -exec \
-			grep -ohE '[*][*][A-Z]+-[0-9]+[.]?[*][*]' {} + \
-			| tr -d '*' | sed 's/[.]$$//' | sort -u > $$tmp/rules; \
-		grep -ohE '[*][*][A-Z]+-[0-9]+[.]?[*][*]' $$refs/rules/index.md \
-			| tr -d '*' | sed 's/[.]$$//' | sort -u > $$tmp/index; \
-		if [ ! -s $$tmp/rules ] || [ ! -s $$tmp/index ]; then \
-			echo "$$skill: parsed no rule ids — check the '**<CAT>-<N>**' format"; fail=1; continue; \
-		fi; \
-		missing=$$(comm -23 $$tmp/rules $$tmp/index | tr '\n' ' '); \
-		ghost=$$(comm -13 $$tmp/rules $$tmp/index | tr '\n' ' '); \
-		if [ -n "$$missing" ]; then \
-			echo "$$skill: in rules/ but missing from rules/index.md: $$missing"; fail=1; \
-		fi; \
-		if [ -n "$$ghost" ]; then \
-			echo "$$skill: in rules/index.md but no such rule in rules/: $$ghost"; fail=1; \
-		fi; \
-	done; \
-	[ $$fail -eq 0 ] || exit 1; \
-	echo "rules/index.md matches rules/ for: $(RULE_SKILLS)"
+validate-rules:
+	@python3 scripts/validate-rules.py
 
 # Behavioural gate: do the skills still trigger? `claude plugin eval` runs each
 # case twice (plugin loaded / not loaded) and reports the delta. Every grader in
