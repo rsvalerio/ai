@@ -1,18 +1,17 @@
 ---
 name: rust-make-clippy-pedantic
 description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, then files one backlog task per warning, each labelled pedantic, and reports a high-level effort estimate for clearing them. Test-only style findings, generated files, and out-of-tree warnings are dropped, and a lint firing more than twenty times in one crate becomes a single aggregate task. Passing --apply additionally writes the lint policy into Cargo.toml and clippy.toml; without it the run only shows what those files would contain. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
-allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git stash list:*) Bash(cargo clippy:*) Bash(cargo metadata:*) Bash(cargo --version) Bash(jq:*) Bash(mktemp:*) Bash(ops backlog:*)
+allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(cargo --version) Bash(cargo clippy --version) Bash(ops --version) Bash(ops clippy-findings:*) Bash(ops about crates:*) Bash(ops backlog:*) Bash(jq:*) Bash(mktemp:*) Bash(sha256sum) Bash(rg:*) Bash(wc -l)
 license: Apache-2.0
 ---
 
 # Make Clippy Pedantic
 
 Raise a Rust project to pedantic-grade linting **without changing a line of its source**.
-The aggressive lint levels are passed as command-line flags to `cargo clippy`; no
-`#![warn(...)]` attribute is added to any crate, and `--fix` is never used. The output of
-the run is a set of backlog tasks, one per finding, plus an effort estimate, plus the lint
-configuration that would make the strictness permanent — shown by default, and written to
-`Cargo.toml` and `clippy.toml` only when the run is invoked with `--apply`.
+The strict lint levels are command-line flags; no `#![warn(...)]` attribute is added, and
+`--fix` is never used. The run produces one backlog task per finding, an effort estimate,
+and the lint configuration that would make the strictness permanent — written only under
+`--apply`.
 
 ## Invocation
 
@@ -28,8 +27,8 @@ else about the run changes — the same preflight, the same flags, the same task
 ## Purpose
 
 - Verify the working tree is clean before linting, so findings map to a known commit
-- Run `cargo clippy` with `clippy::pedantic` (and the other strict groups) supplied as
-  `-W` flags after `--`, leaving the repository byte-identical
+- Run Clippy through `ops clippy-findings` with the strict groups as `-W` flags, leaving
+  the repository byte-identical
 - Diff the pedantic run against a default-level baseline so pre-existing warnings are
   labelled honestly
 - Create one backlog task per finding via `ops backlog task create --plain`, every task
@@ -67,14 +66,16 @@ All four checks must pass. On any failure, print the reason and stop.
 
 ```bash
 git rev-parse --is-inside-work-tree              # must be true
-git status --porcelain                           # must be EMPTY (tracked + untracked)
+git status --porcelain -- . ':(exclude).backlog'  # must be EMPTY (tracked + untracked)
 git rev-parse --short HEAD                       # record: findings are pinned to this SHA
 git rev-parse --abbrev-ref HEAD                  # record: branch name
 ```
 
 - **No modifications, staged or unstaged, and no untracked files.** `git status --porcelain`
   must print nothing. Untracked files count: a stray `src/scratch.rs` gets linted and would
-  file findings against code that is not in the commit.
+  file findings against code that is not in the commit. `.backlog/` is the one exclusion:
+  task files are never linted, and this run writes there anyway. Step 7 checks the tree
+  against the same pathspec.
 - **Do not fetch, pull, rebase, or stash.** The point of the check is that the tree already
   is what it claims to be; making it clean would change what gets linted.
 - A detached HEAD is fine — record the SHA and carry on.
@@ -83,9 +84,11 @@ Then confirm the toolchain and record it for the report:
 
 ```bash
 cargo --version && cargo clippy --version
+ops --version    # must be 0.72.0 or newer: `ops clippy-findings --schema-version 2`
 ```
 
-If `cargo clippy` is not installed (`rustup component add clippy`), stop and say so.
+If `cargo clippy` is not installed (`rustup component add clippy`), or `ops` is missing or
+older than 0.72.0, stop and say so.
 
 ### Step 2 — Establish the default-level baseline
 
@@ -95,16 +98,24 @@ project's `target/` and its incremental caches are untouched:
 ```bash
 SCRATCH="$(mktemp -d)"
 CARGO_TARGET_DIR="$SCRATCH/target" \
-  cargo clippy --workspace --all-targets --locked --message-format=json --quiet \
-  > "$SCRATCH/baseline.json" 2> "$SCRATCH/baseline.err"
+  ops clippy-findings --schema-version 2 > "$SCRATCH/baseline.json" 2> "$SCRATCH/baseline.err"
 ```
 
-`--locked` is part of the non-destructive promise: without it, a missing or stale
-`Cargo.lock` is silently written during dependency resolution, and a run that edits a
-tracked file is exactly what Step 1 verified would not happen. If Cargo refuses with
-`the lock file needs to be updated`, **stop and report it** — refreshing the lock is a
-change to the repository and belongs to the user, not to a lint sweep. The same applies to
-a project that does not commit its lock file at all: say so rather than generating one.
+`ops clippy-findings` is a survey, not a gate. It runs
+`cargo clippy --workspace --all-features --all-targets --locked --message-format=json`,
+never adds `-D warnings`, and prints one normalized JSON row per Clippy diagnostic
+([extraction.md](references/extraction.md)).
+
+`--locked` is on by default and is part of the non-destructive promise
+([lint-catalog.md](references/lint-catalog.md#the-flag-set)); never pass `--no-locked`. If
+Cargo refuses with `the lock file needs to be updated`, or the project commits no lock file,
+**stop and report it**: refreshing the lock is the user's change to make, not a lint sweep's.
+
+**Features.** The survey defaults to `--all-features`, the build the `ops clippy` gate lints.
+If it fails with a feature conflict (mutually exclusive features), rerun **both** passes
+with `--no-all-features`, and note the reduced coverage in the report. Steps 2, 3 and the
+Step 7 verification must always use the same feature set, or the baseline diff compares two
+different builds.
 
 **If this run fails to compile, stop.** A tree that does not build cannot be linted
 meaningfully; report the compiler error and file nothing.
@@ -115,11 +126,11 @@ are failures of the current gate, not new demands from a stricter one.
 
 ### Step 3 — Run the pedantic pass
 
-Same invocation with the strict groups appended as flags after `--`:
+Same invocation, with the strict groups as lint flags after `--`:
 
 ```bash
 CARGO_TARGET_DIR="$SCRATCH/target" \
-  cargo clippy --workspace --all-targets --locked --message-format=json --quiet -- \
+  ops clippy-findings --schema-version 2 -- \
     -W clippy::pedantic \
     -W clippy::nursery \
     -W clippy::cargo \
@@ -136,75 +147,65 @@ Rules for this invocation:
 - `-A clippy::multiple_crate_versions` is suppressed by default: it is a dependency-graph
   fact, not a code defect, and files a task nobody can act on. Drop the `-A` only if the
   user explicitly asks for dependency hygiene findings.
-- Add `--all-features` only if the workspace has no mutually exclusive features. If the
-  run fails with a feature conflict, retry without it and note the reduced coverage in the
-  report.
-- Passing flags after `--` disables Clippy's ability to reuse cached results for the final
-  crates, but dependencies are still only checked once. Expect a full workspace build on the
-  first pass; `$SCRATCH` is reused between Steps 2 and 3 so this is paid once.
+- Expect a full workspace build on the first pass. `$SCRATCH` is shared by Steps 2 and 3,
+  so dependencies are checked once.
 
-### Step 4 — Extract and classify findings
+### Step 4 — Classify findings
 
-```bash
-jq -r 'select(.reason == "compiler-message")
-       | select(.message.code.code? // "" | startswith("clippy::"))
-       | . as $m
-       | ($m.message.spans // [] | map(select(.is_primary)) | first) as $s
-       | [ ($m.message.code.code | ltrimstr("clippy::")),
-           ($m.package_id // "-"),
-           ($m.target.name // "-"),
-           ($s.file_name // "-"),
-           (($s.line_start // 0) | tostring),
-           (($s.column_start // 0) | tostring),
-           $m.message.message ]
-       | @tsv' "$SCRATCH/pedantic.json" | sort -u
-```
+Each report's `findings` are normalized rows: `lint`, `package` (`name@version`),
+repo-relative `manifestDir` and `file`, `target`, `targetKind`, `line`, `column` and the
+verbatim `message`. Out-of-tree spans and rustc warnings are only counted
+(`droppedOutOfTree`, `rustcWarnings`). What each field guarantees, and the defect it
+prevents, is in [extraction.md](references/extraction.md).
 
-Every field of that row earns its place, and three of them fix a defect that is invisible
-until it corrupts the output — the rationale, the spanless-path resolution, and the
-`@tsv` escaping guarantee are in [extraction.md](references/extraction.md). Read it before
-changing the pipeline.
+For each pedantic row:
 
-Run the same extraction over `baseline.json`. Then, for each pedantic finding:
+- **Origin** — the identical row (every field) is also in `baseline.json` →
+  `clippy-default`; otherwise → `pedantic-only`:
 
-- **Origin** — present in the baseline set → `clippy-default`; otherwise → `pedantic-only`.
-- **Lint group** — resolve `clippy::<name>` to its group and effort class using
+  ```bash
+  jq -c --slurpfile base "$SCRATCH/baseline.json" \
+    '.findings[] | . as $r | .origin = (if ($base[0].findings | index([$r])) then "clippy-default" else "pedantic-only" end)' \
+    "$SCRATCH/pedantic.json"
+  ```
+
+- **Lint group** — resolve `clippy::<lint>` to its group and effort class using
   [lint-catalog.md](references/lint-catalog.md).
 - **Severity** — map with the table in [Severity Scale](#severity-scale).
 
-Discard before filing:
+Report `droppedOutOfTree` and `rustcWarnings` as counts; neither is filed. Then discard
+before filing:
 
-- Findings whose primary span is outside the repository (paths under `~/.cargo/registry`,
-  `$SCRATCH`, or any generated `OUT_DIR`). These are dependency or build-script code.
-- Findings in generated files (`build.rs` output, `include!`d generated modules) — note the
-  count in the report instead.
+- Findings in generated files that live inside the repository (`include!`d generated
+  modules checked in, for example). ops only drops what is out of tree. Note the count in
+  the report instead.
 - **Test-only style findings.** Lints such as `clippy::unwrap_used`, `clippy::panic`, and
   `clippy::missing_panics_doc` firing exclusively inside `#[cfg(test)]` modules, files under
-  `tests/`, or `#[test]` functions are not findings. A finding that disappears when test
-  code is excluded is not filed.
+  `tests/` (`targetKind` `test`), or `#[test]` functions are not findings. A finding that
+  disappears when test code is excluded is not filed.
 
 ### Step 5 — Deduplicate, then file one task per finding
 
-Check the backlog before writing:
+The identity of a finding is its full row: lint, package, target, file, line, column and
+message together. A narrower key merges distinct findings: `(file, line)` merges two lints,
+the lint alone a whole crate, and dropping the message merges two problems one lint reports
+at one span. A reworded message in a newer Clippy then reads as a new finding; prefer that
+over a lost one, and close the stale task.
+
+Pass that identity as `--unless-exists`, with the message hashed so the key stays one
+short line:
 
 ```bash
-ops backlog search "clippy::<lint_name>" --plain
+KEY="PED:<lint>:<package>:<target>:<file>:<line>:<column>:$(printf %s "<message>" | sha256sum | cut -c1-12)"
 ```
 
-The identity of a finding is the full row from Step 4 — lint, package, target, file, line,
-column and message together — with the package **normalized** as
-[extraction.md](references/extraction.md) describes, never the raw `package_id`. If an open (not `Done`) task already covers that key,
-skip it. If it is `Done`, file again only if the warning has genuinely
-regressed. Do not treat two findings as the same because they share a lint and a file:
-`(file, line)` alone merges distinct findings, and the lint alone merges a whole crate. The
-message belongs in the key too — one lint can report several distinct problems at one span,
-and dropping it lets the second silently reuse the first one's task. The cost is that a
-reworded message in a newer Clippy reads as a new finding; prefer that over a lost one, and
-close the stale task when it happens.
+When an open task already carries the key, ops creates nothing and prints `Exists <id>`.
+The check runs under the backlog's allocation lock, so it holds across concurrent runs. A
+key whose only task is `Done` files again: the warning has regressed.
 
 The one sanctioned exception is the `(lint, crate)` aggregate described in the volume
 guard below, which deliberately covers many keys in one task and records each of them in
-its description.
+its description. Its key is `PED:<lint>:<package>:aggregate`.
 
 Then create the task. Use a `"$(cat <<'EOF' ... EOF)"` heredoc for the description — do not
 use `$'...'` ANSI-C quoting, which triggers a safety prompt on every call.
@@ -231,6 +232,7 @@ EOF
   --modified-file "<path>" \
   --ac "`clippy::<lint_name>` no longer fires at `<path>` under `-W clippy::pedantic`" \
   --ac "Behaviour is unchanged: existing tests still pass" \
+  --unless-exists "$KEY" \
   --plain
 ```
 
@@ -314,16 +316,16 @@ this and stops has succeeded.
 3. **Choose the level from the sweep's own result** — `warn` when it found anything, `deny`
    only when it found nothing. Denying a workspace that has open findings breaks
    `cargo build` for everyone on code nobody has fixed yet.
-4. **Verify the policy took effect.** Re-run the Step 2 command with no `-W` flags at all:
+4. **Verify the policy took effect.** Re-run the Step 2 command, with no lint flags at
+   all and the same feature set as Steps 2 and 3:
 
    ```bash
    CARGO_TARGET_DIR="$SCRATCH/target" \
-     cargo clippy --workspace --all-targets --locked --message-format=json --quiet \
-     > "$SCRATCH/applied.json" 2> "$SCRATCH/applied.err"
+     ops clippy-findings --schema-version 2 > "$SCRATCH/applied.json" 2> "$SCRATCH/applied.err"
    ```
 
-   Extract it exactly as in Step 4. The configuration is correct when this run reproduces
-   the pedantic finding set from Step 3. A count far *below* it means the policy is inert —
+   The configuration is correct when this run's `findings` reproduce the pedantic finding
+   set from Step 3. A count far *below* it means the policy is inert —
    almost always a member crate missing `[lints] workspace = true`. A manifest error here
    (`lint group has the same priority as`) means the `priority = -1` entries are wrong. Fix
    and re-verify; do not report success on an unverified write.
@@ -337,8 +339,9 @@ this and stops has succeeded.
 |--------|---------|
 | `PED-<lint_name>` | One Clippy lint at one location, or one aggregated `(lint, crate)` pair |
 
-The lint name *is* the identifier — it is stable across runs and greppable, which is what
-makes `ops backlog search "clippy::<lint_name>"` a reliable duplicate check.
+The lint name *is* the title's identifier: it is stable across runs and greppable. The
+duplicate check does not rely on it. That is the full-row `--unless-exists` key from
+Step 5.
 
 ## Severity Scale
 
@@ -376,8 +379,9 @@ Signals worth calling out explicitly in the report, because they change the esti
 The skill is read-only on the codebase and writes only through the `ops backlog` CLI, so
 parallel instances cannot corrupt each other. Two caveats:
 
-- Two runs over the same workspace will file the same findings twice — the duplicate check
-  in Step 5 is per-run, not a lock. Run one at a time per repository.
+- Filing is idempotent: the Step 5 `--unless-exists` key is checked under the backlog's
+  allocation lock, so two runs over one workspace file each finding once. Two runs still
+  build the workspace twice for nothing, so run one at a time per repository.
 - Run it before `code-review-triage`, not during: tasks filed mid-triage land in the next
   wave, not the current one.
 
