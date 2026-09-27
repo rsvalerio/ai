@@ -14,6 +14,7 @@ A collection of [Agent Skills](https://agentskills.io/specification) for Rust an
 | **code-review-run-wave** | Run one planned wave in an isolated git worktree: apply fixes, QA, merge, close. |
 | **code-review-run-waves** | Run every open wave concurrently (one worktree each); land merges one at a time via a shared lock. |
 | **commit-script** | Analyze git state and generate a script that stages grouped files into conventional commits — optionally on a topic branch that ends in a `gh` pull request. |
+| **rust-make-build-fast** | Survey a clean Rust checkout's build cost: profiles, gates, nextest, target directories, duplicate and unused dependencies, sccache hit rate. File one `build-fast` backlog task per finding with its measured cost, the date and machine load, classified `safe` or `trade-off`. Cold builds only with `--measure-cold`; with `--apply`, write the safe fixes (never the trade-offs). |
 | **rust-make-clippy-pedantic** | Lint a clean Rust checkout at pedantic strength via flags only, file one `pedantic`-labelled backlog task per warning — test-only style findings, generated files and out-of-tree warnings dropped, high-volume lints aggregated per crate — estimate the cleanup, and show (or with `--apply`, write) the matching `Cargo.toml` / `clippy.toml` lint policy. |
 | **rust-meta** | Process external Rust content and integrate new knowledge into `code-review-rust`. |
 
@@ -58,7 +59,7 @@ Restart your AI tool after installing so it picks up the new skills.
 ## Requirements
 
 - **AI agent**: Claude Code, OpenAI Codex, Cursor, or another Agent Skills-compatible platform
-- **Backlog CLI**: [`ops`](https://github.com/rsvalerio/ops) on PATH — the code-review skills file and read their findings with `ops backlog` (a `.backlog/tasks/` directory in the target repo is all the setup it needs)
+- **ops 0.72.0 or newer**: [`ops`](https://github.com/rsvalerio/ops) on PATH. Every skill that files findings uses `ops backlog` (a `.backlog/tasks/` directory in the target repo is all the setup it needs), with `--unless-exists` so a finding is filed once. The wave runners claim, lock, park and commit bookkeeping through `ops backlog wave` and `ops lock`. `rust-make-clippy-pedantic` lints through `ops clippy-findings`. `rust-make-build-fast` reads gate plans, machine state and duplicate dependencies through `ops explain` and `ops about`. Each skill checks `ops --version` first and stops if it is older
 - **Developing this repo**: Git, plus `rumdl` and `skill-validator` at the versions pinned in [`.tool-versions`](.tool-versions) — `mise install` gets both, or `make install-tools` via Homebrew — and `claude-code` on PATH for `make validate-marketplace` (the asdf route is in [CONTRIBUTING.md](CONTRIBUTING.md)). Full workflow in [AGENTS.md](AGENTS.md)
 
 ## Usage
@@ -98,7 +99,7 @@ opencode run "/code-review-rust @crates"
 
 ### Review waves
 
-`code-review-triage` groups findings into waves; `code-review-run-wave` / `code-review-run-waves` execute them. Each wave gets its own git worktree; merges serialize through a lock. A failed merge **parks** the worktree/branch so work stays resumable.
+`code-review-triage` groups findings into waves (`ops backlog wave create`) and records their overlap and merge order (`ops backlog wave overlap`); `code-review-run-wave` / `code-review-run-waves` execute them. Each wave gets its own git worktree (`ops backlog wave claim`); merges serialize through `ops lock code-review-merge`, which a killed runner cannot leave behind. A failed merge **parks** the worktree/branch (`ops backlog wave park`) so work stays resumable.
 
 ```bash
 claude -p "/code-review-triage"       # finish triage first (single-writer)
@@ -115,9 +116,10 @@ Details: [Worktree Protocol](skills/code-review-run-wave/references/worktree-pro
 - "Configure this workspace for pedantic clippy — show me the config first."
 
 Requires a clean `git status`; the run aborts rather than stashing or pulling. Lint levels
-are configured with `-W` flags after `--` rather than by editing the crate. What keeps the
-run off your files is the rest of it: `--locked` so Cargo cannot write `Cargo.lock`, a
-scratch `CARGO_TARGET_DIR` so `target/` is untouched, and no `--fix`. Findings are written
+are configured with `-W` flags after `--` rather than by editing the crate. Both passes run
+through `ops clippy-findings`, which returns one normalized JSON row per diagnostic. What
+keeps the run off your files is the rest of it: `--locked` so Cargo cannot write
+`Cargo.lock`, a scratch `CARGO_TARGET_DIR` so `target/` is untouched, and no `--fix`. Findings are written
 to `.backlog/`, which is the point.
 
 The run finishes by printing the `Cargo.toml` lint tables and `clippy.toml` that would make
@@ -125,6 +127,30 @@ the strictness permanent: `[workspace.lints.*]` plus a `[lints] workspace = true
 member for a workspace, or direct `[lints.rust]` / `[lints.clippy]` tables for a single
 crate. Pass `--apply` to have it write them — the only mode that edits checked-in lint
 configuration, though every run writes its findings to `.backlog/`. Neither commits.
+
+### rust-make-build-fast
+
+- "Run rust-make-build-fast on this workspace."
+- "Why is `ops verify` slow here? Survey it and file what you find."
+- "Measure whether dependency opt-level is worth it — run rust-make-build-fast with `--measure-cold`."
+
+Requires a clean `git status`. The default run is cheap: it reads `Cargo.toml` profiles,
+cargo config and `.config/nextest.toml`, resolves gate plans with `ops explain` (which never
+runs a step), lists fixable duplicate dependencies with `ops about dependencies --duplicates`,
+and runs a warm `cargo build --timings` (twice: catch-up, then no-op) into your existing
+`target/`, with machine state and sccache stats from `ops about machine` before and after. It never runs a cold build. Every timing is
+recorded with the date, core count, load, `jobs` cap and compiler wrapper, because a build
+number without them cannot be compared with the next one.
+
+`--measure-cold` adds the cold builds that trade-off findings need. They go into a scratch
+directory under `~/.cache`, never `/tmp` (a tmpfs `/tmp` fails a cold build with exit 101
+and no compile error). The compiler cache is off, and alternatives are passed as
+`--config` overrides, so no file is edited.
+
+Findings are `safe` (nothing gets worse) or `trade-off` (for example, dependency
+`opt-level` speeds the build but may slow the tests). `--apply` writes only the safe ones
+that have a template, into the `Cargo.toml` test profile, `.ops.toml` and
+`.config/nextest.toml`, and then verifies them. It never commits.
 
 ### rust-meta
 

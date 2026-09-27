@@ -26,6 +26,7 @@ This repo is a collection of [Agent Skills](https://agentskills.io/specification
 │   ├── code-review-run-wave/
 │   ├── code-review-run-waves/
 │   ├── commit-script/
+│   ├── rust-make-build-fast/
 │   ├── rust-make-clippy-pedantic/
 │   └── rust-meta/
 └── LICENSE
@@ -35,15 +36,34 @@ Skill purposes are listed in the [README overview](README.md#overview). Relation
 
 - **code-review-rust** / **code-review-web** — formal review and implementation-guardrail engines. Rules live in three tiers: `references/scan-checklist.md` (signal → rule IDs), `references/rules/index.md` (one line per rule), and `references/rules/<CATEGORY>.md` (full text). A **scan** reads tier 1 then tier 3 — tier 2 is not a scan step, because tier 1 already emits rule IDs and tier 3 is what decides a finding. Tier 2 is for resolving an ID you hold without a signal (a backlog task, a `rust-meta` lookup); guardrail mode reads tier 3 alone. Keeping tier 2 out of the scan path is worth ~10,700 tokens a review, and the same again per wave runner. `references/rules.md` holds the category table and severity scale. Adding or changing a rule means updating its category file **and** `rules/index.md`; if the rule's observable signal changes, update `scan-checklist.md` too — and a brand-new category needs either a signal row there or a `## Sweep` entry, or it is unreachable. `rules/index.md` is maintained by hand — its one-liners carry deliberate wording and are not regenerated from the category files.
 - **code-review-triage** — groups `Triage` backlog findings into `code-review-plan-waveN` parents and stamps file scope via `--modified-file` for merge ordering. A wave is a task labelled `code-review-wave` whose members carry `parent_task_id`; the runners enumerate them with `ops backlog wave list` / `wave members`.
-- **code-review-run-wave** — claims one open wave, applies fixes in an isolated git worktree, runs QA, merges under a shared lock. Protocol: `skills/code-review-run-wave/references/worktree-protocol.md`.
+- **code-review-run-wave** — claims one open wave (`ops backlog wave claim`), applies fixes in an isolated git worktree, runs QA, merges under `ops lock code-review-merge` (one command covering rebase → integration verify → fast-forward, with conflicts fixed outside the lock), commits bookkeeping with `ops backlog commit`, parks with `ops backlog wave park`. Protocol: `skills/code-review-run-wave/references/worktree-protocol.md`.
 - **code-review-run-waves** — fans out across open waves; delegates per-wave work to `code-review-run-wave`.
 - **commit-script** — groups related files into conventional commit scripts. Two modes: `commit` (default, local commits only — what the wave runners use) and `pr` (topic branch + push + `gh pr create`).
-- **rust-make-clippy-pedantic** — mechanical counterpart to `code-review-rust`: runs `cargo clippy` with the strict lint groups passed as flags (never as source edits) over a verified-clean tree, files one `Triage` task per warning labelled `pedantic` — dropping test-only style findings, generated files and out-of-tree warnings, and collapsing any lint that fires more than 20 times in one crate into a single aggregate task — reports an effort estimate, and prints the `Cargo.toml` / `clippy.toml` lint policy that would make the strictness permanent, writing it only under `--apply`. Feeds `code-review-triage` like the review skills do.
+- **rust-make-clippy-pedantic** — mechanical counterpart to `code-review-rust`: runs `ops clippy-findings` (Clippy under `--locked`, one normalized JSON row per diagnostic) with the strict lint groups passed as flags (never as source edits) over a verified-clean tree, files one `Triage` task per warning labelled `pedantic` — dropping test-only style findings, generated files and out-of-tree warnings, and collapsing any lint that fires more than 20 times in one crate into a single aggregate task — reports an effort estimate, and prints the `Cargo.toml` / `clippy.toml` lint policy that would make the strictness permanent, writing it only under `--apply`. Feeds `code-review-triage` like the review skills do.
+- **rust-make-build-fast** — `rust-make-clippy-pedantic`'s shape applied to build cost: over a verified-clean tree it reads the profiles, cargo config, gates, nextest config and dependency graph, and takes sccache stats around a warm `cargo build --timings`. It files one `Triage` task per finding, labelled `build-fast`, carrying a measured cost with its date and machine load, classified `safe` or `trade-off`. Cold builds run only under `--measure-cold`, into a target directory on real disk (never tmpfs), with variants passed as `--config` overrides rather than file edits. `--apply` writes only safe findings that have a template (`Cargo.toml` test profile, `.ops.toml` gates, `.config/nextest.toml`). Trade-offs such as dependency `opt-level` are never applied. Machine facts (tmpfs `/tmp`, a user-level `jobs` cap) are report-only. The checks catalog is drawn from hand-tuning dbsec, ops and event0; a check should enter it only after it has cost a real workspace time.
 - **rust-meta** — maps external Rust knowledge into `code-review-rust`.
+
+### ops dependency
+
+Every skill that touches the backlog, and several that do not, run through
+[`ops`](https://github.com/rsvalerio/ops), and the floor is **ops 0.72.0**. Each such skill
+checks `ops --version` first and stops if it is older; the README's Requirements section
+states the same floor. Raise it in all three places — the skill preflights, the README, and
+here — when a skill starts using a newer ops feature. What each skill relies on:
+
+| ops feature | Used by |
+|-------------|---------|
+| `ops backlog task create --unless-exists` (idempotent filing) | code-review-rust, code-review-web, rust-make-clippy-pedantic, rust-make-build-fast |
+| `ops backlog wave create` / `wave overlap` | code-review-triage, code-review-run-waves |
+| `ops backlog wave claim` / `wave park`, `ops backlog commit`, `ops lock` | code-review-run-wave, code-review-run-waves |
+| `ops clippy-findings --schema-version 2` (camelCase report) | rust-make-clippy-pedantic |
+| `ops explain`, `ops about machine` (incl. `cargo.incremental` / `incrementalProfiles`), `ops about dependencies --duplicates [--target]` (host-filtered by default) | rust-make-build-fast |
+| `ops about crates` / `ops about loc` | code-review-rust, rust-make-clippy-pedantic, rust-make-build-fast |
+| `ops typecheck` / `ops lint` (vite/node stack) | code-review-web |
 
 ### Finding output
 
-`code-review-rust` and `code-review-web` file one task per finding through `ops backlog task create` — one markdown file under `.backlog/tasks/` as `task-<N> - <slug>.md` (YAML frontmatter + body); the task id prefixes the title. Task files are written only through the CLI: field types and marker layout are load-bearing for the triage and wave skills. Parallel skill runs are fine — one file per finding. Every finding must record one `--modified-file` per touched path (repo-root-relative, no line numbers) so triage can compute wave scope and merge order.
+`code-review-rust` and `code-review-web` file one task per finding through `ops backlog task create --unless-exists <identity key>` — one markdown file under `.backlog/tasks/` as `task-<N> - <slug>.md` (YAML frontmatter + body); the task id prefixes the title. Task files are written only through the CLI: field types and marker layout are load-bearing for the triage and wave skills. Parallel skill runs are fine — one file per finding. Every finding must record one `--modified-file` per touched path (repo-root-relative, no line numbers) so triage can compute wave scope and merge order.
 
 ## Skill Conventions
 
