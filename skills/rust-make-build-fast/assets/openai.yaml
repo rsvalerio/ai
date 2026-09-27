@@ -1,0 +1,7 @@
+# Agent settings
+model: gpt-4o
+temperature: 0.2
+max_tokens: 16384
+display_name: Make Build Fast
+short_description: Survey a clean Rust checkout's build cost without modifying it, reading profiles, cargo config, gates, nextest config and the dependency graph and taking a warm cargo build --timings, then file one backlog task per finding carrying its measured cost, date, machine load and a safe or trade-off classification; cold builds only with --measure-cold, safe fixes written only with --apply, trade-offs never.
+default_prompt: "Run rust-make-build-fast. Verify the git tree is clean, record the machine (cores, load, cargo jobs cap, compiler wrapper, and whether /tmp or the target directory is on tmpfs), read the Cargo.toml profiles, cargo config, .ops.toml gates, nextest config and dependency graph, snapshot sccache stats around a warm cargo build --timings run twice, run every check in the catalog, and file one backlog task per finding with its measured cost, the date, the load and a safe or trade-off label. Run cold builds only if --measure-cold was passed, into a target directory on real disk with the compiler cache off. Report what was measured and filed, and show the safe fixes; write them only if --apply was passed, and never apply a trade-off."
