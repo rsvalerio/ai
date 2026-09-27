@@ -31,7 +31,16 @@ at a time.
 | Landing branch | `code-review/run-<YYYYMMDD>`, checked out in the main checkout — created by `code-review-run-waves` for a fan-out, or by the standalone runner itself | `code-review/run-20260819` |
 | Worktree path | `../.wave-<waveTaskId>` (sibling of the repo, not inside it) | `../.wave-TASK-0119` |
 | Commit script | `<git-dir>/commit-script-<waveTaskId>.sh` (the worktree's own git dir) | `.git/worktrees/.wave-TASK-0119/commit-script-TASK-0119.sh` |
-| Merge lock | `.git/code-review-merge.lock` (a directory) | — |
+| Merge lock | `ops lock code-review-merge` | — |
+| Backlog lock | `ops lock code-review-backlog` | — |
+
+Both locks are `ops lock` named locks. They are stored under the common git dir, so
+every worktree of the repository shares them. They are kernel `flock` locks: a runner
+that dies, even by `SIGKILL`, releases its lock with it, so no lock can outlive its
+holder. `ops lock status` shows each holder's PID, worktree, command, age and
+whether it is still alive.
+
+**Requires ops 0.72.0 or newer.** Check `ops --version` before claiming anything.
 
 The worktree must be a **sibling** of the repository, never a subdirectory of it.
 A worktree nested inside the main checkout shows up as untracked files there and gets
@@ -39,25 +48,24 @@ swept into commits.
 
 ## Claiming a Wave
 
-Creating the wave branch **is** the claim. `git worktree add -b` fails if the branch
-already exists, so the claim is exclusive without a separate lock file:
+Creating the wave branch **is** the claim, and `ops backlog wave claim` does it in one
+step, from the main checkout:
 
 ```bash
-git worktree add ../.wave-<waveTaskId> -b code-review/<waveTaskId>
+ops backlog wave claim <waveTaskId>
 ```
 
-A second runner attempting the same wave gets:
+It creates `code-review/<waveTaskId>` and the worktree `../.wave-<waveTaskId>`
+(`git worktree add -b`), then flips the wave to `In Progress` and records
+`Branch:` and `Worktree:` notes on it. If the branch already exists, it refuses
+and changes nothing. If the status edit fails after the worktree exists, it
+removes the worktree and branch again (unforced), so a failed claim never
+leaves a task marked in progress by a run that never started.
 
-```text
-fatal: a branch named 'code-review/<waveTaskId>' already exists
-```
-
-Treat that as **"this wave is already claimed"** — do not delete the branch to force the
-claim. Pick a different wave, or if no other wave is open, stop and report that the wave
-is in flight elsewhere. See [Recovery](#recovery) for genuinely abandoned claims.
-
-Only after the claim succeeds, flip the wave parent to `In Progress`. Claiming first
-means a failed claim never leaves a task marked in progress by a run that never started.
+Treat a refusal because the branch exists as **"this wave is already claimed"**:
+do not delete the branch to force the claim. Pick a different wave, or if no
+other wave is open, stop and report that the wave is in flight elsewhere. See
+[Recovery](#recovery) for genuinely abandoned claims.
 
 ## The Main-Checkout Rule
 
@@ -94,94 +102,71 @@ contents are exactly what each wave wrote — but three things go wrong:
 - the wave that *owned* those edits later finds nothing to commit and silently skips its
   own bookkeeping commit
 
-**Stage bookkeeping by path, never by directory.** A wave knows exactly which task files
-are its own: its parent, its members, and any `Triage` task it filed. Ask `ops backlog`
-where each one lives rather than reconstructing the filename — the first line of
-`task view` is the path.
-
-Path-scoping alone is not enough. Choosing *which* files to name does not make the naming
-atomic: the main checkout has one index, shared by every wave, so `git add` → inspect →
-`git commit` is a read-modify-write on shared state. Another wave's `git add` can land
-between your check and your commit, and the commit takes its files too — the "Git index"
-row of the table above, reached by a different route. **Stage, verify, and commit under
-one backlog lock**, using the same atomic `mkdir` idiom as [Merging](#merging):
+**Stage bookkeeping by task, never by directory.** A wave knows exactly which task files
+are its own: its parent, its members, and any `Triage` task it filed. Name those task ids
+to `ops backlog commit`, which resolves each id to its file:
 
 ```bash
-# Acquire — retry in a loop; do not proceed without it.
-until mkdir .git/code-review-backlog.lock 2>/dev/null; do sleep 1; done
-trap 'rmdir .git/code-review-backlog.lock' EXIT   # release on every exit path
-
-git reset -q          # begin from an empty index; the lock makes this safe
-
-# Stage exactly this wave's files, recording the repo-relative path of each.
-expected=()
-for id in <waveTaskId> <memberId>... <filedTriageId>...; do
-  path="$(ops backlog task view "$id" --plain | sed -n '1s/^File: //p')"
-  [ -n "$path" ] || { echo "no file resolved for $id" >&2; exit 1; }
-  git add -- "$path"
-  # Record only what actually became a *staged change*. A member task file the wave
-  # left unchanged stages nothing and must contribute nothing here; `git ls-files
-  # --cached` would list it anyway (it is tracked) and fail the exact-set check.
-  while IFS= read -r rel; do expected+=("$rel"); done \
-    < <(git diff --cached --name-only -- "$path")
-done
-
-# The staged set must equal the expected set exactly. Anything else is another
-# wave's work: abort, do not "unstage the extras" and continue.
-diff <(printf '%s\n' ${expected[@]+"${expected[@]}"} | sed '/^$/d' | sort -u) \
-     <(git diff --cached --name-only | sort -u) \
-  || { echo "unexpected paths staged — aborting" >&2; git reset -q; exit 1; }
-
-# Nothing staged means this wave edited no task files of its own -- report it,
-# do not commit an empty bookkeeping commit.
-[ -n "$(git diff --cached --name-only)" ] \
-  || { echo "no task-file changes for this wave -- report, do not commit" >&2; exit 1; }
-
-git commit -m "chore(backlog): close code-review wave <N>"
+ops lock code-review-backlog --timeout 600 -- \
+  ops backlog commit <waveTaskId> <memberId>... <filedTriageId>... \
+    -m "chore(backlog): close code-review wave <N>"
 ```
 
-Release the lock as soon as the commit succeeds or the attempt fails; if you run these as
-separate commands rather than one script, `rmdir` the lock by hand on the failure paths
-too. Hold it only across stage → verify → commit, never across the member-fix phase. It is
-a distinct lock from the merge lock, and no runner holds both at once — bookkeeping happens
-after the wave has landed and released the merge lock.
+`ops backlog commit` does the three things the bookkeeping step exists for:
 
-Abort rather than repair. If the staged set does not match, the discrepancy means a
-concurrent writer, and silently unstaging the extras leaves you racing that same writer on
-the next command.
+- **It refuses when any other path is staged**, before touching anything. A foreign
+  staged path is another writer's work. Abort and report; do not unstage the extras
+  and retry.
+- **It commits only the listed tasks' files that actually changed.** A member task file
+  the wave left unchanged contributes nothing. It uses `git commit --only`, so it never
+  takes another wave's staged files.
+- **It refuses to make an empty commit.** If none of the tasks changed, it exits non-zero
+  and commits nothing. That means this wave edited no task files of its own. Check that
+  against what the wave actually did, and say so in the report rather than committing
+  nothing in silence.
 
-Under the lock an empty expected set can no longer mean "another runner swept my files".
-It means this wave edited no task files of its own — check that against what the wave
-actually did, and say so in the report rather than committing nothing in silence.
+The backlog lock around it keeps two waves' bookkeeping from interleaving in the one
+shared index: without it, another wave's staged files can make this commit refuse. The
+lock is held only for that one command, never across the member-fix phase. It is a
+distinct lock from the merge lock, and no runner holds both at once: bookkeeping happens
+after the wave has landed.
 
 Other waves' modified task files are left unstaged in the working tree on purpose. They
 are not yours to commit, and their own runners will.
 
 ## Merging
 
-Merges are serialized through a lock directory. `mkdir` is atomic on POSIX filesystems,
-so it either creates the directory or fails — there is no race window:
+Merges are serialized through the `code-review-merge` lock. Land the wave as one
+command, run from the main checkout, that holds the lock for exactly rebase →
+integration verify → fast-forward:
 
 ```bash
-# acquire (retry in a loop; do not proceed without it)
-mkdir .git/code-review-merge.lock
-
-# release, always, including on failure
-rmdir .git/code-review-merge.lock
+ops lock code-review-merge --timeout 3600 -- bash -c '
+  set -e
+  # 1. rebase the wave branch onto the landing branch, in the worktree.
+  #    A conflict aborts the rebase and exits 3; resolve it outside the lock.
+  git -C ../.wave-<waveTaskId> rebase <landing-branch> \
+    || { git -C ../.wave-<waveTaskId> rebase --abort; exit 3; }
+  # 2. integration verify: the merged result, not the isolated result
+  (cd ../.wave-<waveTaskId> && ops verify)
+  # 3. fast-forward the landing branch, in the main checkout
+  git merge --ff-only code-review/<waveTaskId>
+'
 ```
 
-Holding the lock, land the wave:
+`ops lock` releases the lock when the command exits, on success, on failure and on a
+signal alike. There is nothing to release by hand. It passes the command's exit code
+through unchanged. A non-zero exit means nothing landed:
 
-```bash
-# 1. rebase the wave branch onto the landing branch, from the worktree
-cd ../.wave-<waveTaskId> && git rebase <landing-branch>
+| Exit | Meaning | What to do, outside the lock |
+|------|---------|------------------------------|
+| 3 | The rebase conflicted and was aborted | [Handling a Rebase Conflict](#handling-a-rebase-conflict), then run the locked command again |
+| other, during `ops verify` | Integration verify failed | Fix it on the wave branch, rerun pre-merge `ops verify`, then run the locked command again |
+| other, from `git merge --ff-only` | The landing branch moved under you | Run the locked command again: its rebase picks up the new base |
+| 1, with `ops: error: timed out after …s waiting for lock code-review-merge, held by pid …` | Another wave held the lock for the whole `--timeout`. The command never ran | `ops lock status`. A live holder is a merge in progress, so wait and retry. A dead one reports stale: `ops lock break code-review-merge`, then retry |
 
-# 2. integration verify: the merged result, not the isolated result
-ops verify
-
-# 3. fast-forward the landing branch, from the main checkout
-git merge --ff-only code-review/<waveTaskId>
-```
+Doing the fixing *outside* the lock is deliberate: a runner thinking through a
+conflict or a failing test would otherwise block every other wave's merge.
 
 The **landing branch** is the `code-review/run-<YYYYMMDD>` integration branch checked
 out in the main checkout — created by `code-review-run-waves` for a fan-out, or by a
@@ -192,11 +177,8 @@ from the landing branch while waves are in flight — every runner derives its r
 target and merge destination from it.
 
 `--ff-only` is deliberate. After a successful rebase the merge must be a fast-forward;
-if git refuses, the landing branch moved under you — another wave merged while you held
-a stale rebase. Re-run the rebase rather than falling back to a merge commit.
-
-Release the lock as soon as the fast-forward completes or the attempt fails. Never hold
-it across the member-fix phase — only across rebase → integration verify → merge.
+if git refuses, the landing branch moved under you. Re-run the locked command rather than
+falling back to a merge commit.
 
 ### Two Verifies, Two Different Jobs
 
@@ -219,10 +201,19 @@ CONFLICT (content): Merge conflict in <path>
 error: could not apply <sha>... <subject>
 ```
 
-Resolve it in the worktree — you have both sides and the wave's full context. If the
-resolution is not obvious, `git rebase --abort` restores the branch exactly as it was;
-the wave's commits are not lost. Then either retry after the conflicting wave settles, or
-leave the wave parked (below) and report it.
+The locked merge command has already aborted that rebase and released the lock. Redo
+the rebase in the worktree, outside the lock, and resolve it there: you have both
+sides and the wave's full context.
+
+```bash
+cd ../.wave-<waveTaskId> && git rebase <landing-branch>   # resolve, git add, git rebase --continue
+ops verify                                                 # pre-merge verify on the resolved branch
+```
+
+Then run the locked merge command again. Its rebase is a no-op unless another wave
+landed in the meantime. If the resolution is not obvious, `git rebase --abort` restores
+the branch exactly as it was, and the wave's commits are not lost. Then either retry
+after the conflicting wave settles, or park the wave (below) and report it.
 
 Do not resolve a conflict by discarding the other wave's hunk. The other wave already
 merged and passed integration verify; overwriting it silently reverts completed work.
@@ -278,10 +269,21 @@ PR merges is the one sanctioned `-D`; see [Teardown](#teardown).
 
 ## Recovery
 
+**Parking a wave.** When the merge did not land or members remain open, record it from
+the main checkout:
+
+```bash
+ops backlog wave park <waveTaskId> --reason "<why: unfinished members, or the failed step>" \
+  [-s 'To Do']   # default status: In Progress
+```
+
+It sets the status, appends `Parked: <reason>` with the branch and worktree to resume
+from, and touches nothing in git.
+
 **A parked wave (merge failed, worktree still present).** The branch holds the committed
 fixes and the worktree holds any uncommitted remainder. Resume by re-entering the
-worktree, finishing the work, and retrying rebase → integration verify → merge. Nothing
-needs to be recreated.
+worktree, finishing the work, and running the locked merge command again. Nothing needs
+to be recreated.
 
 **A stale worktree whose directory was deleted manually.** Git still lists it. Clear the
 bookkeeping, then re-claim normally:
@@ -296,9 +298,15 @@ active run, and the branch has no commits you need (`git log <landing-branch>..c
 Only then delete the branch to release the claim. If the branch *does* carry commits, it
 is parked work, not an abandoned claim — resume it instead.
 
-**A stuck merge lock.** The lock is a plain directory, so a killed runner leaves it
-behind. Verify no wave is mid-merge (`git worktree list`, plus `git status` in each
-worktree showing no rebase in progress), then `rmdir .git/code-review-merge.lock`.
+**A lock that seems stuck.** It cannot outlive its holder: `ops lock` is a kernel
+`flock`, so a killed runner releases it. `ops lock status` names the holder:
+
+- **Alive**: a merge or bookkeeping commit is genuinely running. Wait.
+- **Stale** (dead holder): only the record remains. `ops lock break <name>` clears
+  it. It refuses while the holder is alive, so it cannot break a live merge.
+
+A killed runner can still leave its worktree mid-rebase. Before retrying that wave,
+check `git status` in its worktree, and finish or `git rebase --abort` there.
 
 **A wave whose branch no longer rebases cleanly after repeated attempts.** Stop retrying.
 Leave it parked, file a `Triage` task describing the conflict and which wave it collides
@@ -311,7 +319,8 @@ problem to brute-force.
 1. One wave, one branch, one worktree. Never two runners on one wave.
 2. Claim before mutating any task state.
 3. All `ops backlog` commands from the main checkout; all code edits in the worktree.
-4. The merge lock is held across rebase → integration verify → merge, and nothing else.
+4. The merge lock is held across rebase → integration verify → merge, as one
+   `ops lock` command, and nothing else. Conflicts and failures are fixed outside it.
 5. A wave closes `Done` only when every member is `Done` **and** the merge landed.
 6. Never `--force` a worktree removal or `-D` a wave branch to clear an obstacle.
 7. A failed wave never blocks another wave — it parks and the others carry on.
