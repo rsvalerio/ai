@@ -47,7 +47,7 @@ of their steps:
 
 | Gate | Steps |
 |------|-------|
-| `ops verify` | `check-tools`, `validate` (skills), `validate-rules`, `validate-actions`, `fmt-check`, `lint-check` |
+| `ops verify` | `check-tools`, `validate` (skills), `validate-rules`, `lint-actions` (ops built-in: SHA pins with a version comment, no `secrets: inherit`), `fmt-check`, `lint-check` |
 | `ops qa` | `verify`, plus `validate-marketplace` (needs `claude-code` on PATH) and `check-install` |
 
 Every step is a Makefile target and non-mutating, so anything `make lint` would have fixed

@@ -15,8 +15,7 @@ This repo is a monorepo of AI tooling, published as a Claude Code plugin marketp
 ├── Makefile                  # validate, lint, link/unlink, eval — discovers skills by glob
 ├── scripts/
 │   ├── validate-skills.py    # strict skill-validator run + documented allowlist
-│   ├── validate-rules.py     # rule-index parity for the review skills
-│   └── validate-actions.py   # third-party actions are SHA-pinned
+│   └── validate-rules.py     # rule-index parity for the review skills
 ├── .claude-plugin/
 │   └── marketplace.json      # The only root manifest; lists every plugin
 ├── plugins/
@@ -128,7 +127,7 @@ ops qa               # full gate: verify + marketplace + install path
 | `ops qa` | Full gate: `verify` plus `validate-marketplace` and `check-install`; CI runs it |
 | `make ci` | The `ops qa` checks without ops or `check-tools` |
 | `make check-install` | `make link` / `make unlink` round-trip every skill through a scratch directory |
-| `make validate-actions` | Fail if a third-party action is not SHA-pinned with a version comment |
+| `ops lint-actions` | ops built-in, part of `ops verify`: every action SHA-pinned with a version comment, no `secrets: inherit` |
 | `make validate-rules` | Fail if `rules/index.md` and `references/rules/*.md` disagree |
 | `make eval` | Run the behavioural eval suite (`claude plugin eval`, not in `make ci`) |
 | `make check-tools` | Fail if local tooling drifted from `.tool-versions` |
