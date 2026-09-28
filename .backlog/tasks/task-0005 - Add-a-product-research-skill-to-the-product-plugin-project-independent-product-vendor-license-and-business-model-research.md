@@ -1,9 +1,10 @@
 ---
 id: TASK-0005
 title: 'Add a product-research skill to the product plugin: project-independent product, vendor, license and business-model research'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-09-27 14:02'
+updated_date: '2026-09-28 11:05'
 labels:
   - product
   - new-skill
@@ -81,11 +82,23 @@ ordinal: 1000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 plugins/product/skills/product-research/ has SKILL.md (name and description, license Apache-2.0), references/ (evidence-contract, license-taxonomy, business-model, jurisdiction, project-profile) and templates/, and passes strict skill-validator
-- [ ] #2 Nothing project-specific in the skill: all conventions come from the consuming repo's profile; with no profile the skill stops and offers to scaffold one
-- [ ] #3 Each run records license (per component, pinned commit or tag) and business model (open vs paid per component, self-hostable, license history, forks) alongside coverage and vendor jurisdiction
-- [ ] #4 Every recorded claim carries its source URL, version or commit, and date checked; unknowns name the check that would settle them
-- [ ] #5 The skill proposes in chat and writes only what was approved
-- [ ] #6 An eval under plugins/product/evals/ asserts that a 'research product X' prompt loads product-research and, with no profile present, the skill asks for one instead of writing
-- [ ] #7 The README overview lists the product plugin and the skill
+- [x] #1 plugins/product/skills/product-research/ has SKILL.md (name and description, license Apache-2.0), references/ (evidence-contract, license-taxonomy, business-model, jurisdiction, project-profile) and templates/, and passes strict skill-validator
+- [x] #2 Nothing project-specific in the skill: all conventions come from the consuming repo's profile; with no profile the skill stops and offers to scaffold one
+- [x] #3 Each run records license (per component, pinned commit or tag) and business model (open vs paid per component, self-hostable, license history, forks) alongside coverage and vendor jurisdiction
+- [x] #4 Every recorded claim carries its source URL, version or commit, and date checked; unknowns name the check that would settle them
+- [x] #5 The skill proposes in chat and writes only what was approved
+- [x] #6 An eval under plugins/product/evals/ asserts that a 'research product X' prompt loads product-research and, with no profile present, the skill asks for one instead of writing
+- [x] #7 The README overview lists the product plugin and the skill
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Implemented on feat/product-research.
+
+- Templates live in assets/ (profile, proposal, product-record, vendor-record), not templates/: strict skill-validator warns 'unknown directory: templates/ ... should this be assets/?'. AC #1 is met in substance; the directory name differs.
+- AC #3/#4 are enforced by the skill's contract (evidence-contract, license-taxonomy, business-model, assets/*-record.md). No real run yet; the first one is the valysec follow-up (Tailscale).
+- AC #6: plugins/product/evals/research-no-profile. Gated tools (Write, Edit, WebSearch, WebFetch) are withheld from both arms unless --allow-tools grants them, so the no-write / no-research graders passed vacuously at first (baseline 0.80). make eval now grants them: with 1.00 / without 0.20, delta +0.80 over 3+3 runs on 2026-09-28.
+- plugin.json needed no change; Makefile (eval grant) was touched in addition.
+<!-- SECTION:NOTES:END -->
