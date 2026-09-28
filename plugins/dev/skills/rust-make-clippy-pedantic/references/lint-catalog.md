@@ -7,34 +7,54 @@ each lint family falls into. Effort classes feed [estimation.md](estimation.md).
 
 Everything is passed on the command line, after `--`, so the repository is never modified.
 `ops clippy-findings` hands the lint flags to Clippy and runs Cargo with
-`--workspace --all-features --all-targets --locked`:
+`--workspace --all-features --all-targets --locked`.
+
+The lint flags are not listed here. SKILL.md Step 3 derives them from the lint policy of ops's
+Rust foundation, rendered by the running `ops` ([apply-config.md](apply-config.md)), so the
+sweep enables exactly what `--apply` writes. With the foundation rendered at `$FND`, this
+writes the flags, one per line, to `$SCRATCH/lint-flags`:
 
 ```bash
-ops clippy-findings --schema-version 2 -- \
-  -W clippy::pedantic \
-  -W clippy::nursery \
-  -W clippy::cargo \
-  -A clippy::multiple_crate_versions
+python3 - "$FND/Cargo.toml" > "$SCRATCH/lint-flags" <<'EOF'
+import sys, tomllib
+
+# Rendered foundation lints -> clippy flags. Groups carry priority -1 and come
+# first, so the named lints after them win. rustdoc lints are not clippy's.
+lints = tomllib.load(open(sys.argv[1], "rb"))["lints"]
+rows = []
+for tool, prefix in (("rust", ""), ("clippy", "clippy::")):
+    for name, spec in lints.get(tool, {}).items():
+        spec = spec if isinstance(spec, dict) else {"level": spec}
+        flag = "-A" if spec["level"] == "allow" else "-W"  # a survey never denies
+        rows.append((spec.get("priority", 0), flag, prefix + name))
+for _, flag, lint in sorted(rows, key=lambda r: r[0]):
+    print(flag, lint)
+EOF
 ```
 
-| Flag | Effect |
-|------|--------|
-| `-W clippy::pedantic` | ~100 lints for idiom, clarity, and numeric-cast discipline. The core of this skill |
-| `-W clippy::nursery` | Newer, less-settled lints. Genuinely useful, occasionally noisy — findings from here carry lower confidence and belong in the `nursery` label |
-| `-W clippy::cargo` | Manifest hygiene: missing metadata, wildcard dependencies, negative feature names |
-| `-A clippy::multiple_crate_versions` | Suppressed: a dependency-graph fact no single task can fix |
-| `--locked` | On by default in `ops clippy-findings`: Cargo fails instead of writing `Cargo.lock`. Both passes carry it — a lint run that resolves dependencies has modified the tree, which this skill promises not to do. Never pass `--no-locked` |
+Read the flag list off the run. It is recorded in the report. In shape it is:
 
-Deliberately **not** enabled by default:
+| Part of the foundation policy | Flags | Effect |
+|-------------------------------|-------|--------|
+| Clippy groups (`all`, `pedantic`, `nursery`) | `-W clippy::<group>` | Idiom, clarity, numeric-cast discipline, and newer, less-settled lints. `nursery` findings carry lower confidence |
+| Named Clippy lints (`unwrap_used`, `indexing_slicing`, `arithmetic_side_effects`, …) | `-W clippy::<lint>` | Individual `restriction` lints: panics and silent wrap-around in production code |
+| rustc lints (`unused_lifetimes`, …) | `-W <lint>` | Compiler lints that pair with a pedantic policy |
+
+`--locked` is on by default in `ops clippy-findings`: Cargo fails instead of writing
+`Cargo.lock`. Both passes carry it, because a lint run that resolves dependencies has
+modified the tree, which this skill promises not to do. Never pass `--no-locked`.
+
+Deliberately **not** enabled:
 
 | Flag | Why not |
 |------|---------|
 | `-D warnings` | Denying aborts at the first warning and truncates the survey |
-| `-W clippy::restriction` | Not a lint group to enable wholesale — it contains mutually contradictory lints (`clippy::else_if_without_else` alongside `clippy::implicit_return`). Enable individual restriction lints only when the user names them |
+| `-W clippy::restriction` | Not a lint group to enable wholesale. It contains mutually contradictory lints (`clippy::else_if_without_else` alongside `clippy::implicit_return`). The foundation names the restriction lints it wants one by one |
+| `-W clippy::cargo` | Not part of the foundation policy. Manifest hygiene findings would be filed that the applied policy never enforces |
 | `--fix` | Mutates the tree. This skill never does |
 
 `clippy::correctness`, `suspicious`, `style`, `complexity`, and `perf` are on by default and
-so appear in the baseline run too — findings from them are labelled `clippy-default`.
+so appear in the baseline run too. Findings from them are labelled `clippy-default`.
 
 ## Effort classes
 
@@ -56,8 +76,8 @@ count fall fast without touching semantics.
 
 `missing_errors_doc`, `missing_panics_doc`, `doc_markdown` (all `pedantic`), and
 `missing_safety_doc` (`style`, so it reaches the report as `clippy-default`).
-`missing_docs_in_private_items` is **not** listed: it belongs to `clippy::restriction`,
-which the flag set does not enable, so it cannot appear in a run.
+`missing_docs_in_private_items` is **not** listed: it is a `restriction` lint the foundation
+does not name, so it cannot appear in a run.
 
 ### Class J — judgement (~15 min per instance)
 
@@ -68,6 +88,15 @@ behaviour. Never batch-apply these.
 `cast_possible_wrap`, `checked_conversions`, `float_cmp`, `similar_names`,
 `unreadable_literal` (where the grouping is domain-meaningful), `struct_excessive_bools`,
 `fn_params_excessive_bools`, `option_if_let_else` (nursery — often less readable after).
+
+The foundation's named `restriction` lints are Class J too, with the exceptions below. Each
+instance replaces a panic, an index or an unchecked operation with an error path or a checked
+one, and choosing what the failure should do is the decision: `unwrap_used`, `expect_used`,
+`panic`, `indexing_slicing`, `string_slice`, `arithmetic_side_effects`, `as_conversions`,
+`unchecked_time_subtraction`, `unreachable`, `exit`. The exceptions are `todo` and
+`unimplemented`, which are Class S, because each marks missing code, not a missing check.
+`panic_in_result_fn` is Class S when the fix changes the function's error type. A named lint
+this list does not cover is Class J until someone classifies it here.
 
 ### Class S — structural (~90 min per instance)
 

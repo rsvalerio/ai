@@ -1,7 +1,7 @@
 ---
 name: rust-meta
 description: Processes external Rust content (URLs, articles, pastes), evaluates it against existing Rust skills and project agents, and integrates approved knowledge into the right files. Use to learn from external sources and keep Rust guidance current.
-allowed-tools: Read Write Edit Grep Glob WebFetch WebSearch Bash(make validate-rules-index)
+allowed-tools: Read Write Edit Grep Glob WebFetch WebSearch Bash(make validate-rules)
 license: Apache-2.0
 ---
 

@@ -4,3 +4,85 @@ statuses = ["Triage", "To Do", "In Progress", "Done"]
 zero_padded_ids = 4
 task_prefix = "TASK"
 backlog_directory = ".backlog"
+
+# Two gates, per the Rust foundation's contract (forge docs/foundation.md), and this file
+# is the only list of their checks:
+#
+# - `ops verify`: fast and offline. Tools from .tool-versions only, so it suits a
+#   pre-commit hook and the wave runners.
+# - `ops qa`: the full gate. Everything in verify, plus the checks that need claude-code
+#   on PATH or exercise the install path.
+#
+# ci.yml runs both, so a check added here runs everywhere. Each step is a Makefile target,
+# which stays the place the check is implemented. CI's ops version is pinned on ci.yml's
+# setup-ops steps.
+#
+# ops shows only a failing step's stderr, and these targets report on stdout, so each
+# step redirects it.
+
+[commands.check-tools]
+program = "sh"
+args = ["-c", "make --no-print-directory check-tools 1>&2"]
+help = "Local rumdl and skill-validator match .tool-versions"
+category = "Code Quality"
+
+[commands.validate-skills]
+program = "sh"
+args = ["-c", "make --no-print-directory validate 1>&2"]
+help = "Every skill passes strict skill-validator"
+category = "Code Quality"
+
+[commands.validate-marketplace]
+program = "sh"
+args = ["-c", "make --no-print-directory validate-marketplace 1>&2"]
+help = "Marketplace and plugin manifests pass claude plugin validate"
+category = "Code Quality"
+
+[commands.validate-rules]
+program = "sh"
+args = ["-c", "make --no-print-directory validate-rules 1>&2"]
+help = "Review-skill rules/index.md matches the category files"
+category = "Code Quality"
+
+[commands.validate-actions]
+program = "sh"
+args = ["-c", "make --no-print-directory validate-actions 1>&2"]
+help = "Third-party actions are SHA-pinned with a version comment"
+category = "Code Quality"
+
+[commands.fmt-check]
+program = "sh"
+args = ["-c", "make --no-print-directory fmt-check 1>&2"]
+help = "Markdown is rumdl-formatted"
+category = "Code Quality"
+
+[commands.lint-check]
+program = "sh"
+args = ["-c", "make --no-print-directory lint-check 1>&2"]
+help = "Markdown passes rumdl lint rules"
+category = "Code Quality"
+
+[commands.check-install]
+program = "sh"
+args = ["-c", "make --no-print-directory check-install 1>&2"]
+help = "make link installs every skill and make unlink removes it (scratch dir)"
+category = "Code Quality"
+
+[commands.verify]
+commands = [
+  "check-tools",
+  "validate-skills",
+  "validate-rules",
+  "validate-actions",
+  "fmt-check",
+  "lint-check",
+]
+fail_fast = false
+help = "Fast offline gate: skills, rules index, action pins, markdown (pre-commit, wave runners, CI)"
+category = "Code Quality"
+
+[commands.qa]
+commands = ["verify", "validate-marketplace", "check-install"]
+fail_fast = false
+help = "Full gate: verify plus the marketplace manifests and the install path (CI)"
+category = "Code Quality"

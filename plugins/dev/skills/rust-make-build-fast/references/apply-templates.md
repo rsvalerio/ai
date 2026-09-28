@@ -5,6 +5,16 @@ here are applied. Trade-off findings are never applied. Safe findings without a
 template (PROF-5, DEP-1, DEP-2) are manual work and stay as tasks. A
 standalone TEST-2 is a trade-off and is never applied.
 
+Where the values come from. None of them is this skill's own copy:
+
+- **`.config/nextest.toml`** comes from ops's Rust foundation (`ops init --rust`), rendered
+  by the running `ops`. See `nextest-leak-timeout`.
+- **The gate templates** edit `.ops.toml` relative to the `ops` rust stack's built-in
+  commands (`next`, `test-doc`, the staged `verify`), read with `ops explain`. They add or
+  swap steps and never restate the stack's list.
+- **`test-profile-align`** is a rule (keep `test` inheriting `dev`), not a file. The
+  foundation deliberately does not template a test profile.
+
 Every template edits one small region of one file. Never reformat a file,
 reorder keys, or touch anything outside that region. The diff should show the
 fix and nothing a reviewer has to check twice.
@@ -81,19 +91,36 @@ it with `ops backlog task edit <id> --append-notes`.
 
 ## `nextest-leak-timeout`
 
-```toml
-[profile.default]
-# nextest flags a test as LEAK when its output pipes have not reached EOF this
-# long after the test reports a result. Raised from the 100ms default because
-# under contention an exit that loses the race for a core is flagged as a leak.
-# A real leak still reports LEAK, only later; a run with no leak pays nothing,
-# because the wait ends at EOF, not at the timeout.
-leak-timeout = "2s"
+The value is the foundation's `leak-timeout`, not one this skill picks. Never run
+`ops init --rust` in the repository: it would also write `clippy.toml`, `deny.toml`,
+`rustfmt.toml` and the lint tables. Render it into scratch instead, and take the
+`[profile.default]` block from there, with its comment:
+
+```bash
+FND="$(mktemp -d)"
+mkdir -p "$FND/src" && touch "$FND/src/lib.rs"
+printf '[package]\nname = "foundation"\nversion = "0.0.0"\nedition = "2021"\n' > "$FND/Cargo.toml"
+(cd "$FND" && ops init --rust >/dev/null)
+cat "$FND/.config/nextest.toml"
 ```
 
-If `[profile.default]` already exists, add only the key and its comment. If
-`leak-timeout` is already set to 2s or more, the check should not have fired.
-Fix the check, not the file.
+Then ask the repository what differs. The check is read-only:
+
+```bash
+ops init --rust --check | grep '^drift *\.config/nextest\.toml:profile\.default\.leak-timeout'
+```
+
+| State | Write |
+|-------|-------|
+| No `.config/nextest.toml` | A new file with the rendered `[profile.default]` block only |
+| File exists, no `[profile.default]` | The rendered `[profile.default]` block, appended |
+| `[profile.default]` exists | Only the `leak-timeout` key and its comment, set to the rendered value |
+
+Write only `leak-timeout`. The rest of the foundation's nextest file, such as its `ci`
+profile, is not TEST-4's fix. Mention the remaining drift in the report and point at
+`ops init --rust`. If the check reports no `leak-timeout` drift, the check should not have
+fired, or the repository waived it under `[foundation.waivers]` in `.ops.toml`. Fix the check,
+not the file, and never override a waiver.
 
 ## `gate-staged`
 
@@ -180,7 +207,7 @@ Check every file that was written before reporting success:
 |------|-------|
 | `Cargo.toml` | `cargo metadata --locked --format-version 1 >/dev/null` parses it, and a `cargo build --locked` of the gate command reports no `unused manifest key` warning |
 | `.ops.toml` | `ops explain <gate> --json` resolves every edited gate, with the new steps in the stages the template intended, for example the test step after the barrier for `gate-barrier`, or the `env.CARGO_TARGET_DIR` for `own-target-dir` |
-| `.config/nextest.toml` | `python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' .config/nextest.toml` parses it. The gate run below then loads it for real. Do not use `cargo nextest show-config` as a cheap check: it builds the test binaries, and in the eval it compiled a new default-feature fingerprint |
+| `.config/nextest.toml` | `python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' .config/nextest.toml` parses it, and `ops init --rust --check` no longer reports `leak-timeout` drift. The gate run below then loads it for real. Do not use `cargo nextest show-config` as a cheap check: it builds the test binaries, and in the eval it compiled a new default-feature fingerprint |
 
 Then run the gates that were edited once, and compare against the numbers the
 finding recorded. A safe fix that did not make anything faster was

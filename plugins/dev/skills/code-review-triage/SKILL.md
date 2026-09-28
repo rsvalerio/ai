@@ -13,7 +13,7 @@ scope so waves can later be run in parallel and merged in a sensible order.
 
 ## Step 1 — Gather triage tasks
 
-Requires `ops` 0.72.0 or newer (`ops --version`), for `wave create` and `wave overlap`.
+Requires `ops` 0.74.0 or newer (`ops --version`), for `wave create` and `wave overlap`.
 Stop with a clear message if it is older.
 
 ```bash

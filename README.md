@@ -73,7 +73,7 @@ Restart your AI tool after installing so it picks up the new skills.
 ## Requirements
 
 - **AI agent**: Claude Code, OpenAI Codex, Cursor, or another Agent Skills-compatible platform
-- **ops 0.72.0 or newer**: [`ops`](https://github.com/rsvalerio/ops) on PATH. Every skill that files findings uses `ops backlog` (a `.backlog/tasks/` directory in the target repo is all the setup it needs), with `--unless-exists` so a finding is filed once. The wave runners claim, lock, park and commit bookkeeping through `ops backlog wave` and `ops lock`. `rust-make-clippy-pedantic` lints through `ops clippy-findings`. `rust-make-build-fast` reads gate plans, machine state and duplicate dependencies through `ops explain` and `ops about`. Each skill checks `ops --version` first and stops if it is older
+- **ops 0.74.0 or newer**: [`ops`](https://github.com/rsvalerio/ops) on PATH. Every skill that files findings uses `ops backlog` (a `.backlog/tasks/` directory in the target repo is all the setup it needs), with `--unless-exists` so a finding is filed once. The wave runners claim, lock, park and commit bookkeeping through `ops backlog wave` and `ops lock`. `rust-make-clippy-pedantic` lints through `ops clippy-findings`. `rust-make-build-fast` reads gate plans, machine state and duplicate dependencies through `ops explain` and `ops about`. Both Rust `--apply` modes take their templates from the Rust foundation that `ops init --rust` renders. Each skill checks `ops --version` first and stops if it is older
 - **Developing this repo**: Git, plus `rumdl` and `skill-validator` at the versions pinned in [`.tool-versions`](.tool-versions) — `mise install` gets both, or `make install-tools` via Homebrew — and `claude-code` on PATH for `make validate-marketplace` (the asdf route is in [CONTRIBUTING.md](CONTRIBUTING.md)). Full workflow in [AGENTS.md](AGENTS.md)
 
 ## Usage
@@ -129,8 +129,9 @@ Details: [Worktree Protocol](plugins/dev/skills/code-review-run-wave/references/
 - "How much work is it to get this crate clippy-pedantic clean?"
 - "Configure this workspace for pedantic clippy — show me the config first."
 
-Requires a clean `git status`; the run aborts rather than stashing or pulling. Lint levels
-are configured with `-W` flags after `--` rather than by editing the crate. Both passes run
+Requires a clean `git status`; the run aborts rather than stashing or pulling. The lint set
+is the policy of the Rust foundation that ships with ops (`ops init --rust`, rendered into a
+scratch crate), passed as `-W` flags after `--` rather than by editing the crate. Both passes run
 through `ops clippy-findings`, which returns one normalized JSON row per diagnostic. What
 keeps the run off your files is the rest of it: `--locked` so Cargo cannot write
 `Cargo.lock`, a scratch `CARGO_TARGET_DIR` so `target/` is untouched, and no `--fix`. Findings are written
@@ -139,7 +140,8 @@ to `.backlog/`, which is the point.
 The run finishes by printing the `Cargo.toml` lint tables and `clippy.toml` that would make
 the strictness permanent: `[workspace.lints.*]` plus a `[lints] workspace = true` opt-in per
 member for a workspace, or direct `[lints.rust]` / `[lints.clippy]` tables for a single
-crate. Pass `--apply` to have it write them — the only mode that edits checked-in lint
+crate. Both come from the same foundation, and in a repository that already has them only
+what `ops init --rust --check` reports as drift is shown. Pass `--apply` to have it write them — the only mode that edits checked-in lint
 configuration, though every run writes its findings to `.backlog/`. Neither commits.
 
 ### rust-make-build-fast
@@ -202,8 +204,7 @@ Setup, gates, commit format, and pull request rules: [CONTRIBUTING.md](CONTRIBUT
 Skill authoring conventions and publishing: [AGENTS.md](AGENTS.md).
 
 `main` is protected: pull requests merge by squash only, need signed commits, and
-must pass the `Lint`, `Validate` and `Install` checks. `make ci` runs the same
-gates locally.
+must pass the `ops verify` and `ops qa` checks. Both run the same gates locally.
 
 ## License
 

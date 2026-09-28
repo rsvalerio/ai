@@ -15,7 +15,8 @@ This repo is a monorepo of AI tooling, published as a Claude Code plugin marketp
 ├── Makefile                  # validate, lint, link/unlink, eval — discovers skills by glob
 ├── scripts/
 │   ├── validate-skills.py    # strict skill-validator run + documented allowlist
-│   └── validate-rules.py     # rule-index parity for the review skills
+│   ├── validate-rules.py     # rule-index parity for the review skills
+│   └── validate-actions.py   # third-party actions are SHA-pinned
 ├── .claude-plugin/
 │   └── marketplace.json      # The only root manifest; lists every plugin
 ├── plugins/
@@ -49,7 +50,7 @@ Skill purposes are listed in the [README overview](README.md#overview). Relation
 - **code-review-run-wave** — claims one open wave (`ops backlog wave claim`), applies fixes in an isolated git worktree, runs QA, merges under `ops lock code-review-merge` (one command covering rebase → integration verify → fast-forward, with conflicts fixed outside the lock), commits bookkeeping with `ops backlog commit`, parks with `ops backlog wave park`. Protocol: `skills/code-review-run-wave/references/worktree-protocol.md`.
 - **code-review-run-waves** — fans out across open waves; delegates per-wave work to `code-review-run-wave`.
 - **commit-script** — groups related files into conventional commit scripts. Two modes: `commit` (default, local commits only — what the wave runners use) and `pr` (topic branch + push + `gh pr create`).
-- **rust-make-clippy-pedantic** — mechanical counterpart to `code-review-rust`: runs `ops clippy-findings` (Clippy under `--locked`, one normalized JSON row per diagnostic) with the strict lint groups passed as flags (never as source edits) over a verified-clean tree, files one `Triage` task per warning labelled `pedantic` — dropping test-only style findings, generated files and out-of-tree warnings, and collapsing any lint that fires more than 20 times in one crate into a single aggregate task — reports an effort estimate, and prints the `Cargo.toml` / `clippy.toml` lint policy that would make the strictness permanent, writing it only under `--apply`. Feeds `code-review-triage` like the review skills do.
+- **rust-make-clippy-pedantic** — mechanical counterpart to `code-review-rust`: runs `ops clippy-findings` (Clippy under `--locked`, one normalized JSON row per diagnostic) with the lint policy of ops's Rust foundation (rendered by `ops init --rust` into scratch) passed as flags (never as source edits) over a verified-clean tree, files one `Triage` task per warning labelled `pedantic` — dropping test-only style findings, generated files and out-of-tree warnings, and collapsing any lint that fires more than 20 times in one crate into a single aggregate task — reports an effort estimate, and prints the `Cargo.toml` / `clippy.toml` lint policy that would make the strictness permanent, writing it only under `--apply`. The policy is never restated in the skill: it is ops's foundation, and `ops init --rust --check` decides what an existing file lacks. Feeds `code-review-triage` like the review skills do.
 - **rust-make-build-fast** — `rust-make-clippy-pedantic`'s shape applied to build cost: over a verified-clean tree it reads the profiles, cargo config, gates, nextest config and dependency graph, and takes sccache stats around a warm `cargo build --timings`. It files one `Triage` task per finding, labelled `build-fast`, carrying a measured cost with its date and machine load, classified `safe` or `trade-off`. Cold builds run only under `--measure-cold`, into a target directory on real disk (never tmpfs), with variants passed as `--config` overrides rather than file edits. `--apply` writes only safe findings that have a template (`Cargo.toml` test profile, `.ops.toml` gates, `.config/nextest.toml`). Trade-offs such as dependency `opt-level` are never applied. Machine facts (tmpfs `/tmp`, a user-level `jobs` cap) are report-only. The checks catalog is drawn from hand-tuning dbsec, ops and event0; a check should enter it only after it has cost a real workspace time.
 - **rust-meta** — maps external Rust knowledge into `code-review-rust`.
 
@@ -60,7 +61,7 @@ Relationships that matter when editing the `product` skills:
 ### ops dependency
 
 Every skill that touches the backlog, and several that do not, run through
-[`ops`](https://github.com/rsvalerio/ops), and the floor is **ops 0.72.0**. Each such skill
+[`ops`](https://github.com/rsvalerio/ops), and the floor is **ops 0.74.0**. Each such skill
 checks `ops --version` first and stops if it is older; the README's Requirements section
 states the same floor. Raise it in all three places — the skill preflights, the README, and
 here — when a skill starts using a newer ops feature. What each skill relies on:
@@ -72,6 +73,7 @@ here — when a skill starts using a newer ops feature. What each skill relies o
 | `ops backlog wave claim` / `wave park`, `ops backlog commit`, `ops lock` | code-review-run-wave, code-review-run-waves |
 | `ops clippy-findings --schema-version 2` (camelCase report) | rust-make-clippy-pedantic |
 | `ops explain`, `ops about machine` (incl. `cargo.incremental` / `incrementalProfiles`), `ops about dependencies --duplicates [--target]` (host-filtered by default) | rust-make-build-fast |
+| `ops init --rust` (rendered into scratch, never the repo) and `ops init --rust --check` (drift) — the Rust foundation | rust-make-clippy-pedantic, rust-make-build-fast |
 | `ops about crates` / `ops about loc` | code-review-rust, rust-make-clippy-pedantic, rust-make-build-fast |
 | `ops typecheck` / `ops lint` (vite/node stack) | code-review-web |
 
@@ -113,6 +115,8 @@ cd ai
 mise install         # or: make install-tools (Homebrew)
 make check-tools     # confirm they match .tool-versions
 make lint-and-validate
+ops verify           # fast offline gate
+ops qa               # full gate: verify + marketplace + install path
 ```
 
 | Command | Description |
@@ -120,8 +124,12 @@ make lint-and-validate
 | `make validate` | Validate all skills, strict (`scripts/validate-skills.py`) |
 | `make lint` | Format and lint all skills (`rumdl`) |
 | `make lint-and-validate` | Both gates |
-| `make ci` | Non-mutating CI gate (`validate` + fmt/lint check) |
-| `make validate-rules-index` | Fail if `rules/index.md` and `references/rules/*.md` disagree |
+| `ops verify` | Fast offline gate (skills, rules index, action pins, markdown, tool versions); wave runners and CI run it. Steps in `.ops.toml` |
+| `ops qa` | Full gate: `verify` plus `validate-marketplace` and `check-install`; CI runs it |
+| `make ci` | The `ops qa` checks without ops or `check-tools` |
+| `make check-install` | `make link` / `make unlink` round-trip every skill through a scratch directory |
+| `make validate-actions` | Fail if a third-party action is not SHA-pinned with a version comment |
+| `make validate-rules` | Fail if `rules/index.md` and `references/rules/*.md` disagree |
 | `make eval` | Run the behavioural eval suite (`claude plugin eval`, not in `make ci`) |
 | `make check-tools` | Fail if local tooling drifted from `.tool-versions` |
 | `make install-tools` | Install both tools via Homebrew |
@@ -130,7 +138,7 @@ make lint-and-validate
 
 `.tool-versions` pins the tool versions, and CI reads that same file — a green `make ci` only means something when `make check-tools` passes too.
 
-Edit under `plugins/<plugin>/skills/<skill-name>/`, then run `make ci` before opening a PR. Follow the [Agent Skills specification](https://agentskills.io/specification). Contribution and pull request rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+Edit under `plugins/<plugin>/skills/<skill-name>/`, then run `ops qa` before opening a PR. Follow the [Agent Skills specification](https://agentskills.io/specification). Contribution and pull request rules: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Validation
 
@@ -148,7 +156,7 @@ Checks YAML frontmatter, required `name`/`description`, lowercase-hyphen naming,
 
 ### Rule-index drift
 
-`make validate-rules-index` compares every `**<CAT>-<N>**` id in
+`make validate-rules` compares every `**<CAT>-<N>**` id in
 `references/rules/*.md` against `references/rules/index.md`, for both
 `code-review-rust` and `code-review-web`. A rule that lands in a category file
 without an index line is invisible to a scan — the skill silently stops
