@@ -1,9 +1,10 @@
 ---
 id: TASK-0004
 title: 'Restructure the repo into a multi-plugin monorepo: plugins/dev (was dev-skills) and plugins/product'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-27 14:02'
+updated_date: '2026-09-28 10:21'
 labels:
   - monorepo
   - plugins
@@ -61,11 +62,26 @@ The validators and link targets should discover skills with the glob `plugins/*/
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Root holds only .claude-plugin/marketplace.json, listing two plugins: dev (source ./plugins/dev) and product (source ./plugins/product)
-- [ ] #2 The nine existing skills live under plugins/dev/skills/ and their evals under plugins/dev/evals/; no skill content changes beyond path fixes
-- [ ] #3 plugins/product/.claude-plugin/plugin.json exists, with a description for product and market research skills
-- [ ] #4 No reference to dev-skills remains anywhere in the repo
-- [ ] #5 Makefile validate/link/unlink/eval, scripts/validate-skills.py, scripts/validate-rules.py and CI discover skills with the plugins/*/skills/*/ glob
-- [ ] #6 make ci passes, claude plugin validate passes for the marketplace and both plugins, and make link symlinks every skill
-- [ ] #7 README and AGENTS.md describe the monorepo layout, how to add a plugin, and the install commands dev@rsvalerio and product@rsvalerio
+- [x] #1 Root holds only .claude-plugin/marketplace.json, listing two plugins: dev (source ./plugins/dev) and product (source ./plugins/product)
+- [x] #2 The nine existing skills live under plugins/dev/skills/ and their evals under plugins/dev/evals/; no skill content changes beyond path fixes
+- [x] #3 plugins/product/.claude-plugin/plugin.json exists, with a description for product and market research skills
+- [x] #4 No reference to dev-skills remains anywhere in the repo
+- [x] #5 Makefile validate/link/unlink/eval, scripts/validate-skills.py, scripts/validate-rules.py and CI discover skills with the plugins/*/skills/*/ glob
+- [x] #6 make ci passes, claude plugin validate passes for the marketplace and both plugins, and make link symlinks every skill
+- [x] #7 README and AGENTS.md describe the monorepo layout, how to add a plugin, and the install commands dev@rsvalerio and product@rsvalerio
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-09-28, branch refactor/multi-plugin-monorepo (uncommitted):
+- AC1: root has only .claude-plugin/marketplace.json, listing dev (./plugins/dev) and product (./plugins/product).
+- AC2: 9 skills git-mv'd to plugins/dev/skills/, evals to plugins/dev/evals/ (history kept). Skill content unchanged: intra-plugin paths like skills/code-review-run-wave/... are plugin-root-relative and still correct.
+- AC3: plugins/product/.claude-plugin/plugin.json, plus plugins/product/skills/.gitkeep.
+- AC4: no dev-skills left outside this task file, which keeps it as history of the rename.
+- AC5: Makefile (PLUGINS / SKILL_DIRS globs; validate-marketplace and eval loop per plugin), validate-skills.py (globs, and rejects duplicate skill names across plugins, since make link is flat), validate-rules.py (locates skills by glob), CI install check (glob). Lint scope is plugins/*/skills, so eval prompt files stay unlinted as before.
+- AC6: make ci passes; claude plugin validate passes for the marketplace and both plugins (the expected no-version warning only); make link symlinks all 9. `claude plugin eval plugins/dev --case guardrail-rust` scores 1.00 from the new path.
+- AC7: README (plugin overview, dev@rsvalerio / product@rsvalerio installs, new paths) and AGENTS.md (layout tree, plugin-root-relative paths, Adding a New Plugin, per-plugin evals, publishing).
+Also: docs/implementation-guardrail.md links and one report's relative link point at plugins/dev/skills/.
+<!-- SECTION:NOTES:END -->
