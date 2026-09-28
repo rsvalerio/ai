@@ -1,11 +1,14 @@
-SKILLS_DIR := skills
-SKILLS := $(sort $(shell ls -1 $(SKILLS_DIR)))
+# The repo is a multi-plugin marketplace: each plugin lives in plugins/<name>/ with
+# its own skills/, and a top-level skills/ holds standalone skills that belong to no
+# plugin (optional). Everything below discovers skills by globbing both, so adding a
+# plugin needs no Makefile edit.
+PLUGINS := $(sort $(patsubst %/,%,$(wildcard plugins/*/)))
+SKILL_DIRS := $(sort $(patsubst %/,%,$(wildcard plugins/*/skills/*/ skills/*/)))
 CLAUDE_SKILLS_DIR := $(HOME)/.claude/skills
-SKILLS_ABS := $(abspath $(SKILLS_DIR))
 
 # Every tracked markdown file, not just the skills — README and AGENTS.md are
 # the most-read pages here and were previously unlinted.
-MARKDOWN := $(SKILLS_DIR) docs reports README.md AGENTS.md CONTRIBUTING.md .github
+MARKDOWN := $(wildcard plugins/*/skills skills) docs reports README.md AGENTS.md CONTRIBUTING.md .github
 
 # .tool-versions is the single source of truth; CI and `mise install` read the
 # same file. Names may carry a mise backend prefix, so match on the last segment.
@@ -40,12 +43,14 @@ check-tools:
 validate:
 	@python3 scripts/validate-skills.py
 
-# The repo root doubles as a Claude Code plugin marketplace (.claude-plugin/
-# marketplace.json), one plugin per skill. claude-code is expected on PATH
-# rather than pinned in .tool-versions: anyone developing skills already runs
-# it, and CI installs its own pinned copy.
+# The repo root is a Claude Code plugin marketplace (.claude-plugin/
+# marketplace.json) listing every plugin under plugins/. Validate the marketplace
+# and each plugin's own manifest. claude-code is expected on PATH rather than
+# pinned in .tool-versions: anyone developing skills already runs it, and CI
+# installs its own pinned copy.
 validate-marketplace:
 	@claude plugin validate .
+	@for plugin in $(PLUGINS); do claude plugin validate $$plugin || exit 1; done
 
 # Homebrew works on macOS and Linuxbrew. Without it, install the pinned releases
 # from github.com/rvcas/rumdl and github.com/agent-ecosystem/skill-validator, or
@@ -69,11 +74,16 @@ validate-rules:
 
 # Behavioural gate: do the skills still trigger? `claude plugin eval` runs each
 # case twice (plugin loaded / not loaded) and reports the delta. Every grader in
-# evals/ is free — tool_used only — so this costs agent runs, not judge calls.
+# plugins/<name>/evals/ is free — tool_used only — so this costs agent runs, not
+# judge calls. Each plugin with an evals/ directory runs against its own manifest.
 # Deliberately not part of `make ci`: it is non-deterministic and needs
 # credentials. Run it before a release and after a Claude Code model bump.
 eval:
-	@claude plugin eval . --trust-plugin --no-publish
+	@for plugin in $(PLUGINS); do \
+		[ -d $$plugin/evals ] || continue; \
+		echo "== $$plugin"; \
+		claude plugin eval $$plugin --trust-plugin --no-publish || exit 1; \
+	done
 
 lint:
 	@rumdl fmt $(MARKDOWN)
@@ -87,13 +97,15 @@ lint-check:
 
 link:
 	@mkdir -p $(CLAUDE_SKILLS_DIR)
-	@for skill in $(SKILLS); do \
-		ln -sfn $(SKILLS_ABS)/$$skill $(CLAUDE_SKILLS_DIR)/$$skill; \
-		echo "linked $(CLAUDE_SKILLS_DIR)/$$skill -> $(SKILLS_ABS)/$$skill"; \
+	@for dir in $(SKILL_DIRS); do \
+		skill=$$(basename $$dir); \
+		ln -sfn $(CURDIR)/$$dir $(CLAUDE_SKILLS_DIR)/$$skill; \
+		echo "linked $(CLAUDE_SKILLS_DIR)/$$skill -> $(CURDIR)/$$dir"; \
 	done
 
 unlink:
-	@for skill in $(SKILLS); do \
+	@for dir in $(SKILL_DIRS); do \
+		skill=$$(basename $$dir); \
 		if [ -L $(CLAUDE_SKILLS_DIR)/$$skill ]; then \
 			rm $(CLAUDE_SKILLS_DIR)/$$skill; \
 			echo "removed $(CLAUDE_SKILLS_DIR)/$$skill"; \

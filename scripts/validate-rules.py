@@ -60,8 +60,18 @@ def signal_categories(checklist: str) -> set[str]:
     return {p for p, _a, _b in CHECKLIST_ID.findall("\n".join(table))}
 
 
+def skill_dir(skill: str) -> Path | None:
+    """Find a skill wherever it lives: in any plugin, or as a standalone skill."""
+    matches = sorted(REPO.glob(f"plugins/*/skills/{skill}")) + sorted(REPO.glob(f"skills/{skill}"))
+    return matches[0] if matches else None
+
+
 def check(skill: str, problems: list[str]) -> None:
-    refs = REPO / "skills" / skill / "references"
+    root = skill_dir(skill)
+    if root is None:
+        problems.append(f"{skill}: skill directory not found under plugins/*/skills/ or skills/")
+        return
+    refs = root / "references"
     rules_dir, index, checklist = refs / "rules", refs / "rules" / "index.md", refs / "scan-checklist.md"
 
     for required in (rules_dir, index, checklist):

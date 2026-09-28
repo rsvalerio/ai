@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run skill-validator over every skill and fail on anything not allowlisted.
 
-Every immediate directory under skills/ is validated, not only those that already
+Every skill directory (plugins/*/skills/*/ and skills/*/) is validated, not only those that already
 contain a SKILL.md: filtering on SKILL.md would let a skill directory missing its
 manifest pass by being skipped, which is the same silent-pass bug this script exists
 to remove.
@@ -20,7 +20,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
+REPO = Path(__file__).resolve().parent.parent
+
+# Skills live in plugins/<plugin>/skills/<skill>/, plus an optional top-level
+# skills/<skill>/ for standalone skills that belong to no plugin. Globbing both means
+# a new plugin needs no change here.
+SKILL_GLOBS = ("plugins/*/skills/*", "skills/*")
 
 # (skill name, exact validator message) pairs that are accepted as warnings.
 #
@@ -41,9 +46,16 @@ ALLOWED: set[tuple[str, str]] = {
 
 
 def main() -> int:
-    skills = sorted(p for p in SKILLS_DIR.iterdir() if p.is_dir())
+    skills = sorted(p for g in SKILL_GLOBS for p in REPO.glob(g) if p.is_dir())
     if not skills:
-        print(f"no skill directories under {SKILLS_DIR}", file=sys.stderr)
+        print(f"no skill directories matching {', '.join(SKILL_GLOBS)}", file=sys.stderr)
+        return 1
+    names = [p.name for p in skills]
+    clashes = sorted({n for n in names if names.count(n) > 1})
+    if clashes:
+        # `make link` installs every skill into one flat ~/.claude/skills/, so two
+        # plugins shipping the same skill name would overwrite each other there.
+        print(f"skill names must be unique across plugins: {', '.join(clashes)}", file=sys.stderr)
         return 1
     failed: list[str] = []
     stale = set(ALLOWED)
