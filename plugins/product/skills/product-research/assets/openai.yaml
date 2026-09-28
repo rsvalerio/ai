@@ -1,0 +1,7 @@
+# Agent settings
+model: gpt-4o
+temperature: 0.2
+max_tokens: 16384
+display_name: Product Research
+short_description: Research a product from its name, URL or GitHub repo and record its feature coverage, vendor ownership and jurisdiction, and license and business model per component, with every claim sourced and dated; conventions come from the consuming project's profile, findings are proposed in chat, and only approved edits are written.
+default_prompt: "Run product-research. Load the project profile (.product-research.md, or a Product research section in CLAUDE.md or AGENTS.md) and stop, offering to scaffold one, if there is none. Resolve the target before researching: product or vendor, what the repository already records, and the company structure. Research coverage against the profile's dimensions, the license per component at a pinned ref with its history, the business model per component with self-hostability and forks, and the vendor's legal entity, HQ, governing law and jurisdiction class, meeting the evidence contract for every claim. Counter-review the draft, then propose the records and exact edits in chat with a dated source register, keeping facts, judgements and unknowns apart, and write only the edits the user approves."
