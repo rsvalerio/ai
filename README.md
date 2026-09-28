@@ -9,7 +9,7 @@ A monorepo of AI tooling: [Agent Skills](https://agentskills.io/specification) g
 | Plugin | Path | Contents |
 |--------|------|----------|
 | **dev** | [`plugins/dev`](plugins/dev) | Rust and frontend development: code review, review-wave orchestration, Clippy and build-cost surveys, commit scripting. The nine skills below |
-| **product** | [`plugins/product`](plugins/product) | Product and market research: product, vendor, license and business-model research. Scaffold only; the first skill is in progress |
+| **product** | [`plugins/product`](plugins/product) | Product and market research: product, vendor, license and business-model research. The skill below |
 
 ### dev skills
 
@@ -24,6 +24,12 @@ A monorepo of AI tooling: [Agent Skills](https://agentskills.io/specification) g
 | **rust-make-build-fast** | Survey a clean Rust checkout's build cost: profiles, gates, nextest, target directories, duplicate and unused dependencies, sccache hit rate. File one `build-fast` backlog task per finding with its measured cost, the date and machine load, classified `safe` or `trade-off`. Cold builds only with `--measure-cold`; with `--apply`, write the safe fixes (never the trade-offs). |
 | **rust-make-clippy-pedantic** | Lint a clean Rust checkout at pedantic strength via flags only, file one `pedantic`-labelled backlog task per warning — test-only style findings, generated files and out-of-tree warnings dropped, high-volume lints aggregated per crate — estimate the cleanup, and show (or with `--apply`, write) the matching `Cargo.toml` / `clippy.toml` lint policy. |
 | **rust-meta** | Process external Rust content and integrate new knowledge into `code-review-rust`. |
+
+### product skills
+
+| Skill | Purpose |
+|-------|---------|
+| **product-research** | Research a product from its name, URL or GitHub repo and record its feature coverage, vendor ownership and jurisdiction, and license and business model per component (open vs paid, self-hostable, license history, forks and rebuilds). Every claim carries its source, ref and date checked. Conventions come from the consuming repo's `.product-research.md` profile; with none, the skill stops and offers to scaffold one. Proposes in chat and writes only what was approved. |
 
 ## Installation
 
@@ -46,10 +52,10 @@ git clone https://github.com/rsvalerio/ai.git
 cd ai
 
 # Claude Code
-cp -r plugins/dev/skills/* .claude/skills/
+cp -r plugins/*/skills/* .claude/skills/
 
 # OpenAI Codex
-cp -r plugins/dev/skills/* .codex/skills/
+cp -r plugins/*/skills/* .codex/skills/
 ```
 
 For a live symlink into `~/.claude/skills/` while developing this repo, use `make link` (see [AGENTS.md](AGENTS.md)).
@@ -164,6 +170,23 @@ that have a template, into the `Cargo.toml` test profile, `.ops.toml` and
 
 - "Process this external Rust doc and integrate new knowledge into the rules."
 - "Evaluate this blog post against our evaluation criteria."
+
+### product-research
+
+- "Research Tailscale and add it to our reference folder."
+- "Update what we have on HashiCorp Vault — check whether the license changed."
+- "Who owns this product and under whose law? <https://example.com>"
+
+The skill needs a profile in the consuming repo: `.product-research.md` at the root, or a
+`## Product research` section in `CLAUDE.md` / `AGENTS.md`. It declares where records go,
+the coverage dimensions and markers, the scope map, depth tiers, jurisdiction policy and
+search paths. Without one the skill stops before any research and offers to scaffold it,
+asking for each section rather than guessing. It needs no `ops`.
+
+Licenses are read from the LICENSE file at a pinned tag or commit, per component, never
+from a badge; an unknown license is never recorded as permissive. Every claim carries its
+source URL, ref and date checked, and every unknown names the check that would settle it.
+Findings are proposed in chat, and only the approved edits are written.
 
 ## Resources
 

@@ -34,7 +34,9 @@ This repo is a monorepo of AI tooling, published as a Claude Code plugin marketp
 │   │       └── rust-meta/
 │   └── product/              # Product and market research
 │       ├── .claude-plugin/plugin.json
-│       └── skills/           # empty until the first product skill lands
+│       ├── evals/
+│       └── skills/
+│           └── product-research/
 └── LICENSE
 ```
 
@@ -50,6 +52,10 @@ Skill purposes are listed in the [README overview](README.md#overview). Relation
 - **rust-make-clippy-pedantic** — mechanical counterpart to `code-review-rust`: runs `ops clippy-findings` (Clippy under `--locked`, one normalized JSON row per diagnostic) with the strict lint groups passed as flags (never as source edits) over a verified-clean tree, files one `Triage` task per warning labelled `pedantic` — dropping test-only style findings, generated files and out-of-tree warnings, and collapsing any lint that fires more than 20 times in one crate into a single aggregate task — reports an effort estimate, and prints the `Cargo.toml` / `clippy.toml` lint policy that would make the strictness permanent, writing it only under `--apply`. Feeds `code-review-triage` like the review skills do.
 - **rust-make-build-fast** — `rust-make-clippy-pedantic`'s shape applied to build cost: over a verified-clean tree it reads the profiles, cargo config, gates, nextest config and dependency graph, and takes sccache stats around a warm `cargo build --timings`. It files one `Triage` task per finding, labelled `build-fast`, carrying a measured cost with its date and machine load, classified `safe` or `trade-off`. Cold builds run only under `--measure-cold`, into a target directory on real disk (never tmpfs), with variants passed as `--config` overrides rather than file edits. `--apply` writes only safe findings that have a template (`Cargo.toml` test profile, `.ops.toml` gates, `.config/nextest.toml`). Trade-offs such as dependency `opt-level` are never applied. Machine facts (tmpfs `/tmp`, a user-level `jobs` cap) are report-only. The checks catalog is drawn from hand-tuning dbsec, ops and event0; a check should enter it only after it has cost a real workspace time.
 - **rust-meta** — maps external Rust knowledge into `code-review-rust`.
+
+Relationships that matter when editing the `product` skills:
+
+- **product-research** — carries no project conventions. Output paths, coverage dimensions and markers, scope, tiers, jurisdiction policy and vocabulary all come from the consuming repo's profile (`.product-research.md`, or a `## Product research` section in its `CLAUDE.md` / `AGENTS.md`); with none, the skill stops and offers to scaffold one from `assets/profile.md`. Never add a consuming project's thesis, paths or product list to the skill, not even as an example. Each rubric is defined in exactly one file: the evidence levels and source record in `references/evidence-contract.md`, license classes in `license-taxonomy.md`, business-model patterns and self-hostability grades in `business-model.md`, jurisdiction classes in `jurisdiction.md`, and the profile schema in `project-profile.md`. `SKILL.md` and `assets/` link to them rather than restate them. Record templates live in `assets/`, not `templates/`, because strict `skill-validator` warns on unknown top-level directories. The skill does not use `ops`.
 
 ### ops dependency
 
@@ -152,23 +158,31 @@ Part of `make ci`.
 ### Behavioural evals
 
 Each plugin can carry an `evals/` directory; `make eval` runs `claude plugin eval
-plugins/<name>` for every plugin that has one. `plugins/dev/evals/` holds three cases that answer
-"does the skill still fire", not "is the markdown well-formed".
+plugins/<name>` for every plugin that has one. The cases answer "does the skill still
+fire", not "is the markdown well-formed".
 
 | Case | Asserts |
 |------|---------|
 | `review-rust` | A Rust review request loads `code-review-rust` and reads `references/rules/` |
 | `review-web` | A React/TS request loads `code-review-web`, not the Rust skill |
 | `guardrail-rust` | The verification prompt from [docs/implementation-guardrail.md](docs/implementation-guardrail.md) loads the skill and names a rule id |
+| `research-no-profile` (product) | A "research product X" request loads `product-research` and, with no profile in the sandbox, stops and asks for `.product-research.md`: no web search or fetch, no write or edit attempt |
 
 Every grader is free (`tool_used` / `regex`), so a run costs agent turns but no
 judge calls. By default each case also runs a no-plugin arm and reports the
 delta — a case that scores the same in both arms is not being carried by the
 skill.
 
+`Write`, `Edit`, `WebSearch` and `WebFetch` are gated: without `--allow-tools` they
+are withheld from both arms, so a "must not write" or "must not research" grader
+passes vacuously. `make eval` grants them; pass the same flag when running one case
+by hand, or the product case's baseline scores 0.80 instead of 0.20.
+
 ```bash
 make eval                                              # whole suite
 claude plugin eval plugins/dev --trust-plugin --case review-web  # one case
+claude plugin eval plugins/product --trust-plugin \
+  --allow-tools Write Edit WebSearch WebFetch     # product suite, graders armed
 ```
 
 Deliberately **not** in `make ci`: it is non-deterministic and needs
