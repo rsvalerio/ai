@@ -79,13 +79,15 @@ workspace = true
 **This is the step that is easy to skip and silently does nothing when skipped.**
 `[workspace.lints]` on its own configures no crate; it is a table members opt into. A
 workspace where half the crates lack the opt-in has half a policy, and the missing half
-looks clean because nothing is checking it. Enumerate members from `cargo metadata` rather
-than globbing `crates/*` — path dependencies outside the members list are common:
+looks clean because nothing is checking it. Enumerate members from `ops about crates`
+rather than globbing `crates/*` — path dependencies outside the members list are common:
 
 ```bash
-cargo metadata --no-deps --locked --format-version 1 \
-  | jq -r '.packages[].manifest_path'
+ops about crates --json | jq -r '.crates[] | select(.inTree) | "\(.manifestDir)/Cargo.toml"'
 ```
+
+`manifestDir` is repo-relative. A member outside the checkout (`inTree: false`) is not
+this repository's manifest to edit: report it and leave it alone.
 
 ## Root `clippy.toml`
 

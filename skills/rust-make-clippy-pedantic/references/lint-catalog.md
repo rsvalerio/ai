@@ -5,10 +5,12 @@ each lint family falls into. Effort classes feed [estimation.md](estimation.md).
 
 ## The flag set
 
-Everything is passed on the command line, after `--`, so the repository is never modified:
+Everything is passed on the command line, after `--`, so the repository is never modified.
+`ops clippy-findings` hands the lint flags to Clippy and runs Cargo with
+`--workspace --all-features --all-targets --locked`:
 
 ```bash
-cargo clippy --workspace --all-targets --locked --message-format=json --quiet -- \
+ops clippy-findings --schema-version 2 -- \
   -W clippy::pedantic \
   -W clippy::nursery \
   -W clippy::cargo \
@@ -21,7 +23,7 @@ cargo clippy --workspace --all-targets --locked --message-format=json --quiet --
 | `-W clippy::nursery` | Newer, less-settled lints. Genuinely useful, occasionally noisy — findings from here carry lower confidence and belong in the `nursery` label |
 | `-W clippy::cargo` | Manifest hygiene: missing metadata, wildcard dependencies, negative feature names |
 | `-A clippy::multiple_crate_versions` | Suppressed: a dependency-graph fact no single task can fix |
-| `--locked` | Cargo fails instead of writing `Cargo.lock`. Both invocations carry it — a lint run that resolves dependencies has modified the tree, which this skill promises not to do |
+| `--locked` | On by default in `ops clippy-findings`: Cargo fails instead of writing `Cargo.lock`. Both passes carry it — a lint run that resolves dependencies has modified the tree, which this skill promises not to do. Never pass `--no-locked` |
 
 Deliberately **not** enabled by default:
 
@@ -96,7 +98,7 @@ signature); the cost is the call sites it forces you to touch.
    defining crate's sources and count matches, then subtract the declaration:
 
    ```bash
-   CRATE_DIR="$(dirname '<manifest_path from cargo metadata>')"
+   CRATE_DIR='<manifestDir from the finding row>'   # repo-relative
    PAT='\b<fn_name>\s*(::<[^>]*>)?\s*\('
    calls=$(rg -o --glob '!target/' "$PAT" "$CRATE_DIR" | wc -l)
    decls=$(rg -o --glob '!target/' '\bfn +<fn_name>\b' "$CRATE_DIR" | wc -l)

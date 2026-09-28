@@ -49,6 +49,10 @@ to a scan.
 - Only approved items are integrated; rejected items appear in evaluation only
 - "Needs Clarification" items are flagged for user review; do not integrate until clarified
 - Verify the file structure is intact and links/refs still valid
+- When working in the skills repository, run `make validate-rules-index`. It fails when a
+  rule id in a category file has no line in `rules/index.md`, or when an index line points
+  at a rule that no longer exists. A rule that exists only in the category file is
+  silently dropped from every scan.
 - Document which files were modified and a short summary of additions/enhancements
 
 > **Note**: rust-meta integrates knowledge into code-review-rust and produces evaluation files — it does not write finding files or use the backlog task layout. The code-review-rust skill produces its own findings after knowledge is integrated.

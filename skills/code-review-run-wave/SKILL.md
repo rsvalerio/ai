@@ -1,7 +1,7 @@
 ---
 name: code-review-run-wave
 description: Pick one code-review wave, run it in an isolated git worktree, apply every member fix, run QA, merge it back, and close only fully completed waves
-allowed-tools: Bash, Read, Edit, Write, Grep, Glob
+allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git log:*) Bash(git diff:*) Bash(git rev-parse:*) Bash(git checkout:*) Bash(git branch:*) Bash(git worktree:*) Bash(git rebase:*) Bash(git merge:*) Bash(git add:*) Bash(git commit:*) Bash(git push:*) Bash(git pull:*) Bash(gh pr:*) Bash(ops --version) Bash(ops verify) Bash(ops backlog:*) Bash(ops lock:*) Bash(bash *commit-script-*.sh)
 license: Apache-2.0
 ---
 
@@ -64,6 +64,10 @@ count as work discovered by the wave, and the exception above for "issues you no
 while fixing" does not cover them.
 
 ## Step 1 — List open waves
+
+Requires `ops` 0.72.0 or newer: the claim, the locks and the bookkeeping commit
+are `ops` commands. Check `ops --version` first, and stop with a clear message if
+it is older.
 
 From the main checkout:
 
@@ -131,29 +135,19 @@ Take the task IDs from those rows. Do **not** try to read members out of
 `Missing dependencies: <ids>` line means the wave names tasks that are no longer in
 `tasks/`; note them in the final report and carry on with the rest.
 
-**Claim the wave by creating its worktree.** Branch creation is the claim — it fails if
-another runner already holds this wave:
+**Claim the wave** (main checkout). One command creates the branch
+`code-review/<waveTaskId>` and the worktree `../.wave-<waveTaskId>`, flips the wave
+to `In Progress`, and records the branch and worktree on the task, so a parked wave
+can be found later:
 
 ```bash
-git worktree add ../.wave-<waveTaskId> -b code-review/<waveTaskId>
+ops backlog wave claim <waveTaskId>
 ```
 
-A `fatal: a branch named 'code-review/<waveTaskId>' already exists` means the wave is
-already claimed — pick another, and never delete the branch to force the claim. Full
-rules, including genuinely abandoned claims:
+If the branch already exists, it refuses with nothing changed: the wave is already
+claimed. Pick another, and never delete the branch to force the claim. Full rules,
+including genuinely abandoned claims:
 [Claiming a Wave](references/worktree-protocol.md#claiming-a-wave).
-
-Only after the claim succeeds, flip the wave parent to `In Progress` (main checkout):
-
-```bash
-ops backlog task edit -s 'In Progress' <waveTaskId>
-```
-
-Also record the wave's branch on the task so a parked wave can be found later:
-
-```bash
-ops backlog task edit --append-notes 'Branch: code-review/<waveTaskId>' <waveTaskId>
-```
 
 ## Step 3 — Execute member tasks sequentially
 
@@ -315,23 +309,17 @@ no action at all (e.g. "`ops verify` clean on first run").
 
 ## Step 7 — Merge the wave back, serialized
 
-Only one wave may merge at a time. Acquire the merge lock, retrying until it is free:
+Only one wave may merge at a time. From the main checkout, land the wave as one command
+that holds the merge lock for exactly rebase → integration verify → fast-forward:
 
 ```bash
-mkdir .git/code-review-merge.lock
-```
-
-Holding the lock:
-
-```bash
-# 1. rebase the wave onto the landing branch, from the worktree
-cd ../.wave-<waveTaskId> && git rebase <landing-branch>
-
-# 2. integration verify — the merged result, not the isolated one
-ops verify
-
-# 3. fast-forward the landing branch, from the main checkout
-git merge --ff-only code-review/<waveTaskId>
+ops lock code-review-merge --timeout 3600 -- bash -c '
+  set -e
+  git -C ../.wave-<waveTaskId> rebase <landing-branch> \
+    || { git -C ../.wave-<waveTaskId> rebase --abort; exit 3; }
+  (cd ../.wave-<waveTaskId> && ops verify)   # integration verify: the merged result
+  git merge --ff-only code-review/<waveTaskId>
+'
 ```
 
 The **landing branch** is the one recorded in Step 2. Waves never land on `main` directly;
@@ -339,22 +327,19 @@ it ships to `main` as one PR (Step 8 here, or Step 5 of `code-review-run-waves`)
 switch the main checkout to another branch while a wave is in flight — runners derive
 their rebase target and merge destination from it.
 
-Then release the lock — **always**, including on every failure path:
+`ops lock` releases the lock when the command exits, whatever the outcome, and passes the
+exit code through. On a non-zero exit nothing landed. Fix it **outside** the lock, so no
+other wave waits on your thinking, then run the locked command again:
 
-```bash
-rmdir .git/code-review-merge.lock
-```
-
-If the rebase conflicts, see
-[Handling a Rebase Conflict](references/worktree-protocol.md#handling-a-rebase-conflict).
-The one rule to carry in your head: never resolve by discarding the other wave's hunk.
-
-If integration `ops verify` fails, fix it on the wave branch, re-verify, and retry. A
-wave that passes pre-merge and fails integration is a normal outcome — it is exactly the
-class of failure isolation cannot catch on its own.
-
-If `git merge --ff-only` refuses, another wave landed while you held a stale rebase.
-Re-run the rebase; do not fall back to a merge commit.
+- **Exit 3**: the rebase conflicted and was aborted. Resolve it in the worktree per
+  [Handling a Rebase Conflict](references/worktree-protocol.md#handling-a-rebase-conflict).
+  Never resolve by discarding the other wave's hunk.
+- **Integration `ops verify` failed**: fix it in the worktree, rerun pre-merge
+  `ops verify`, and **commit** the fix on the wave branch (Step 5): the locked command
+  rebases, and a rebase refuses a dirty worktree. This is a normal outcome.
+- **`--ff-only` refused**: another wave landed first; never fall back to a merge commit.
+- **`timed out … waiting for lock`**: `ops lock status`; wait for a live holder,
+  `ops lock break code-review-merge` a stale one.
 
 ## Step 8 — Close out or park
 
@@ -368,33 +353,42 @@ git branch -d code-review/<waveTaskId>
 ```
 
 Then commit the backlog task-file changes as their own `chore(backlog)` commit on the
-landing branch, **staging only this wave's own files, under the backlog lock**. The exact
-sequence — acquire, `git reset -q`, resolve each task file's path through
-`ops backlog task view`, verify the staged set matches exactly, commit, release — is in
-[Task files are shared mutable state](references/worktree-protocol.md#task-files-are-shared-mutable-state).
-Run it from there rather than from memory; the checks in it are the point.
+landing branch, **naming only this wave's own tasks, under the backlog lock**:
 
-Two things that section settles and are easy to get wrong: `git add .backlog` is never
-correct here (concurrent waves write their task edits into this same checkout, so it
-attributes their work to your wave), and the lock is what makes the exact-set check mean
-anything — without it another wave's `git add` lands between your check and your commit.
-If the staged set does not match, abort and report; do not unstage the extras and continue.
+```bash
+ops lock code-review-backlog --timeout 600 -- \
+  ops backlog commit <waveTaskId> <memberId>... <filedTriageId>... \
+    -m "chore(backlog): close code-review wave <N>"
+```
+
+It commits only the listed tasks' changed files, and refuses an empty commit or any
+other staged path. Never `git add .backlog`: concurrent waves' task edits share this
+checkout. On a foreign staged path, abort and report; never unstage and retry. See
+[Task files are shared mutable state](references/worktree-protocol.md#task-files-are-shared-mutable-state).
 
 **Standalone runs only — open the run's PR.** A fan-out run does not: `code-review-run-waves`
 PRs all its waves once every runner returns. Procedure (report body file, push, `gh pr
 create` on the landing branch recorded in Step 2, and the one sanctioned `-D` afterwards):
 [Opening the Run PR](references/worktree-protocol.md#opening-the-run-pr-standalone-runs-only).
 
-**Parked.** If any member task is not `Done`, or the merge did not land, leave the wave
-parent non-done (`In Progress` or `To Do`, matching the remaining work) and append a note
-listing the unfinished members and the reason the merge was not attempted or failed.
-**Leave the worktree and branch in place** — that is what makes the work resumable.
-Do not promise deferred PRs or future work in prose; remaining work goes into the backlog
-as a `Triage` task (Step 6), which is the only sanctioned way to defer anything.
+**Parked.** If any member task is not `Done`, or the merge did not land, park the wave
+(main checkout), naming the unfinished members and why the merge was not attempted or
+failed:
 
-Never use `git worktree remove --force` or `git branch -D` to clear an obstacle. Both
-refusals exist to stop you deleting unmerged work; investigate what is uncommitted
-instead.
+```bash
+ops backlog wave park <waveTaskId> --reason "<unfinished members; the failed step>" \
+  [-s 'To Do']   # default In Progress; match the remaining work
+```
+
+It records the reason and the branch and worktree to resume from, and touches nothing in
+git. **The worktree and branch stay in place**, which is what makes the work resumable.
+Commit it with the same locked `ops backlog commit` as a landed wave
+(`chore(backlog): park code-review wave <N>`), or the next run's clean-tree preflight
+blocks.
+Deferred work goes into the backlog as a `Triage` task (Step 6), never into prose.
+
+Never `git worktree remove --force` or `git branch -D` to clear an obstacle: both
+refusals guard unmerged work. Investigate what is uncommitted instead.
 
 ## Step 9 — Report
 

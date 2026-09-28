@@ -1,7 +1,7 @@
 ---
 name: code-review-web
 description: Reviews React and TypeScript code in Vite SPAs for hooks and type safety, async error handling, rendering performance, accessibility, XSS and Web Crypto security, and test quality including socket.io real-time patterns. Use while writing or editing frontend code as an implementation guardrail, or run a formal review that files one backlog task per finding.
-allowed-tools: Read Grep Glob Bash(wc *) Bash(ls *) Bash(tree *) Bash(git rev-parse:*) Bash(git log:*) Bash(ops backlog:*) Bash(eslint *) Bash(npx eslint *) Bash(bunx eslint *) Bash(tsc *) Bash(npx tsc *) Bash(bunx tsc *)
+allowed-tools: Read Grep Glob Bash(git rev-parse:*) Bash(git log:*) Bash(ops --version) Bash(ops backlog:*) Bash(ops typecheck) Bash(ops lint) Bash(ops explain:*)
 license: Apache-2.0
 ---
 
@@ -13,7 +13,7 @@ Review React + TypeScript + Vite frontend code against all rule categories: Reac
 
 - Use this skill for formal frontend code reviews (React/TypeScript/Vite SPAs).
 - Also use this skill as an implementation guardrail when making non-trivial frontend code changes: read the relevant rules, keep the change within those constraints, and avoid introducing new violations.
-- In implementation guardrail mode, do not create backlog tasks unless the user explicitly asked for a formal review. Treat the rules as acceptance criteria for the code change and run the project's relevant QA gates (`eslint .`, `tsc -b --noEmit`, the test runner) before finishing.
+- In implementation guardrail mode, do not create backlog tasks unless the user explicitly asked for a formal review. Treat the rules as acceptance criteria for the code change and run the project's relevant QA gates (`ops typecheck`, `ops lint`, the test runner) before finishing.
 
 ## Purpose
 
@@ -24,7 +24,7 @@ Review React + TypeScript + Vite frontend code against all rule categories: Reac
 
 ## Relationship to ESLint / tsc (machine-enforced baseline)
 
-Many mechanical rules are already enforced by `typescript-eslint`, `eslint-plugin-react-hooks` v7 (compiler-powered), and `tsc` in `strict` mode. **Do not file findings for what the configured tooling already catches** — running `eslint .` and `tsc -b --noEmit` is the baseline. This skill's unique value is what tools miss: design smells, severity nuance, security reasoning, missing test coverage, architectural drift, and rules the project hasn't enabled. When a rule references an ESLint rule (e.g. `no-floating-promises`), check whether the project already enables it before filing; if it does and passes, skip.
+Many mechanical rules are already enforced by `typescript-eslint`, `eslint-plugin-react-hooks` v7 (compiler-powered), and `tsc` in `strict` mode. **Do not file findings for what the configured tooling already catches** — running `ops typecheck` and `ops lint` is the baseline. In the `ops` vite stack they are `bunx tsc -b --noEmit` and `bunx eslint .`. The node stack has `ops lint` (`npm run lint`) but no `typecheck`: `ops explain typecheck` tells you whether it is defined, and if it is not, say in the report that the type-check baseline was not run. This skill's unique value is what tools miss: design smells, severity nuance, security reasoning, missing test coverage, architectural drift, and rules the project hasn't enabled. When a rule references an ESLint rule (e.g. `no-floating-promises`), check whether the project already enables it before filing; if it does and passes, skip.
 
 ## Loading rules (token discipline)
 
@@ -56,9 +56,9 @@ You are running unattended — nobody is watching to course-correct. Follow thes
 
 ## Process
 
-1. **Survey** — List all `.ts`/`.tsx` files and the config files (`package.json`, `tsconfig*.json`, `eslint.config.*`, `vite.config.*`, `vitest.config.*`); identify large files (>300 lines) and large components (>250 lines), map the module/feature structure and dependencies, enumerate test files (`*.test.ts(x)`, `*.spec.ts(x)`, `__tests__/`). Always **exclude** `node_modules/`, `dist/`, `build/`, `target/`, `public/`, `*.d.ts` (generated), and coverage output.
+1. **Survey** — Requires `ops` 0.72.0 or newer (`ops --version`). List all `.ts`/`.tsx` files and the config files (`package.json`, `tsconfig*.json`, `eslint.config.*`, `vite.config.*`, `vitest.config.*`); identify large files (>300 lines) and large components (>250 lines), map the module/feature structure and dependencies, enumerate test files (`*.test.ts(x)`, `*.spec.ts(x)`, `__tests__/`). Always **exclude** `node_modules/`, `dist/`, `build/`, `target/`, `public/`, `*.d.ts` (generated), and coverage output.
 2. **Scan** — Walk [scan-checklist.md](references/scan-checklist.md) signal by signal. For every signal that hits, open `references/rules/<CATEGORY>.md` for the rule IDs it named and confirm against the full rule text. Do not read `rules/index.md` — tier 1 already gave you the IDs. A category the table named whose signals did not hit, and whose code is not present, needs no rule file read. Then work the checklist's **Sweep** list: those categories have no signal at all, so nothing above opens them and that skip cannot apply to them — read each one regardless, or their rules drop out of the review silently. For each violation, prepare a finding with rule ID, severity, file location, description, and acceptance criteria
-3. **Deduplicate** — Run `ops backlog search "<RULE-ID>" --plain` to check for existing tasks with the same finding ID. If one exists and is not marked Done, skip. If Done, create only if the issue has regressed. Group findings that target the same `(file, component/function)` at different granularity into a single finding with the broadest scope
+3. **Deduplicate** — Give each finding an identity key, `<RULE-ID>:<path>:<enclosing item>`, where the item is the enclosing component, hook, function or module: it survives line shifts where a line number would not. Pass it as `--unless-exists` on create (step 4). When an open task already carries the key, ops creates nothing and prints `Exists <id>`, checked under the backlog's allocation lock, so concurrent reviews cannot file the same finding twice. A key whose only task is Done files again, which is right for a regression. Because the key has no line, several violations of one rule in the same enclosing item are **one** finding: list every `file:line` in its description before filing, never file them one by one, or every one after the first comes back `Exists` and is lost. Group findings that target the same `(file, component/function)` at different granularity into a single finding with the broadest scope
 4. **Create tasks** — For each finding, run `ops backlog task create --plain` with the flags below. Use a `"$(cat <<'EOF' ... EOF)"` heredoc for multi-line values (do NOT use `$'...'` ANSI-C quoting — it triggers an `ansi_c_string` safety prompt on every call).
 5. **Summarize** — run `ops backlog task list --status 'Triage' --plain`
 
@@ -92,6 +92,7 @@ EOF
   --modified-file "<path>" \
   --ac "<acceptance criterion 1>" \
   --ac "<acceptance criterion 2>" \
+  --unless-exists "<RULE-ID>:<path>:<enclosing item>" \
   --plain
 ```
 

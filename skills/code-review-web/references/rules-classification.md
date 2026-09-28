@@ -14,7 +14,7 @@ Code with a documented, specific justification should be assigned **one severity
 
 Before filing REACT/TS/ASYNC findings, check whether the project's configured tooling already catches and fails on them:
 
-1. **Caught and failing in `eslint .` or `tsc -b --noEmit`?** → not a finding for this skill; the gate already enforces it. Note it only if the gate is mis-configured.
+1. **Caught and failing in `ops lint` or `ops typecheck` (`eslint .`, `tsc -b --noEmit`)?** → not a finding for this skill; the gate already enforces it. Note it only if the gate is mis-configured.
 2. **The rule exists in ESLint/typescript-eslint but the project hasn't enabled it?** → the finding's real value is "enable this rule"; file it as a config recommendation (e.g. "enable `@typescript-eslint/no-floating-promises`") rather than per-occurrence noise.
 3. **Not mechanically detectable (design smell, severity nuance, missing test coverage, security reasoning)?** → this is the skill's core value; file it.
 

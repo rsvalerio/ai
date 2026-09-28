@@ -1,81 +1,45 @@
-# Extracting Findings from Clippy JSON
+# Extracting Findings from Clippy
 
-Why the Step 4 `jq` pipeline is shaped the way it is. Each rule below exists because the
-obvious alternative silently corrupts the finding set rather than failing.
+`ops clippy-findings --schema-version 2` (ops 0.72.0 or newer) turns Clippy's JSON stream into one normalized row
+per diagnostic. This skill used to do that with a hand-written `jq` pipeline. Each rule
+below is one that pipeline had to get right, because the obvious alternative silently
+corrupts the finding set rather than failing. ops now implements them. The list is kept
+so a reader knows what the report guarantees, and what would break if the skill ever went
+back to raw `cargo clippy` output.
 
-## The row
+## What each row guarantees
 
-- **`startswith("clippy::")`** — the same JSON stream carries plain rustc warnings
-  (`dead_code`, `unused_variables`, …), which are not Clippy findings and have no entry in
-  the lint catalog. Count them and mention the total in the report, but do not file them as
-  `PED-` tasks. Stripping the prefix once here keeps `<lint_name>` consistent across the
-  task title, the labels, and the `ops backlog search "clippy::<lint_name>"` duplicate check.
-- **`package_id` and `target.name`** — the crate and target (lib, bin, test) the diagnostic
-  belongs to. These live on the `compiler-message` record, not inside `.message`, which is
-  why the filter binds `$m` before descending. Without them the `(lint, crate)` aggregation
-  in Step 5 has no crate to key on.
-- **`column_start`** — two different findings of the same lint on one line are two
-  findings. Keying on `file:line` alone silently collapses them under `sort -u`.
-- **The `// "-"` and `// 0` fallbacks** — a diagnostic with no primary span (a crate-level
-  lint, most `clippy::cargo` findings) must still produce a row. The earlier
-  `.spans[] | select(.is_primary)` form emitted *nothing* for those, which shortened the
-  array and shifted every later column into the wrong field. Fixed arity means a spanless
-  finding is filed against the crate rather than lost.
+| Field | Guarantee | The defect it prevents |
+|-------|-----------|------------------------|
+| `lint` | Clippy lints only, `clippy::` prefix stripped. Plain rustc warnings (`dead_code`, `unused_variables`, …) are counted in `rustcWarnings`, not listed | Filing rustc warnings as `PED-` tasks with no catalog entry, and an inconsistent `<lint_name>` across title, labels and key |
+| `package` | `name@version`, never Cargo's raw `package_id` | A raw `package_id` embeds the absolute checkout path (`path+file:///home/alice/proj#my-crate@0.4.1`), so the same finding gets a different identity from another clone or a `git worktree` and is filed again. Cargo also documents that id's format as unstable |
+| `manifestDir`, `file` | Repo-relative, `/`-separated | Absolute paths in `**File**:` and `--modified-file`, which put files the repository does not contain into the wave scope `code-review-triage` computes |
+| `target`, `targetKind` | The crate target (lib, bin, test, …) | Without the crate, the `(lint, crate)` aggregation in Step 5 has nothing to key on. `targetKind` `test` is also a quick way to spot findings in `tests/` |
+| `line`, `column` | 1-based; `0`/`0` for a diagnostic with no span | Two findings of one lint on one line collapsing into one. A spanless diagnostic (a crate-level lint, most `clippy::cargo` findings) is attributed to its crate's `Cargo.toml` at line 0 instead of being dropped. The old pipeline once lost those and shifted every later column into the wrong field |
+| `message` | Verbatim | Two distinct problems at one span sharing a task. The message is part of the finding's identity (Step 5), so it must never be rewritten or whitespace-collapsed |
 
-## Normalize `package_id` before it becomes identity
+At report level:
 
-A raw `package_id` is not a stable key. For a path package Cargo emits the *absolute*
-checkout path — `path+file:///home/alice/proj#my-crate@0.4.1` — so the same repository
-cloned to a different directory, or examined in a `git worktree`, produces a different id
-for the same crate. Used verbatim in the Step 5 identity key, that re-files every finding
-the first time anyone runs the sweep from another location. Cargo also documents the id's
-internal format as an implementation detail subject to change between versions.
+- **`schemaVersion`** must be `2`. v2 is the default since ops 0.72.0, but every pass
+  still pins it with `--schema-version 2`. The v1 report uses snake_case keys
+  (`manifest_dir`, …), which this skill would read as `null`, and a pinned version cannot
+  be changed underneath the skill by a future default. If a report says anything else,
+  stop and say so.
+- **`droppedOutOfTree`** counts diagnostics whose span is outside the repository:
+  registry sources, the toolchain, a build script's `OUT_DIR`. They are dependency or
+  generated code, so they are never filed. Report the count.
+- **Members outside the checkout** (`path = "../shared"`) are out of tree by the same rule,
+  so their findings are dropped too, not filed with absolute paths.
+- **Rows are sorted and de-duplicated**, so the same commit gives a byte-identical report
+  from any checkout path. That is what makes the baseline diff in Step 4 and the
+  `--unless-exists` key in Step 5 stable.
 
-Normalize it once, to the package's name and version plus its repo-relative manifest
-directory, and key on that:
+## What the report does not do
 
-```bash
-ROOT="$(git rev-parse --show-toplevel)"
-cargo metadata --no-deps --locked --format-version 1 \
-  | jq -r --arg root "$ROOT/" '
-      .packages[]
-      | select(.manifest_path | startswith($root))
-      | [ .id,
-          "\(.name)@\(.version)",
-          (.manifest_path | ltrimstr($root) | sub("/Cargo\\.toml$"; "")) ]
-      | @tsv'
-```
-
-The `select` is not optional. A workspace can list members that live outside the checkout
-(`path = "../shared"`), and for those `ltrimstr` finds no prefix to strip and hands back the
-absolute path unchanged — which then flows into `**File**:` and `--modified-file` through
-the spanless fallback below, putting `/home/alice/shared/Cargo.toml` into the wave scope
-`code-review-triage` computes. Dropping them here matches Step 4, which already discards
-findings whose span is out of tree; report the count of members skipped this way rather than
-filing against a path the repository does not contain.
-
-Keep name *and* version: two members can share a name across a version bump, and the
-manifest directory alone does not distinguish a renamed package. Registry and git ids
-(`registry+https://…#regex@1.4.3`) carry no local path and need no rewriting — leave them
-as they are; findings never originate there anyway, since Step 4 discards out-of-tree
-paths.
-
-**Resolve the `-` file placeholder before filing.** It is a marker inside the pipeline, not
-a path: `**File**: \`-\`` tells a reader nothing and `--modified-file "-"` puts a file that
-does not exist into the wave scope `code-review-triage` computes. Map the row's
-`package_id` to its manifest and make it repo-relative:
-
-```bash
-ROOT="$(git rev-parse --show-toplevel)"
-cargo metadata --no-deps --locked --format-version 1 \
-  | jq -r --arg root "$ROOT/" '.packages[] | [.id, (.manifest_path | ltrimstr($root))] | @tsv'
-```
-
-A spanless finding is then filed against that crate's `Cargo.toml` — which is genuinely the
-file to edit for a `clippy::cargo` lint — keeping `line 0` to record that the diagnostic
-had no span.
-
-- **The message, verbatim** — `@tsv` already escapes tabs, newlines and backslashes, so a
-  multi-line Clippy message stays one row without any rewriting. Do not `gsub` it: the
-  message is part of the finding's identity (below), and collapsing whitespace throws away
-  the detail that distinguishes two diagnostics sharing a location.
+- **In-tree generated files** (a checked-in `include!`d module) are still listed. Recognize
+  and skip them in Step 4, and report the count.
+- **Test-only findings** are still listed. The test-code exclusion in Step 4 is a judgement
+  about `#[cfg(test)]` modules and `#[test]` functions that no row field fully captures.
+- **Feature coverage** is whatever the survey built: `--all-features` by default,
+  `--no-all-features` or an explicit `--features` list when the workspace's features
+  conflict. Steps 2, 3 and 7 must use the same choice.

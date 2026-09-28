@@ -1,7 +1,7 @@
 ---
 name: code-review-run-waves
 description: Runs every open code-review wave concurrently in isolated git worktrees, lands the run on main as a single PR through a merge lock, and reports which waves closed and which parked
-allowed-tools: Bash, Read, Edit, Write, Grep, Glob
+allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git log:*) Bash(git rev-parse:*) Bash(git checkout:*) Bash(git branch:*) Bash(git worktree list:*) Bash(git add .backlog) Bash(git commit:*) Bash(git push:*) Bash(git pull:*) Bash(gh pr:*) Bash(ops --version) Bash(ops verify) Bash(ops backlog:*) Bash(ops lock status:*)
 license: Apache-2.0
 ---
 
@@ -26,8 +26,10 @@ claiming, merging, and recovery rule there applies unchanged here.
 
 ## Preconditions
 
-Check all three before starting. Stop and report if any fails:
+Check all four before starting. Stop and report if any fails:
 
+0. **`ops` 0.72.0 or newer.** `ops --version`. The runners claim, lock, park and
+   commit bookkeeping through `ops`, and this skill plans the merge order with it.
 1. **`main` is clean and checked out.** `git status --short` in the main checkout is
    empty. The integration branch is created from `main` and the main checkout stays on
    it for the whole run; uncommitted work there will be swept into a wave's integration
@@ -35,8 +37,10 @@ Check all three before starting. Stop and report if any fails:
 2. **No triage is running.** `code-review-triage` mutates task state in bulk and races
    with member status flips. Run it to completion first.
 3. **No stale locks or worktrees.** `git worktree list` shows only the main checkout, or
-   only worktrees you intend to resume, and `.git/code-review-merge.lock` does not exist.
-   Clear genuinely stale state per the Recovery section of
+   only worktrees you intend to resume. `ops lock status` shows `code-review-merge` and
+   `code-review-backlog` free: a live holder means another run is in flight, and a stale
+   record is cleared with `ops lock break <name>`. Clear other genuinely stale state per
+   the Recovery section of
    `skills/code-review-run-wave/references/worktree-protocol.md` — never by force-removing
    worktrees or deleting branches that carry commits.
 
@@ -86,21 +90,19 @@ ops backlog wave list -s 'To Do' --plain
 
 If the list is empty, stop and report "no open waves".
 
-For each wave, read its recorded file scope and overlap notes:
-
-```bash
-ops backlog task view <waveTaskId> --json
-```
-
-`code-review-triage` stamps each wave with one `--modified-file` per file in its scope and
-an `Overlaps:` note. If a wave predates that and carries no scope, treat its overlap as
-unknown and place it last in the merge order.
-
 ## Step 2 — Plan the merge order
 
-Rank waves by how many other waves they share files with, fewest first. Waves that overlap
-nothing rebase cleanly and should land while the others are still working; heavily
-overlapping waves land last, when the integration branch has stopped moving under them.
+```bash
+ops backlog wave overlap <waveTaskId>... --json
+```
+
+For each wave it computes the file scope (the union of its members' `modifiedFiles`),
+the paths it shares with every other open wave, and a suggested merge order: fewest
+shared paths first, ties by task id. Waves that overlap nothing rebase cleanly and
+should land while the others are still working. Heavily overlapping waves land last,
+when the integration branch has stopped moving under them. A wave whose members carry
+no `modifiedFiles` has an empty scope, which is not the same as no overlap: treat its
+overlap as unknown and place it last.
 
 Print the plan **before** starting anything: the wave list, each wave's file count, the
 overlap pairs, and the intended merge order. The user should be able to see what is about
@@ -142,8 +144,8 @@ worktree, may hold the merge lock, and has task state half-written — reporting
 up around it produces a wrong summary and can destroy work.
 
 If a runner appears stuck, inspect rather than kill it: `git worktree list` shows whether
-its worktree still exists, and `.git/code-review-merge.lock` shows whether a merge is in
-progress.
+its worktree still exists, and `ops lock status` shows whether a merge or bookkeeping
+commit is in progress, whose it is, for how long, and whether its holder is alive.
 
 ## Step 5 — Verify the run and open the PR
 
@@ -167,8 +169,8 @@ must state which waves landed and which parked.
 
 Then commit whatever backlog task-file changes are *left* in the main checkout as one
 `chore(backlog)` commit — it rides the PR, so task-status flips are reviewed alongside
-the code they describe. Each runner stages and commits its own wave's task files by path,
-serialized under the backlog lock
+the code they describe. Each runner commits its own wave's task files with
+`ops backlog commit`, serialized under the `code-review-backlog` lock
 (see "Task files are shared mutable state" in
 `skills/code-review-run-wave/references/worktree-protocol.md`),
 so by now this should be a sweep of the remainder — a parked wave's notes, edits you made
