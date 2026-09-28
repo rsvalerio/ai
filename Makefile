@@ -78,11 +78,18 @@ validate-rules:
 # judge calls. Each plugin with an evals/ directory runs against its own manifest.
 # Deliberately not part of `make ci`: it is non-deterministic and needs
 # credentials. Run it before a release and after a Claude Code model bump.
+#
+# The --allow-tools grant is what makes "must not write / must not research"
+# graders mean anything: without it a gated tool is withheld from both arms, so
+# a max-0 count passes vacuously. Each case's allowed_tools still bounds what
+# its runs can reach.
+EVAL_ALLOW_TOOLS := Write Edit WebSearch WebFetch
+
 eval:
 	@for plugin in $(PLUGINS); do \
 		[ -d $$plugin/evals ] || continue; \
 		echo "== $$plugin"; \
-		claude plugin eval $$plugin --trust-plugin --no-publish || exit 1; \
+		claude plugin eval $$plugin --trust-plugin --no-publish --allow-tools $(EVAL_ALLOW_TOOLS) || exit 1; \
 	done
 
 lint:
