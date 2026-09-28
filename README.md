@@ -1,10 +1,17 @@
-# Development Skills
+# rsvalerio/ai
 
 [![CI](https://github.com/rsvalerio/ai/actions/workflows/ci.yml/badge.svg)](https://github.com/rsvalerio/ai/actions/workflows/ci.yml)
 
-A collection of [Agent Skills](https://agentskills.io/specification) for Rust and frontend development. Compatible with Claude Code, OpenAI Codex, Cursor, and other agent platforms.
+A monorepo of AI tooling: [Agent Skills](https://agentskills.io/specification) grouped into Claude Code plugins, one per domain. Compatible with Claude Code, OpenAI Codex, Cursor, and other agent platforms.
 
 ## Overview
+
+| Plugin | Path | Contents |
+|--------|------|----------|
+| **dev** | [`plugins/dev`](plugins/dev) | Rust and frontend development: code review, review-wave orchestration, Clippy and build-cost surveys, commit scripting. The nine skills below |
+| **product** | [`plugins/product`](plugins/product) | Product and market research: product, vendor, license and business-model research. Scaffold only; the first skill is in progress |
+
+### dev skills
 
 | Skill | Purpose |
 |-------|---------|
@@ -22,14 +29,15 @@ A collection of [Agent Skills](https://agentskills.io/specification) for Rust an
 
 ### Option 1: Claude Code Plugin Marketplace
 
-The repository is a plugin marketplace with a single `dev-skills` plugin containing every skill — they reference each other's files (review waves lean on the worktree protocol, rust-meta on the review rule set), so they ship together.
+The repository root is a plugin marketplace listing every plugin under `plugins/`. Install the ones you want; each is independent. Inside a plugin the skills ship together, because they reference each other's files (in `dev`, the review waves lean on the worktree protocol and rust-meta on the review rule set).
 
 ```bash
 claude plugin marketplace add rsvalerio/ai
-claude plugin install dev-skills@rsvalerio
+claude plugin install dev@rsvalerio
+claude plugin install product@rsvalerio
 ```
 
-Inside a session, `/plugin marketplace add rsvalerio/ai` and `/plugin install dev-skills@rsvalerio` work the same way. Skills are invoked through the plugin namespace — `/dev-skills:code-review-rust` — and track the latest commit on `main`; update with `claude plugin update dev-skills@rsvalerio`.
+Inside a session, `/plugin marketplace add rsvalerio/ai` and `/plugin install dev@rsvalerio` work the same way. Skills are invoked through the plugin namespace, e.g. `/dev:code-review-rust`, and track the latest commit on `main`; update with `claude plugin update dev@rsvalerio`.
 
 ### Option 2: Clone the Repository
 
@@ -38,10 +46,10 @@ git clone https://github.com/rsvalerio/ai.git
 cd ai
 
 # Claude Code
-cp -r skills/* .claude/skills/
+cp -r plugins/dev/skills/* .claude/skills/
 
 # OpenAI Codex
-cp -r skills/* .codex/skills/
+cp -r plugins/dev/skills/* .codex/skills/
 ```
 
 For a live symlink into `~/.claude/skills/` while developing this repo, use `make link` (see [AGENTS.md](AGENTS.md)).
@@ -51,7 +59,7 @@ For a live symlink into `~/.claude/skills/` while developing this repo, use `mak
 Using [agent-skills-cli](https://lib.rs/crates/agent-skills-cli):
 
 ```bash
-agent-skills install https://github.com/rsvalerio/ai/tree/main/skills/code-review-rust
+agent-skills install https://github.com/rsvalerio/ai/tree/main/plugins/dev/skills/code-review-rust
 ```
 
 Restart your AI tool after installing so it picks up the new skills.
@@ -107,7 +115,7 @@ claude -p "/code-review-run-waves"    # all open waves
 claude -p "/code-review-run-wave"     # one wave
 ```
 
-Details: [Worktree Protocol](skills/code-review-run-wave/references/worktree-protocol.md).
+Details: [Worktree Protocol](plugins/dev/skills/code-review-run-wave/references/worktree-protocol.md).
 
 ### rust-make-clippy-pedantic
 

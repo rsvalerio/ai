@@ -4,7 +4,7 @@ How to work in this repository: skill conventions, development workflow, validat
 
 ## Project Overview
 
-This repo is a collection of [Agent Skills](https://agentskills.io/specification). Skills live under `skills/`; each skill is a directory with `SKILL.md`, optional `references/*.md`, and optional `assets/openai.yaml`.
+This repo is a monorepo of AI tooling, published as a Claude Code plugin marketplace. The root holds only the marketplace manifest; each plugin lives under `plugins/<name>/` with its own manifest, `skills/` and optional `evals/`. Each skill is a directory with `SKILL.md`, optional `references/*.md`, and optional `assets/openai.yaml`. A top-level `skills/` (or `agents/`) is allowed for standalone items that belong to no plugin; create it only when needed.
 
 ```text
 .
@@ -12,27 +12,35 @@ This repo is a collection of [Agent Skills](https://agentskills.io/specification
 ├── AGENTS.md                 # This file: contributor / agent instructions
 ├── docs/
 │   └── implementation-guardrail.md  # Consumer activation for guardrail mode
-├── Makefile                  # validate, lint, link/unlink, eval
+├── Makefile                  # validate, lint, link/unlink, eval — discovers skills by glob
 ├── scripts/
-│   └── validate-skills.py    # strict skill-validator run + documented allowlist
-├── evals/                    # `claude plugin eval` cases (see Behavioural evals)
+│   ├── validate-skills.py    # strict skill-validator run + documented allowlist
+│   └── validate-rules.py     # rule-index parity for the review skills
 ├── .claude-plugin/
-│   ├── marketplace.json      # Marketplace manifest (one `dev-skills` plugin)
-│   └── plugin.json           # Plugin manifest — also what `claude plugin eval` resolves
-├── skills/                   # One directory per skill
-│   ├── code-review-rust/
-│   ├── code-review-web/
-│   ├── code-review-triage/
-│   ├── code-review-run-wave/
-│   ├── code-review-run-waves/
-│   ├── commit-script/
-│   ├── rust-make-build-fast/
-│   ├── rust-make-clippy-pedantic/
-│   └── rust-meta/
+│   └── marketplace.json      # The only root manifest; lists every plugin
+├── plugins/
+│   ├── dev/                  # Rust and frontend development
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── evals/            # `claude plugin eval` cases (see Behavioural evals)
+│   │   └── skills/
+│   │       ├── code-review-rust/
+│   │       ├── code-review-web/
+│   │       ├── code-review-triage/
+│   │       ├── code-review-run-wave/
+│   │       ├── code-review-run-waves/
+│   │       ├── commit-script/
+│   │       ├── rust-make-build-fast/
+│   │       ├── rust-make-clippy-pedantic/
+│   │       └── rust-meta/
+│   └── product/              # Product and market research
+│       ├── .claude-plugin/plugin.json
+│       └── skills/           # empty until the first product skill lands
 └── LICENSE
 ```
 
-Skill purposes are listed in the [README overview](README.md#overview). Relationships that matter when editing skills:
+Paths inside a skill that name another skill (`skills/code-review-run-wave/references/worktree-protocol.md`) are relative to the **plugin root**, which is what an installed plugin contains. They stay correct wherever the plugin lives in this repo.
+
+Skill purposes are listed in the [README overview](README.md#overview). Relationships that matter when editing the `dev` skills:
 
 - **code-review-rust** / **code-review-web** — formal review and implementation-guardrail engines. Rules live in three tiers: `references/scan-checklist.md` (signal → rule IDs), `references/rules/index.md` (one line per rule), and `references/rules/<CATEGORY>.md` (full text). A **scan** reads tier 1 then tier 3 — tier 2 is not a scan step, because tier 1 already emits rule IDs and tier 3 is what decides a finding. Tier 2 is for resolving an ID you hold without a signal (a backlog task, a `rust-meta` lookup); guardrail mode reads tier 3 alone. Keeping tier 2 out of the scan path is worth ~10,700 tokens a review, and the same again per wave runner. `references/rules.md` holds the category table and severity scale. Adding or changing a rule means updating its category file **and** `rules/index.md`; if the rule's observable signal changes, update `scan-checklist.md` too — and a brand-new category needs either a signal row there or a `## Sweep` entry, or it is unreachable. `rules/index.md` is maintained by hand — its one-liners carry deliberate wording and are not regenerated from the category files.
 - **code-review-triage** — groups `Triage` backlog findings into `code-review-plan-waveN` parents and stamps file scope via `--modified-file` for merge ordering. A wave is a task labelled `code-review-wave` whose members carry `parent_task_id`; the runners enumerate them with `ops backlog wave list` / `wave members`.
@@ -116,17 +124,17 @@ make lint-and-validate
 
 `.tool-versions` pins the tool versions, and CI reads that same file — a green `make ci` only means something when `make check-tools` passes too.
 
-Edit under `skills/<skill-name>/`, then run `make ci` before opening a PR. Follow the [Agent Skills specification](https://agentskills.io/specification). Contribution and pull request rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+Edit under `plugins/<plugin>/skills/<skill-name>/`, then run `make ci` before opening a PR. Follow the [Agent Skills specification](https://agentskills.io/specification). Contribution and pull request rules: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Validation
 
 ```bash
-skill-validator validate structure --strict ./skills/code-review-rust
+skill-validator validate structure --strict ./plugins/dev/skills/code-review-rust
 ```
 
 Checks YAML frontmatter, required `name`/`description`, lowercase-hyphen naming, directory structure, and that `name` matches the parent directory.
 
-`make validate` runs this over every skill through [`scripts/validate-skills.py`](scripts/validate-skills.py), which propagates per-skill failures — a plain shell loop kept only the last skill's exit code, so the gate silently passed while four skills were failing — and carries one allowlist entry:
+`make validate` runs this over every skill (`plugins/*/skills/*/` and `skills/*/`) through [`scripts/validate-skills.py`](scripts/validate-skills.py), which propagates per-skill failures — a plain shell loop kept only the last skill's exit code, so the gate silently passed while four skills were failing — and carries one allowlist entry:
 
 **`deep nesting detected: references/rules/` (both review skills) is allowed, and cannot be fixed.** Flattening the corpus to `references/rules-<CAT>.md` makes those 21 files counted top-level references and trips a hard error from the same validator (`total reference files: 74055 tokens`), which fails even without `--strict`. The nesting is what keeps ~50k tokens of rule text out of the counted budget; the warning and the error cannot both be satisfied without deleting rules. An allowlist entry that stops firing fails the build, so it cannot rot into a licence to regress.
 
@@ -143,7 +151,8 @@ Part of `make ci`.
 
 ### Behavioural evals
 
-`evals/` holds a small `claude plugin eval` suite: three cases that answer
+Each plugin can carry an `evals/` directory; `make eval` runs `claude plugin eval
+plugins/<name>` for every plugin that has one. `plugins/dev/evals/` holds three cases that answer
 "does the skill still fire", not "is the markdown well-formed".
 
 | Case | Asserts |
@@ -159,12 +168,12 @@ skill.
 
 ```bash
 make eval                                              # whole suite
-claude plugin eval . --trust-plugin --case review-web  # one case
+claude plugin eval plugins/dev --trust-plugin --case review-web  # one case
 ```
 
 Deliberately **not** in `make ci`: it is non-deterministic and needs
 credentials. Run it before a release and after a Claude Code or model bump.
-Results land in `evals/results/` (gitignored).
+Results land in `plugins/<name>/evals/results/` (gitignored).
 
 Scope limit worth keeping in mind: these cover description-driven auto-load,
 which `docs/implementation-guardrail.md` calls best-effort by design. The
@@ -176,16 +185,24 @@ not exercised here.
 Config lives in [`.rumdl.toml`](.rumdl.toml). Prefer Make targets above; for a single path:
 
 ```bash
-rumdl check skills/code-review-rust/
-rumdl fmt skills/code-review-rust/
+rumdl check plugins/dev/skills/code-review-rust/
+rumdl fmt plugins/dev/skills/code-review-rust/
 ```
 
 ## Adding a New Skill
 
-1. Create `skills/<skill-name>/` with `SKILL.md` (`name`, `description`, `license`).
+1. Create `plugins/<plugin>/skills/<skill-name>/` with `SKILL.md` (`name`, `description`, `license`). The plugin picks up every directory under its `skills/` automatically. Skill names must be unique across plugins, because `make link` installs them into one flat `~/.claude/skills/`; `make validate` enforces it.
 2. Optionally add `assets/openai.yaml` and `references/*.md`.
-3. Add the skill to the [README overview](README.md#overview) — the `dev-skills` plugin picks up every directory under `skills/` automatically.
+3. Add the skill to the [README overview](README.md#overview).
 4. Run `make validate` and `make validate-marketplace`.
+
+## Adding a New Plugin
+
+1. Create `plugins/<name>/.claude-plugin/plugin.json` (`name`, `description`, `author`, `homepage`, `license`; no `version`, see Publishing) and `plugins/<name>/skills/`.
+2. Add an entry to `.claude-plugin/marketplace.json` with `"source": "./plugins/<name>"`.
+3. Optionally add `plugins/<name>/evals/`; `make eval` finds it.
+4. Add the plugin to the README overview and its install line.
+5. Run `make ci`. Nothing in the Makefile, the validator scripts or CI needs editing: they discover plugins and skills with `plugins/*/` and `plugins/*/skills/*/`.
 
 ## Publishing
 
@@ -193,11 +210,12 @@ Prerequisites: `make lint-and-validate` passes.
 
 **Local (Claude Code):** `make link` / `make unlink`.
 
-**Claude Code marketplace:** the repo root is a plugin marketplace (`.claude-plugin/marketplace.json`) exposing a single `dev-skills` plugin that contains every skill — they reference each other's files, so they are not installable separately. No `version` field in `.claude-plugin/plugin.json` — installs track the commit SHA, so pushing to `main` *is* the release. `claude plugin validate` warns about the missing version; that warning is expected and does not fail `make ci`. The manifest exists so `claude plugin eval .` can resolve the plugin and run its no-plugin baseline arm. Users install with:
+**Claude Code marketplace:** the repo root is a plugin marketplace (`.claude-plugin/marketplace.json`) listing every plugin under `plugins/`. Inside a plugin the skills reference each other's files, so they are not installable separately. No `version` field in any `plugin.json` — installs track the commit SHA, so pushing to `main` *is* the release. `claude plugin validate` warns about the missing version; that warning is expected and does not fail `make ci`. Each plugin's manifest is also what `claude plugin eval plugins/<name>` resolves to run its no-plugin baseline arm. Users install with:
 
 ```bash
 claude plugin marketplace add rsvalerio/ai
-claude plugin install dev-skills@rsvalerio
+claude plugin install dev@rsvalerio
+claude plugin install product@rsvalerio
 ```
 
 Validate the manifest with `make validate-marketplace` before pushing (also part of `make lint-and-validate` and `make ci`).
@@ -205,7 +223,7 @@ Validate the manifest with `make validate-marketplace` before pushing (also part
 **GitHub catalog:** this repo *is* the catalog. Users install with:
 
 ```bash
-agent-skills install https://github.com/rsvalerio/ai/tree/main/skills/code-review-rust
+agent-skills install https://github.com/rsvalerio/ai/tree/main/plugins/dev/skills/code-review-rust
 ```
 
 Publish by pushing to `main` (and optionally tagging `vX.Y.Z` for versioned installs). To submit upstream, fork [openai/skills](https://github.com/openai/skills) and follow that repo's guidelines. For discovery, keep the README clear and use topics such as `rust`, `agent-skills`, `claude`, `codex`.
