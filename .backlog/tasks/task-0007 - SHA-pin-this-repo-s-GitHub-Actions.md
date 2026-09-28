@@ -4,7 +4,7 @@ title: 'SHA-pin this repo''s GitHub Actions'
 status: Done
 assignee: []
 created_date: '2026-09-28 10:59'
-updated_date: '2026-09-28 14:27'
+updated_date: '2026-09-28 17:02'
 labels:
   - ci
   - security
@@ -33,4 +33,7 @@ dedup_key: 'ops-align:ai-pin-actions'
 
 <!-- SECTION:NOTES:BEGIN -->
 Pinned actions/checkout v7.0.1, jdx/mise-action v4.3.0 (same SHAs as forge) and actions/setup-node v7.0.0 in ci.yml. forge's ci/lint.sh pinned-actions is repo-local, so scripts/validate-actions.py mirrors its regex and exemptions as `make validate-actions` (in make ci and ops verify); swap it for the shared lint once forge ships one consumers can call. Existing .github/dependabot.yml moves SHA + comment together.
+
+Shared lint adopted: ops 0.75.0's `ops lint-actions` built-in (ops TASK-2328) replaces scripts/validate-actions.py in `ops verify`; it also rejects `secrets: inherit`. setup-ops is now SHA-pinned with a `# v0.5.0` comment (forge v1 = v0.5.0) so Dependabot moves it; CI installs ops 0.75.0.
+
 <!-- SECTION:NOTES:END -->

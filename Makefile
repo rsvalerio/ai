@@ -17,13 +17,14 @@ tool_version = $(shell awk -v t=$(1) '$$1 == t || $$1 ~ "/" t "$$" { print $$2 }
 RUMDL_VERSION := $(call tool_version,rumdl)
 SKILL_VALIDATOR_VERSION := $(call tool_version,skill-validator)
 
-.PHONY: all ci validate validate-marketplace validate-rules validate-actions check-install eval lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
+.PHONY: all ci validate validate-marketplace validate-rules check-install eval lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
 
-lint-and-validate: lint validate validate-marketplace validate-rules validate-actions
+lint-and-validate: lint validate validate-marketplace validate-rules
 
-# Every non-mutating check, without ops: the same set `ops qa` runs, minus check-tools.
-# .ops.toml is where the gates are defined; this target is for machines without ops.
-ci: validate validate-marketplace validate-rules validate-actions fmt-check lint-check check-install
+# Every non-mutating check, without ops: the set `ops qa` runs, minus check-tools and the
+# action-pin lint, which is the ops built-in `ops lint-actions`. .ops.toml is where the
+# gates are defined; this target is for machines without ops.
+ci: validate validate-marketplace validate-rules fmt-check lint-check check-install
 
 # Fail loudly when local tooling has drifted from the versions CI runs.
 check-tools:
@@ -72,11 +73,6 @@ install-tools:
 # enforcing it, and nothing else in `make ci` notices. Compare the two ID sets.
 validate-rules:
 	@python3 scripts/validate-rules.py
-
-# Third-party actions are pinned to a full commit SHA with the version in a comment
-# (forge README design rule 6); a moved tag would run unreviewed code in CI.
-validate-actions:
-	@python3 scripts/validate-actions.py
 
 # Behavioural gate: do the skills still trigger? `claude plugin eval` runs each
 # case twice (plugin loaded / not loaded) and reports the delta. Every grader in
