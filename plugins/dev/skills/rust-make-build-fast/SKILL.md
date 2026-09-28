@@ -1,7 +1,7 @@
 ---
 name: rust-make-build-fast
 description: Surveys a Rust workspace's build cost without touching the tree, reading its profiles, cargo config, gates, nextest config and dependency graph, taking sccache stats and a warm cargo build --timings, and files one backlog task per finding, each with its measured cost, the date and machine load, and a safe or trade-off classification. A cold build is opt-in via --measure-cold, into a target directory on real disk, never tmpfs. Passing --apply writes the safe fixes into Cargo.toml profiles, .ops.toml gates and .config/nextest.toml; trade-offs such as dependency opt-level are never applied. Use when a Rust workspace's builds, tests or gates feel slow, or before tuning its profiles by hand.
-allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git show:*) Bash(cargo build:*) Bash(cargo metadata:*) Bash(cargo clippy:*) Bash(cargo doc:*) Bash(cargo nextest:*) Bash(cargo machete:*) Bash(cargo shear:*) Bash(cargo --version) Bash(ops --version) Bash(ops explain:*) Bash(ops about machine:*) Bash(ops about crates:*) Bash(ops about dependencies:*) Bash(ops backlog:*) Bash(jq:*) Bash(python3:*) Bash(du:*) Bash(date:*) Bash(mktemp:*) Bash(mkdir -p:*) Bash(rg:*)
+allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git show:*) Bash(cargo build:*) Bash(cargo metadata:*) Bash(cargo clippy:*) Bash(cargo doc:*) Bash(cargo nextest:*) Bash(cargo machete:*) Bash(cargo shear:*) Bash(cargo --version) Bash(ops --version) Bash(ops explain:*) Bash(ops about machine:*) Bash(ops about crates:*) Bash(ops about dependencies:*) Bash(ops backlog:*) Bash(ops init --rust:*) Bash(printf:*) Bash(touch:*) Bash(jq:*) Bash(python3:*) Bash(du:*) Bash(date:*) Bash(mktemp:*) Bash(mkdir -p:*) Bash(rg:*)
 license: Apache-2.0
 ---
 
@@ -73,7 +73,7 @@ You are running unattended, and nobody is watching to course-correct.
    ([checks.md](references/checks.md#environment--env-report-only)).
 7. **Never ask for confirmation.** You are pre-authorized to file tasks.
 8. **On tool failure, retry once, then report the specific error.** `ops`
-   0.72.0 or newer is required: findings are filed through `ops backlog`, and
+   0.74.0 or newer is required: findings are filed through `ops backlog`, and
    the survey reads gate plans, machine state and duplicates through it. If it
    is missing or older, stop at preflight and report nothing as findings. A missing
    optional tool (`cargo machete`/`cargo shear`, `sccache`, `cargo nextest`)
@@ -90,7 +90,7 @@ git status --porcelain -- . ':(exclude).backlog'    # must be EMPTY, untracked f
 git rev-parse --short HEAD                          # findings are pinned to this SHA
 git rev-parse --abbrev-ref HEAD
 cargo --version
-ops --version                                       # must be 0.72.0 or newer
+ops --version                                       # must be 0.74.0 or newer
 ```
 
 `.backlog/` is excluded because task files there are routine, and this run

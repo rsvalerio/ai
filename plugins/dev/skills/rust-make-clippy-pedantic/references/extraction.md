@@ -1,6 +1,6 @@
 # Extracting Findings from Clippy
 
-`ops clippy-findings --schema-version 2` (ops 0.72.0 or newer) turns Clippy's JSON stream into one normalized row
+`ops clippy-findings --schema-version 2` (ops 0.74.0 or newer) turns Clippy's JSON stream into one normalized row
 per diagnostic. This skill used to do that with a hand-written `jq` pipeline. Each rule
 below is one that pipeline had to get right, because the obvious alternative silently
 corrupts the finding set rather than failing. ops now implements them. The list is kept

@@ -1,7 +1,7 @@
 ---
 name: rust-make-clippy-pedantic
 description: Runs Clippy at pedantic strength over a clean checkout without touching the source tree, then files one backlog task per warning, each labelled pedantic, and reports a high-level effort estimate for clearing them. Test-only style findings, generated files, and out-of-tree warnings are dropped, and a lint firing more than twenty times in one crate becomes a single aggregate task. Passing --apply additionally writes the lint policy into Cargo.toml and clippy.toml; without it the run only shows what those files would contain. Use when a Rust project should be held to stricter lint levels than its current configuration enforces.
-allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(cargo --version) Bash(cargo clippy --version) Bash(ops --version) Bash(ops clippy-findings:*) Bash(ops about crates:*) Bash(ops backlog:*) Bash(jq:*) Bash(mktemp:*) Bash(sha256sum) Bash(rg:*) Bash(wc -l)
+allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(cargo --version) Bash(cargo clippy --version) Bash(ops --version) Bash(ops clippy-findings:*) Bash(ops about crates:*) Bash(ops backlog:*) Bash(ops init --rust:*) Bash(jq:*) Bash(mktemp:*) Bash(mkdir:*) Bash(touch:*) Bash(printf:*) Bash(python3:*) Bash(xargs:*) Bash(sha256sum) Bash(rg:*) Bash(wc -l)
 license: Apache-2.0
 ---
 
@@ -27,8 +27,8 @@ else about the run changes — the same preflight, the same flags, the same task
 ## Purpose
 
 - Verify the working tree is clean before linting, so findings map to a known commit
-- Run Clippy through `ops clippy-findings` with the strict groups as `-W` flags, leaving
-  the repository byte-identical
+- Run Clippy through `ops clippy-findings` with ops's foundation lints as `-W` flags,
+  leaving the repository byte-identical
 - Diff the pedantic run against a default-level baseline so pre-existing warnings are
   labelled honestly
 - Create one backlog task per finding via `ops backlog task create --plain`, every task
@@ -84,11 +84,11 @@ Then confirm the toolchain and record it for the report:
 
 ```bash
 cargo --version && cargo clippy --version
-ops --version    # must be 0.72.0 or newer: `ops clippy-findings --schema-version 2`
+ops --version    # must be 0.74.0 or newer: clippy-findings v2, init --rust
 ```
 
 If `cargo clippy` is not installed (`rustup component add clippy`), or `ops` is missing or
-older than 0.72.0, stop and say so.
+older than 0.74.0, stop and say so.
 
 ### Step 2 — Establish the default-level baseline
 
@@ -126,29 +126,20 @@ are failures of the current gate, not new demands from a stricter one.
 
 ### Step 3 — Run the pedantic pass
 
-Same invocation, with the strict groups as lint flags after `--`:
+The lints are ops's Rust foundation policy, which Step 7 applies. Render it into `$SCRATCH`
+([apply-config.md](references/apply-config.md#the-source-opss-rust-foundation), never in the
+repository), write `$SCRATCH/lint-flags` ([lint-catalog.md](references/lint-catalog.md#the-flag-set)),
+record the flags, and rerun Step 2 with them:
 
 ```bash
 CARGO_TARGET_DIR="$SCRATCH/target" \
-  ops clippy-findings --schema-version 2 -- \
-    -W clippy::pedantic \
-    -W clippy::nursery \
-    -W clippy::cargo \
-    -A clippy::multiple_crate_versions \
+  xargs ops clippy-findings --schema-version 2 -- < "$SCRATCH/lint-flags" \
   > "$SCRATCH/pedantic.json" 2> "$SCRATCH/pedantic.err"
 ```
 
-Rules for this invocation:
-
-- **Flags, never source.** Everything strict arrives through `-W` after `--`. This is what
-  makes the run non-destructive and repeatable.
-- **Never pass `-D warnings`.** Denying turns the first warning into a hard error and
-  truncates the survey; the whole point is to enumerate everything.
-- `-A clippy::multiple_crate_versions` is suppressed by default: it is a dependency-graph
-  fact, not a code defect, and files a task nobody can act on. Drop the `-A` only if the
-  user explicitly asks for dependency hygiene findings.
-- Expect a full workspace build on the first pass. `$SCRATCH` is shared by Steps 2 and 3,
-  so dependencies are checked once.
+- **Flags, never source**, so the run is non-destructive and repeatable.
+- **Never `-D`**, even for a foundation `deny`: it truncates the survey.
+- **Add nothing** unless the user names lints; report those, as `--apply` will not write them.
 
 ### Step 4 — Classify findings
 
@@ -285,10 +276,10 @@ configuration. Templates, the level policy, and the gotchas that make a policy s
 inert live in [apply-config.md](references/apply-config.md) — read it before writing
 anything.
 
-Three files are involved: the root `Cargo.toml` (the `[workspace.lints.*]` tables), every
-member `Cargo.toml` (`[lints] workspace = true`, without which the workspace tables
-configure nothing), and a root `clippy.toml` (thresholds, `msrv` copied from `rust-version`,
-and the `allow-*-in-tests` opt-outs).
+Three files are involved: the root `Cargo.toml` (`[workspace.lints.*]`), every member
+`Cargo.toml` (`[lints] workspace = true`, without which the workspace tables configure
+nothing), and a root `clippy.toml` (plus `msrv` from `rust-version`), all from Step 3's
+render. In existing files, change only what `ops init --rust --check` reports.
 
 **Without `--apply` — the default — write nothing.** Print each file's proposed content in
 full, as a fenced TOML block per file, under a heading that names the path and says whether
@@ -311,7 +302,7 @@ this and stops has succeeded.
 
    Anything else appearing here means the tree moved under the sweep; stop and report
    rather than writing a policy derived from code that is no longer checked out.
-2. **Write the three file kinds** using the templates, editing surgically. Do not reformat
+2. **Write the three file kinds** from the rendered foundation, surgically. Do not reformat
    the manifest, reorder dependencies, or touch anything but the lint tables.
 3. **Choose the level from the sweep's own result** — `warn` when it found anything, `deny`
    only when it found nothing. Denying a workspace that has open findings breaks
@@ -323,6 +314,9 @@ this and stops has succeeded.
    CARGO_TARGET_DIR="$SCRATCH/target" \
      ops clippy-findings --schema-version 2 > "$SCRATCH/applied.json" 2> "$SCRATCH/applied.err"
    ```
+
+   Then `ops init --rust --check` must report no drift in `clippy.toml`, the root lint
+   tables or any member's `lints.workspace`.
 
    The configuration is correct when this run's `findings` reproduce the pedantic finding
    set from Step 3. A count far *below* it means the policy is inert —
@@ -355,7 +349,7 @@ construction and rarely rises above medium.
 | `perf` | medium | Real cost, but bounded and local |
 | `complexity` | medium | Maintenance burden; raise to high above ~30 lines of affected code |
 | `pedantic`, `nursery`, `style` | low | Clarity and idiom; batch them |
-| `cargo` | low | Manifest hygiene |
+| `restriction` (named foundation lints) | medium | A panic or silent wrap-around in production code |
 
 Escalate one level when the finding sits in a public API, an `unsafe` block, or an error
 path — the same code being wrong costs more there.
@@ -390,7 +384,7 @@ parallel instances cannot corrupt each other. Two caveats:
 - [Extraction](references/extraction.md) — Why the `jq` row is shaped as it is, and the defects each field prevents
 - [Lint catalog](references/lint-catalog.md) — Groups, flag set, and effort class per lint family
 - [Estimation model](references/estimation.md) — Effort classes, rates, and how the higher-view number is built
-- [Applying the lint policy](references/apply-config.md) — `--apply` templates for `Cargo.toml` and `clippy.toml`, level policy, and what not to write
+- [Applying the lint policy](references/apply-config.md) — Rendering ops's Rust foundation, what `--apply` writes from it, level policy, and what not to write
 - [OpenAI agent metadata](assets/openai.yaml) — Optional agent configuration for compatible runtimes
 - `code-review-rust` — Semantic Rust review; this skill is its mechanical counterpart
 - `code-review-triage` — Groups the `Triage` tasks this skill files into waves

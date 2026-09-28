@@ -244,15 +244,17 @@ its ignored suite this way.
 ### TEST-4 — nextest leak detection flagged under contention
 
 **Signal**: a nextest run the survey saw, or a CI log someone pasted, reports
-`LEAK` for a test that starts no subprocess. `.config/nextest.toml` still has
-the default `leak-timeout` (100ms). File this only when a leak was actually
+`LEAK` for a test that starts no subprocess, and `ops init --rust --check`
+reports `leak-timeout` drift in `.config/nextest.toml` (typically the 100ms
+default). File this only when a leak was actually
 seen. A default setting alone is not a finding.
 
 **Why it costs**: a flagged run waits out the timeout, and under load it fails
 tests that are fine. dbsec saw it in about one full-workspace run in three at
 `--test-threads=16` on 12 cores, and the flagged test changed from run to run.
 
-**Class**: **safe**. `--apply` uses template `nextest-leak-timeout` (2s).
+**Class**: **safe**. `--apply` uses template `nextest-leak-timeout`, which writes
+the Rust foundation's value from `ops init --rust` (2s as of ops 0.74.0).
 Leak detection stays on, and a run with no leak pays nothing, because the wait
 ends when the output reaches EOF, not at the timeout.
 
