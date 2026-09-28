@@ -4,7 +4,7 @@
 
 ## Checks
 
-- [ ] `ops verify` passes locally
+- [ ] `ops qa` passes locally
 - [ ] `make check-tools` passes, so those gates match CI
 - [ ] Commits follow the conventional format described in CONTRIBUTING.md
 

@@ -18,7 +18,7 @@ current, so `check-tools` may tell you to pin it back.
 `.tool-versions` pins the versions CI runs. If `check-tools` fails, your local gates are
 not the gates that will run on your pull request — fix that before trusting a green run.
 Bumping a tool means editing `.tool-versions`; nothing else hardcodes a version. The one
-exception is `claude-code`, pinned only in the `ops verify` job of
+exception is `claude-code`, pinned only in the `ops qa` job of
 `.github/workflows/ci.yml` — mise's registry does not know the tool, so a `.tool-versions`
 entry would fail `mise install` in CI. Locally, manage it with asdf instead, outside this
 repo's `.tool-versions` for the same reason:
@@ -37,15 +37,22 @@ Skills live under `skills/<skill-name>/`. Then:
 
 ```bash
 make lint             # rewrites files: rumdl fmt + check --fix
-ops verify             # the exact non-mutating gate CI runs
+ops verify            # fast offline gate: fine as a pre-commit hook
+ops qa                # the full gate: verify, plus the marketplace and the install path
 ```
 
-Run `make lint` while iterating and `ops verify` before pushing. CI runs `ops verify`,
-whose steps `.ops.toml` lists: `make ci` (`validate`, `validate-marketplace`,
-`validate-rules`, `validate-actions`, `fmt-check`, `lint-check`) plus `check-tools`. All
-are non-mutating, so anything `make lint` would have fixed is a failure there instead.
-`make ci` runs the same checks without [ops](https://github.com/rsvalerio/ops) or the
-tool-version check.
+Run `make lint` while iterating, `ops verify` as often as you like, and `ops qa` before
+pushing. CI runs both, as the `ops verify` and `ops qa` checks. `.ops.toml` is the one list
+of their steps:
+
+| Gate | Steps |
+|------|-------|
+| `ops verify` | `check-tools`, `validate` (skills), `validate-rules`, `validate-actions`, `fmt-check`, `lint-check` |
+| `ops qa` | `verify`, plus `validate-marketplace` (needs `claude-code` on PATH) and `check-install` |
+
+Every step is a Makefile target and non-mutating, so anything `make lint` would have fixed
+is a failure there instead. `make ci` runs the `ops qa` checks without
+[ops](https://github.com/rsvalerio/ops) or the tool-version check.
 
 Validation is `--strict`: warnings fail. Common ones are a `description` that reads as a
 keyword list rather than prose, and files placed outside the standard skill layout.
@@ -59,7 +66,7 @@ everything at once.
 
 ## Pull requests
 
-`main` is protected. A pull request needs `ops verify` and `Install`
+`main` is protected. A pull request needs `ops verify` and `ops qa`
 green, all review threads resolved, and signed commits — set up commit signing before
 your first PR:
 

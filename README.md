@@ -204,8 +204,7 @@ Setup, gates, commit format, and pull request rules: [CONTRIBUTING.md](CONTRIBUT
 Skill authoring conventions and publishing: [AGENTS.md](AGENTS.md).
 
 `main` is protected: pull requests merge by squash only, need signed commits, and
-must pass the `ops verify` and `Install` checks. `ops verify` runs the same
-gate locally.
+must pass the `ops verify` and `ops qa` checks. Both run the same gates locally.
 
 ## License
 

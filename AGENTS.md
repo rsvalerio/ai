@@ -115,7 +115,8 @@ cd ai
 mise install         # or: make install-tools (Homebrew)
 make check-tools     # confirm they match .tool-versions
 make lint-and-validate
-ops verify           # the gate CI runs
+ops verify           # fast offline gate
+ops qa               # full gate: verify + marketplace + install path
 ```
 
 | Command | Description |
@@ -123,8 +124,10 @@ ops verify           # the gate CI runs
 | `make validate` | Validate all skills, strict (`scripts/validate-skills.py`) |
 | `make lint` | Format and lint all skills (`rumdl`) |
 | `make lint-and-validate` | Both gates |
-| `ops verify` | The gate CI and the wave runners run: `make ci` plus `check-tools`, listed in `.ops.toml` |
-| `make ci` | Non-mutating gate (`validate`, marketplace, rules index, action pins, fmt/lint check) |
+| `ops verify` | Fast offline gate (skills, rules index, action pins, markdown, tool versions); wave runners and CI run it. Steps in `.ops.toml` |
+| `ops qa` | Full gate: `verify` plus `validate-marketplace` and `check-install`; CI runs it |
+| `make ci` | The `ops qa` checks without ops or `check-tools` |
+| `make check-install` | `make link` / `make unlink` round-trip every skill through a scratch directory |
 | `make validate-actions` | Fail if a third-party action is not SHA-pinned with a version comment |
 | `make validate-rules` | Fail if `rules/index.md` and `references/rules/*.md` disagree |
 | `make eval` | Run the behavioural eval suite (`claude plugin eval`, not in `make ci`) |
@@ -135,7 +138,7 @@ ops verify           # the gate CI runs
 
 `.tool-versions` pins the tool versions, and CI reads that same file — a green `make ci` only means something when `make check-tools` passes too.
 
-Edit under `plugins/<plugin>/skills/<skill-name>/`, then run `ops verify` before opening a PR. Follow the [Agent Skills specification](https://agentskills.io/specification). Contribution and pull request rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+Edit under `plugins/<plugin>/skills/<skill-name>/`, then run `ops qa` before opening a PR. Follow the [Agent Skills specification](https://agentskills.io/specification). Contribution and pull request rules: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Validation
 
