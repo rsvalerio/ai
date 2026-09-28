@@ -32,14 +32,14 @@ jobs:
       # crate, which is why it is pinned through mise's `github:` backend.
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
 
-      # The ops that runs the gates; keep it at or above the ops floor the skills
-      # require (AGENTS.md "ops dependency"), and equal on both jobs. setup-ops is on
-      # forge main but not yet in a forge release, so it is pinned by commit; move to
-      # @v1 once v1 carries it.
+      # The ops that runs the gates: 0.75.0 or newer for the `lint-actions` built-in, never
+      # below the skills' ops floor (AGENTS.md "ops dependency"), and equal on both jobs.
+      # Nothing bumps it automatically. setup-ops is SHA-pinned like any third-party
+      # action (forge's own docs use @v1), so Dependabot moves it with its comment.
       - name: Install ops
-        uses: rsvalerio/forge/actions/setup-ops@c6d281a0f32cdfd16417b2ca09579f62eeb6de46 # main
+        uses: rsvalerio/forge/actions/setup-ops@c6d281a0f32cdfd16417b2ca09579f62eeb6de46 # v0.5.0
         with:
-          version: 0.74.0
+          version: 0.75.0
 
       # Every check .ops.toml lists under [commands.verify]; see there for what each does.
       - name: ops verify
@@ -70,9 +70,9 @@ jobs:
         run: npm install -g @anthropic-ai/claude-code@2.1.235
 
       - name: Install ops
-        uses: rsvalerio/forge/actions/setup-ops@c6d281a0f32cdfd16417b2ca09579f62eeb6de46 # main
+        uses: rsvalerio/forge/actions/setup-ops@c6d281a0f32cdfd16417b2ca09579f62eeb6de46 # v0.5.0
         with:
-          version: 0.74.0
+          version: 0.75.0
 
       # Every check .ops.toml lists under [commands.qa]: verify, the marketplace
       # manifests, and the make link / make unlink install path.
