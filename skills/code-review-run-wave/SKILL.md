@@ -334,8 +334,9 @@ other wave waits on your thinking, then run the locked command again:
 - **Exit 3**: the rebase conflicted and was aborted. Resolve it in the worktree per
   [Handling a Rebase Conflict](references/worktree-protocol.md#handling-a-rebase-conflict).
   Never resolve by discarding the other wave's hunk.
-- **Integration `ops verify` failed**: fix it on the wave branch and rerun pre-merge
-  `ops verify`. A wave that passes pre-merge and fails integration is a normal outcome.
+- **Integration `ops verify` failed**: fix it in the worktree, rerun pre-merge
+  `ops verify`, and **commit** the fix on the wave branch (Step 5): the locked command
+  rebases, and a rebase refuses a dirty worktree. This is a normal outcome.
 - **`--ff-only` refused**: another wave landed first; never fall back to a merge commit.
 - **`timed out … waiting for lock`**: `ops lock status`; wait for a live holder,
   `ops lock break code-review-merge` a stale one.
@@ -360,11 +361,9 @@ ops lock code-review-backlog --timeout 600 -- \
     -m "chore(backlog): close code-review wave <N>"
 ```
 
-`ops backlog commit` commits only the listed tasks' changed files. It refuses, touching
-nothing, if any other path is staged, and it refuses an empty commit. `git add .backlog`
-is never correct here: concurrent waves write their task edits into this same checkout,
-so it would attribute their work to your wave. If the command refuses because of a
-foreign staged path, abort and report; do not unstage the extras and retry. Details:
+It commits only the listed tasks' changed files, and refuses an empty commit or any
+other staged path. Never `git add .backlog`: concurrent waves' task edits share this
+checkout. On a foreign staged path, abort and report; never unstage and retry. See
 [Task files are shared mutable state](references/worktree-protocol.md#task-files-are-shared-mutable-state).
 
 **Standalone runs only — open the run's PR.** A fan-out run does not: `code-review-run-waves`
@@ -383,12 +382,13 @@ ops backlog wave park <waveTaskId> --reason "<unfinished members; the failed ste
 
 It records the reason and the branch and worktree to resume from, and touches nothing in
 git. **The worktree and branch stay in place**, which is what makes the work resumable.
-Do not promise deferred PRs or future work in prose; remaining work goes into the backlog
-as a `Triage` task (Step 6), which is the only sanctioned way to defer anything.
+Commit it with the same locked `ops backlog commit` as a landed wave
+(`chore(backlog): park code-review wave <N>`), or the next run's clean-tree preflight
+blocks.
+Deferred work goes into the backlog as a `Triage` task (Step 6), never into prose.
 
-Never use `git worktree remove --force` or `git branch -D` to clear an obstacle. Both
-refusals exist to stop you deleting unmerged work; investigate what is uncommitted
-instead.
+Never `git worktree remove --force` or `git branch -D` to clear an obstacle: both
+refusals guard unmerged work. Investigate what is uncommitted instead.
 
 ## Step 9 — Report
 

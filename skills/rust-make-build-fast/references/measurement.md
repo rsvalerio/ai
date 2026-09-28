@@ -17,7 +17,7 @@ environment, naming the source of each:
 |-------|--------|
 | Date | `date -u +%F` |
 | Command | The exact cargo invocation, including any `--config` override |
-| Wall time | `date +%s.%N` before and after. Don't use `time`: its output format differs between shells. Capture the build's exit code right after it (`cmd; rc=$?`), before the second `date` overwrites `$?` |
+| Wall time | `python3 -c 'import time; print(time.time())'` before and after. Not `date +%s.%N`, whose `%N` is GNU-only (macOS prints a literal `N`), and not `time`, whose output format differs between shells. Capture the build's exit code right after it (`cmd; rc=$?`), before the second timestamp overwrites `$?` |
 | Load | `loadAverage[0]` at the start and at the end |
 | Cores | `cores` |
 | Jobs | `cargo.jobs.value`, or `default` when absent, plus `cargo.jobs.source` |

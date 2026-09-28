@@ -78,10 +78,10 @@ tests do, not just how long they take to compile.
 
 | Divergent key | Class | Why |
 |---------------|-------|-----|
-| `codegen-units`, `incremental`, `split-debuginfo`, `strip` | **safe** | Only compile time and artifact layout change. `--apply` removes the key (template `test-profile-align`) |
+| `codegen-units`, `incremental`, `split-debuginfo` | **safe** | Only compile time and artifact layout change. `--apply` removes the key (template `test-profile-align`) |
 | `opt-level`, `lto`, or a `package` override setting either | **trade-off** | The tests run the optimized code, as in PROF-1 |
 | `overflow-checks`, `debug-assertions`, `panic` | **trade-off** | Test **behaviour** changes. A test that relies on an overflow panic or a `debug_assert!` passes under one setting and fails under the other |
-| `debug` | **trade-off** | Debuggability changes, as in PROF-3 |
+| `debug`, `strip` | **trade-off** | Debuggability changes, as in PROF-3. Removing a test-profile `strip` override makes tests inherit dev's stripping, and backtraces can lose their symbols |
 
 A key not in this table is a **trade-off** until someone adds it here with a
 reason. Keys that only restate what `dev` already says, such as

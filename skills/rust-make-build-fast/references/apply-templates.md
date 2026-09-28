@@ -28,8 +28,7 @@ limited to `.ops.toml`.
 
 Delete only the **safe** divergent keys from `[profile.test]`, the ones
 PROF-2's table in [checks.md](checks.md#prof-2--test-profile-diverges-from-dev)
-classifies as safe: `codegen-units`, `incremental`, `split-debuginfo` and
-`strip`. `test` then inherits them from `dev` again. If that leaves the table
+classifies as safe: `codegen-units`, `incremental` and `split-debuginfo`. `test` then inherits them from `dev` again. If that leaves the table
 empty, delete the table header and any comment that describes the deleted
 keys.
 
@@ -43,7 +42,7 @@ incremental = true
 ```
 
 Leave every other key where it is, even when it diverges from `dev`: `opt-level`,
-`lto`, `debug`, `overflow-checks`, `debug-assertions`, `panic`, and any
+`lto`, `debug`, `strip`, `overflow-checks`, `debug-assertions`, `panic`, and any
 `package` override. These change how fast the tests run, what they check, or
 what a debugger shows. They are PROF-2 trade-offs and are never applied. If
 removing the safe keys would still leave `test` diverging from `dev`, say in
