@@ -65,7 +65,7 @@ while fixing" does not cover them.
 
 ## Step 1 — List open waves
 
-Requires `ops` 0.72.0 or newer: the claim, the locks and the bookkeeping commit
+Requires `ops` 0.74.0 or newer: the claim, the locks and the bookkeeping commit
 are `ops` commands. Check `ops --version` first, and stop with a clear message if
 it is older.
 

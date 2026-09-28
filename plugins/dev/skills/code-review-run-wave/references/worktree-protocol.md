@@ -40,7 +40,7 @@ that dies, even by `SIGKILL`, releases its lock with it, so no lock can outlive 
 holder. `ops lock status` shows each holder's PID, worktree, command, age and
 whether it is still alive.
 
-**Requires ops 0.72.0 or newer.** Check `ops --version` before claiming anything.
+**Requires ops 0.74.0 or newer.** Check `ops --version` before claiming anything.
 
 The worktree must be a **sibling** of the repository, never a subdirectory of it.
 A worktree nested inside the main checkout shows up as untracked files there and gets

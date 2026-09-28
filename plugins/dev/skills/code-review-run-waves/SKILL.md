@@ -28,7 +28,7 @@ claiming, merging, and recovery rule there applies unchanged here.
 
 Check all four before starting. Stop and report if any fails:
 
-0. **`ops` 0.72.0 or newer.** `ops --version`. The runners claim, lock, park and
+0. **`ops` 0.74.0 or newer.** `ops --version`. The runners claim, lock, park and
    commit bookkeeping through `ops`, and this skill plans the merge order with it.
 1. **`main` is clean and checked out.** `git status --short` in the main checkout is
    empty. The integration branch is created from `main` and the main checkout stays on
