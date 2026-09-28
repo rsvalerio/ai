@@ -50,9 +50,11 @@ of their steps:
 | `ops verify` | `check-tools`, `validate` (skills), `validate-rules`, `lint-actions` (ops built-in: SHA pins with a version comment, no `secrets: inherit`), `fmt-check`, `lint-check` |
 | `ops qa` | `verify`, plus `validate-marketplace` (needs `claude-code` on PATH) and `check-install` |
 
-Every step is a Makefile target and non-mutating, so anything `make lint` would have fixed
-is a failure there instead. `make ci` runs the `ops qa` checks without
-[ops](https://github.com/rsvalerio/ops) or the tool-version check.
+Every step is non-mutating, so anything `make lint` would have fixed is a failure there
+instead. All but `lint-actions` are Makefile targets. The gates need
+[ops](https://github.com/rsvalerio/ops) 0.75.0 or newer, the first release with
+`lint-actions`. `make ci` runs the `ops qa` checks without ops, so it skips the tool-version
+check and the action-pin lint: run `ops verify` to check pins.
 
 Validation is `--strict`: warnings fail. Common ones are a `description` that reads as a
 keyword list rather than prose, and files placed outside the standard skill layout.

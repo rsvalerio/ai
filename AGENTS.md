@@ -63,7 +63,10 @@ Every skill that touches the backlog, and several that do not, run through
 [`ops`](https://github.com/rsvalerio/ops), and the floor is **ops 0.74.0**. Each such skill
 checks `ops --version` first and stops if it is older; the README's Requirements section
 states the same floor. Raise it in all three places — the skill preflights, the README, and
-here — when a skill starts using a newer ops feature. What each skill relies on:
+here — when a skill starts using a newer ops feature. Running this repo's own gates
+(`ops verify`, `ops qa`) needs ops 0.75.0 or newer for the `lint-actions` built-in. That is
+a contributor requirement, pinned on ci.yml's `setup-ops` steps, not a skill floor. What
+each skill relies on:
 
 | ops feature | Used by |
 |-------------|---------|
@@ -125,7 +128,7 @@ ops qa               # full gate: verify + marketplace + install path
 | `make lint-and-validate` | Both gates |
 | `ops verify` | Fast offline gate (skills, rules index, action pins, markdown, tool versions); wave runners and CI run it. Steps in `.ops.toml` |
 | `ops qa` | Full gate: `verify` plus `validate-marketplace` and `check-install`; CI runs it |
-| `make ci` | The `ops qa` checks without ops or `check-tools` |
+| `make ci` | The `ops qa` checks without ops: no `check-tools`, no `lint-actions` |
 | `make check-install` | `make link` / `make unlink` round-trip every skill through a scratch directory |
 | `ops lint-actions` | ops built-in, part of `ops verify`: every action SHA-pinned with a version comment, no `secrets: inherit` |
 | `make validate-rules` | Fail if `rules/index.md` and `references/rules/*.md` disagree |
