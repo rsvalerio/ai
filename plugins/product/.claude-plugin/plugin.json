@@ -1,0 +1,10 @@
+{
+  "name": "product",
+  "description": "Product and market research skills: product, vendor, license, business-model and jurisdiction research, recorded against the consuming project's own conventions.",
+  "author": {
+    "name": "Rodrigo Valerio",
+    "url": "https://github.com/rsvalerio"
+  },
+  "homepage": "https://github.com/rsvalerio/ai",
+  "license": "Apache-2.0"
+}
