@@ -86,7 +86,10 @@ jobs:
       - name: Verify every skill resolves to a SKILL.md
         run: |
           set -e
-          for skill in skills/*/; do
+          shopt -s nullglob
+          dirs=(plugins/*/skills/*/ skills/*/)
+          [ ${#dirs[@]} -gt 0 ] || { echo "::error::no skills found"; exit 1; }
+          for skill in "${dirs[@]}"; do
             name=$(basename "$skill")
             test -f "$HOME/.claude/skills/$name/SKILL.md" \
               || { echo "::error::$name did not link to a readable SKILL.md"; exit 1; }

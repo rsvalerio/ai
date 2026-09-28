@@ -83,7 +83,7 @@ Run `cargo fmt`, `cargo clippy --all-targets --workspace -- -D warnings`, and
 ## Rust implementation guardrails
 
 When editing Rust code, follow the rules in the `code-review-rust` Agent Skill
-(<https://github.com/rsvalerio/ai/tree/main/skills/code-review-rust>). The
+(<https://github.com/rsvalerio/ai/tree/main/plugins/dev/skills/code-review-rust>). The
 rules are in `references/rules/<CATEGORY>.md`, one file per prefix, with a one-line
 index of every rule at `references/rules/index.md`.
 
@@ -142,7 +142,7 @@ The vendored list is the binding contract; the skill is deeper guidance. Update 
 
 ## See also
 
-- [`code-review-rust` skill](../skills/code-review-rust/SKILL.md)
-- [`references/rules/index.md`](../skills/code-review-rust/references/rules/index.md) — every rule as a one-liner
-- [`references/rules.md`](../skills/code-review-rust/references/rules.md) — category table, severity scale, design philosophy
+- [`code-review-rust` skill](../plugins/dev/skills/code-review-rust/SKILL.md)
+- [`references/rules/index.md`](../plugins/dev/skills/code-review-rust/references/rules/index.md) — every rule as a one-liner
+- [`references/rules.md`](../plugins/dev/skills/code-review-rust/references/rules.md) — category table, severity scale, design philosophy
 - [Agent Skills specification](https://agentskills.io/specification)
