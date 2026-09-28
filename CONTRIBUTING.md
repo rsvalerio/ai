@@ -18,7 +18,7 @@ current, so `check-tools` may tell you to pin it back.
 `.tool-versions` pins the versions CI runs. If `check-tools` fails, your local gates are
 not the gates that will run on your pull request — fix that before trusting a green run.
 Bumping a tool means editing `.tool-versions`; nothing else hardcodes a version. The one
-exception is `claude-code`, pinned only in the Marketplace job of
+exception is `claude-code`, pinned only in the `ops verify` job of
 `.github/workflows/ci.yml` — mise's registry does not know the tool, so a `.tool-versions`
 entry would fail `mise install` in CI. Locally, manage it with asdf instead, outside this
 repo's `.tool-versions` for the same reason:
@@ -37,12 +37,15 @@ Skills live under `skills/<skill-name>/`. Then:
 
 ```bash
 make lint             # rewrites files: rumdl fmt + check --fix
-make ci               # the exact non-mutating gate CI runs
+ops verify             # the exact non-mutating gate CI runs
 ```
 
-Run `make lint` while iterating and `make ci` before pushing. CI runs `fmt-check`,
-`lint-check`, `validate` and `validate-marketplace` — all non-mutating, so anything
-`make lint` would have fixed is a failure there instead.
+Run `make lint` while iterating and `ops verify` before pushing. CI runs `ops verify`,
+whose steps `.ops.toml` lists: `make ci` (`validate`, `validate-marketplace`,
+`validate-rules`, `validate-actions`, `fmt-check`, `lint-check`) plus `check-tools`. All
+are non-mutating, so anything `make lint` would have fixed is a failure there instead.
+`make ci` runs the same checks without [ops](https://github.com/rsvalerio/ops) or the
+tool-version check.
 
 Validation is `--strict`: warnings fail. Common ones are a `description` that reads as a
 keyword list rather than prose, and files placed outside the standard skill layout.
@@ -56,7 +59,7 @@ everything at once.
 
 ## Pull requests
 
-`main` is protected. A pull request needs `Lint`, `Validate`, `Marketplace` and `Install`
+`main` is protected. A pull request needs `ops verify` and `Install`
 green, all review threads resolved, and signed commits — set up commit signing before
 your first PR:
 

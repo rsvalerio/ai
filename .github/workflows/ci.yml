@@ -14,71 +14,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  # The gate is `ops verify`, defined once in .ops.toml: this job runs exactly what a
+  # developer or a wave runner runs locally, so a check is added there and nowhere else.
+  verify:
+    name: ops verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      # This job npm-installs third-party code after checkout; do not leave the
+      # repo token in git config for those steps to see.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # mise reads .tool-versions directly — the same file `make check-tools`
       # reads locally, so CI and a developer machine install identical versions.
       # skill-validator ships as GitHub release assets rather than a crates.io
       # crate, which is why it is pinned through mise's `github:` backend.
-      - uses: jdx/mise-action@v4
-
-      - name: Confirm tooling matches .tool-versions
-        run: make check-tools
-
-      - name: Check formatting
-        run: make fmt-check
-
-      - name: Check lint rules
-        run: make lint-check
-
-  validate:
-    name: Validate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: jdx/mise-action@v4
-
-      - name: Confirm tooling matches .tool-versions
-        run: make check-tools
-
-      - name: Validate all agent skills
-        run: make validate
-
-  marketplace:
-    name: Marketplace
-    runs-on: ubuntu-latest
-    steps:
-      # This job npm-installs third-party code after checkout; do not leave the
-      # repo token in git config for those steps to see.
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
 
       # claude-code stays out of .tool-versions on purpose: mise's registry
       # does not know the tool, so an entry would fail `mise install` in CI.
       # The pin below is the one place a version is hardcoded outside
       # .tool-versions — bump it alongside Claude Code releases. Locally, any
       # recent claude-code on PATH works (CONTRIBUTING.md has the asdf route).
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
 
       - name: Install pinned claude-code
         run: npm install -g @anthropic-ai/claude-code@2.1.235
 
-      - name: Validate the plugin marketplace manifest
-        run: make validate-marketplace
+      # The ops that runs the gate; keep it at or above the ops floor the skills
+      # require (AGENTS.md "ops dependency"). setup-ops is on forge main but not yet
+      # in a forge release, so it is pinned by commit; move to @v1 once v1 carries it.
+      - name: Install ops
+        uses: rsvalerio/forge/actions/setup-ops@c6d281a0f32cdfd16417b2ca09579f62eeb6de46 # main
+        with:
+          version: 0.74.0
+
+      # Every check .ops.toml lists under [commands.verify]; see there for what each does.
+      - name: ops verify
+        run: ops verify
 
   install:
     name: Install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Link skills into the agent directory
         run: make link

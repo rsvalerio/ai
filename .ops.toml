@@ -4,3 +4,69 @@ statuses = ["Triage", "To Do", "In Progress", "Done"]
 zero_padded_ids = 4
 task_prefix = "TASK"
 backlog_directory = ".backlog"
+
+# `ops verify` is this repo's gate, and this file is the only list of its checks: the
+# wave runners, a developer before pushing and ci.yml's verify job all run `ops verify`
+# itself, so a check added here runs everywhere. Each step is a Makefile target, which
+# stays the place the check is implemented. Tools come from .tool-versions (mise),
+# except claude-code, which must be on PATH; CI's ops version is pinned on ci.yml's
+# setup-ops step.
+#
+# ops shows only a failing step's stderr, and these targets report on stdout, so each
+# step redirects it.
+
+[commands.check-tools]
+program = "sh"
+args = ["-c", "make --no-print-directory check-tools 1>&2"]
+help = "Local rumdl and skill-validator match .tool-versions"
+category = "Code Quality"
+
+[commands.validate-skills]
+program = "sh"
+args = ["-c", "make --no-print-directory validate 1>&2"]
+help = "Every skill passes strict skill-validator"
+category = "Code Quality"
+
+[commands.validate-marketplace]
+program = "sh"
+args = ["-c", "make --no-print-directory validate-marketplace 1>&2"]
+help = "Marketplace and plugin manifests pass claude plugin validate"
+category = "Code Quality"
+
+[commands.validate-rules]
+program = "sh"
+args = ["-c", "make --no-print-directory validate-rules 1>&2"]
+help = "Review-skill rules/index.md matches the category files"
+category = "Code Quality"
+
+[commands.validate-actions]
+program = "sh"
+args = ["-c", "make --no-print-directory validate-actions 1>&2"]
+help = "Third-party actions are SHA-pinned with a version comment"
+category = "Code Quality"
+
+[commands.fmt-check]
+program = "sh"
+args = ["-c", "make --no-print-directory fmt-check 1>&2"]
+help = "Markdown is rumdl-formatted"
+category = "Code Quality"
+
+[commands.lint-check]
+program = "sh"
+args = ["-c", "make --no-print-directory lint-check 1>&2"]
+help = "Markdown passes rumdl lint rules"
+category = "Code Quality"
+
+[commands.verify]
+commands = [
+  "check-tools",
+  "validate-skills",
+  "validate-marketplace",
+  "validate-rules",
+  "validate-actions",
+  "fmt-check",
+  "lint-check",
+]
+fail_fast = false
+help = "This repo's gate: `make ci` plus the tool-version check (ci.yml's verify job runs this)"
+category = "Code Quality"
