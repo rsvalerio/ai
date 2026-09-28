@@ -14,14 +14,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The gate is `ops verify`, defined once in .ops.toml: this job runs exactly what a
-  # developer or a wave runner runs locally, so a check is added there and nowhere else.
+  # The gates are defined once in .ops.toml: these jobs run exactly what a developer or
+  # a wave runner runs locally, so a check is added there and nowhere else. verify is
+  # the fast offline gate and reports first; qa is the full gate and repeats verify's
+  # checks, which cost under a second.
   verify:
     name: ops verify
     runs-on: ubuntu-latest
     steps:
-      # This job npm-installs third-party code after checkout; do not leave the
-      # repo token in git config for those steps to see.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -30,6 +30,31 @@ jobs:
       # reads locally, so CI and a developer machine install identical versions.
       # skill-validator ships as GitHub release assets rather than a crates.io
       # crate, which is why it is pinned through mise's `github:` backend.
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+
+      # The ops that runs the gates; keep it at or above the ops floor the skills
+      # require (AGENTS.md "ops dependency"), and equal on both jobs. setup-ops is on
+      # forge main but not yet in a forge release, so it is pinned by commit; move to
+      # @v1 once v1 carries it.
+      - name: Install ops
+        uses: rsvalerio/forge/actions/setup-ops@c6d281a0f32cdfd16417b2ca09579f62eeb6de46 # main
+        with:
+          version: 0.74.0
+
+      # Every check .ops.toml lists under [commands.verify]; see there for what each does.
+      - name: ops verify
+        run: ops verify
+
+  qa:
+    name: ops qa
+    runs-on: ubuntu-latest
+    steps:
+      # This job npm-installs third-party code after checkout; do not leave the
+      # repo token in git config for those steps to see.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
 
       # claude-code stays out of .tool-versions on purpose: mise's registry
@@ -44,38 +69,12 @@ jobs:
       - name: Install pinned claude-code
         run: npm install -g @anthropic-ai/claude-code@2.1.235
 
-      # The ops that runs the gate; keep it at or above the ops floor the skills
-      # require (AGENTS.md "ops dependency"). setup-ops is on forge main but not yet
-      # in a forge release, so it is pinned by commit; move to @v1 once v1 carries it.
       - name: Install ops
         uses: rsvalerio/forge/actions/setup-ops@c6d281a0f32cdfd16417b2ca09579f62eeb6de46 # main
         with:
           version: 0.74.0
 
-      # Every check .ops.toml lists under [commands.verify]; see there for what each does.
-      - name: ops verify
-        run: ops verify
-
-  install:
-    name: Install
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Link skills into the agent directory
-        run: make link
-
-      - name: Verify every skill resolves to a SKILL.md
-        run: |
-          set -e
-          shopt -s nullglob
-          dirs=(plugins/*/skills/*/ skills/*/)
-          [ ${#dirs[@]} -gt 0 ] || { echo "::error::no skills found"; exit 1; }
-          for skill in "${dirs[@]}"; do
-            name=$(basename "$skill")
-            test -f "$HOME/.claude/skills/$name/SKILL.md" \
-              || { echo "::error::$name did not link to a readable SKILL.md"; exit 1; }
-          done
-
-      - name: Unlink skills
-        run: make unlink
+      # Every check .ops.toml lists under [commands.qa]: verify, the marketplace
+      # manifests, and the make link / make unlink install path.
+      - name: ops qa
+        run: ops qa

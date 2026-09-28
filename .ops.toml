@@ -5,12 +5,17 @@ zero_padded_ids = 4
 task_prefix = "TASK"
 backlog_directory = ".backlog"
 
-# `ops verify` is this repo's gate, and this file is the only list of its checks: the
-# wave runners, a developer before pushing and ci.yml's verify job all run `ops verify`
-# itself, so a check added here runs everywhere. Each step is a Makefile target, which
-# stays the place the check is implemented. Tools come from .tool-versions (mise),
-# except claude-code, which must be on PATH; CI's ops version is pinned on ci.yml's
-# setup-ops step.
+# Two gates, per the Rust foundation's contract (forge docs/foundation.md), and this file
+# is the only list of their checks:
+#
+# - `ops verify`: fast and offline. Tools from .tool-versions only, so it suits a
+#   pre-commit hook and the wave runners.
+# - `ops qa`: the full gate. Everything in verify, plus the checks that need claude-code
+#   on PATH or exercise the install path.
+#
+# ci.yml runs both, so a check added here runs everywhere. Each step is a Makefile target,
+# which stays the place the check is implemented. CI's ops version is pinned on ci.yml's
+# setup-ops steps.
 #
 # ops shows only a failing step's stderr, and these targets report on stdout, so each
 # step redirects it.
@@ -57,16 +62,27 @@ args = ["-c", "make --no-print-directory lint-check 1>&2"]
 help = "Markdown passes rumdl lint rules"
 category = "Code Quality"
 
+[commands.check-install]
+program = "sh"
+args = ["-c", "make --no-print-directory check-install 1>&2"]
+help = "make link installs every skill and make unlink removes it (scratch dir)"
+category = "Code Quality"
+
 [commands.verify]
 commands = [
   "check-tools",
   "validate-skills",
-  "validate-marketplace",
   "validate-rules",
   "validate-actions",
   "fmt-check",
   "lint-check",
 ]
 fail_fast = false
-help = "This repo's gate: `make ci` plus the tool-version check (ci.yml's verify job runs this)"
+help = "Fast offline gate: skills, rules index, action pins, markdown (pre-commit, wave runners, CI)"
+category = "Code Quality"
+
+[commands.qa]
+commands = ["verify", "validate-marketplace", "check-install"]
+fail_fast = false
+help = "Full gate: verify plus the marketplace manifests and the install path (CI)"
 category = "Code Quality"

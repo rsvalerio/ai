@@ -17,12 +17,13 @@ tool_version = $(shell awk -v t=$(1) '$$1 == t || $$1 ~ "/" t "$$" { print $$2 }
 RUMDL_VERSION := $(call tool_version,rumdl)
 SKILL_VALIDATOR_VERSION := $(call tool_version,skill-validator)
 
-.PHONY: all ci validate validate-marketplace validate-rules validate-actions eval lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
+.PHONY: all ci validate validate-marketplace validate-rules validate-actions check-install eval lint lint-check fmt-check lint-and-validate check-tools install-tools link unlink
 
 lint-and-validate: lint validate validate-marketplace validate-rules validate-actions
 
-# Non-mutating gate for CI: structure, marketplace, action pins, formatting and lint rules.
-ci: validate validate-marketplace validate-rules validate-actions fmt-check lint-check
+# Every non-mutating check, without ops: the same set `ops qa` runs, minus check-tools.
+# .ops.toml is where the gates are defined; this target is for machines without ops.
+ci: validate validate-marketplace validate-rules validate-actions fmt-check lint-check check-install
 
 # Fail loudly when local tooling has drifted from the versions CI runs.
 check-tools:
@@ -114,6 +115,20 @@ link:
 		ln -sfn $(CURDIR)/$$dir $(CLAUDE_SKILLS_DIR)/$$skill; \
 		echo "linked $(CLAUDE_SKILLS_DIR)/$$skill -> $(CURDIR)/$$dir"; \
 	done
+
+# `make link` must install every skill as a readable SKILL.md, and `make unlink` must remove
+# exactly those links. Runs against a scratch directory, never ~/.claude/skills.
+check-install:
+	@[ -n "$(SKILL_DIRS)" ] || { echo "no skills found"; exit 1; }
+	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	$(MAKE) --no-print-directory link CLAUDE_SKILLS_DIR="$$tmp" >/dev/null; \
+	for dir in $(SKILL_DIRS); do \
+		skill=$$(basename $$dir); \
+		test -f "$$tmp/$$skill/SKILL.md" || { echo "$$skill did not link to a readable SKILL.md"; exit 1; }; \
+	done; \
+	$(MAKE) --no-print-directory unlink CLAUDE_SKILLS_DIR="$$tmp" >/dev/null; \
+	left=$$(ls -A "$$tmp"); [ -z "$$left" ] || { echo "unlink left behind: $$left"; exit 1; }; \
+	echo "all $(words $(SKILL_DIRS)) skills link and unlink cleanly"
 
 unlink:
 	@for dir in $(SKILL_DIRS); do \
