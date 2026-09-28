@@ -11,6 +11,7 @@ them and do not restate them.
 | Feature ships | Product documentation for the current version, or the code at a pinned ref | Landing page, blog post, roadmap, a "coming soon" |
 | Feature shipped *when* | Changelog or release notes | Announcement post |
 | License of a component | The LICENSE (or COPYING, or SPDX header) file **at a pinned commit or tag**, per component | README badge, GitHub's sidebar detection, package-registry metadata, "open source" in marketing |
+| License of a component with no published source | The vendor's statement that it is closed or hosted-only, **and** a dated search of the vendor's organisation and package registries finding no source | Either one alone; the absence of a repository is not by itself a license |
 | License change | The vendor's announcement **and** the LICENSE diff across the two refs | Press coverage alone |
 | Pricing, paid tier, plan limits | The official pricing page, with the date checked | Third-party comparison sites, reseller pages |
 | Self-hostable | Self-hosting docs for the component, or a deployable artifact (image, binary, chart) at a pinned version | "Enterprise on-prem available", "contact sales" |

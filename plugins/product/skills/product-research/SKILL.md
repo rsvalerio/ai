@@ -57,7 +57,8 @@ The schema, what each section means and which sections are required are in
 If the user agrees, scaffold it from [assets/profile.md](assets/profile.md), asking for
 each required section (AskUserQuestion when available). Leave a section as its placeholder
 rather than inventing content. Write the profile only once the user approves it, then
-continue from Step 1.
+run the Step 0 check again on what was written. Continue to Step 1 only when no required
+section is missing or still a placeholder; otherwise stop as below.
 
 **A profile missing a required section: stop** and name the section. Do not fill it in
 from the existing reference files: a convention you inferred is still a guess.
@@ -78,12 +79,13 @@ Do this **before any research**, because it changes what gets researched.
   similar name is not proof of ownership. Jurisdiction work starts here; the rubric is in
   [jurisdiction.md](references/jurisdiction.md).
 
-**Stop gate.** If the input resolves to several in-scope products, to something already
-recorded, or to something the profile's scope map puts out of scope, report what you found
-and ask which to research:
+**Stop gate.** If the input resolves to several in-scope products, or to something whose
+scope is unresolved (the scope map puts it out of scope, or cannot place it), report what
+you found and ask which to research. A single named product that is already recorded is
+not a question: continue in update mode and say so in the proposal.
 
 - every product behind the input, with where the scope map would place it
-- which are already recorded, and what the record says
+- which are already recorded, and what the record says (update mode for those)
 - which are out of scope, citing the profile section that says so
 - whether the vendor is already recorded, and what that record says
 

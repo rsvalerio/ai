@@ -41,10 +41,13 @@ control plane, SDKs, and enterprise directory.
    files, an `ee/` or `enterprise/` directory with its own terms, license headers that
    differ from the root file, and a README section on licensing. Monorepos that are open
    at the root and source-available under `ee/` are common.
-4. **Components in other repositories** — a closed server with an open client often has
-   no server repository at all. The absence is the finding: record the server as
-   `proprietary`, citing where the vendor says it is hosted-only. If nothing says either
-   way, record it as `unknown`.
+4. **Components with no published source** — a closed server with an open client often
+   has no server repository at all. There is no LICENSE file to read, so the evidence is
+   the one the [evidence contract](evidence-contract.md) sets for unpublished components:
+   the vendor's own statement that the component is closed or hosted-only, **and** a
+   search showing no source is published. With both, record the class `proprietary`; with
+   either missing, `unknown`. Availability (`hosted-only`, `paid`) is recorded separately in
+   the business model; it is not what establishes the license class.
 5. **Package-registry metadata** (crates.io, npm, PyPI, Docker Hub) is a cross-check. When
    it disagrees with the LICENSE file, record the disagreement as an unknown; do not pick
    one.
