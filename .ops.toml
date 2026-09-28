@@ -44,12 +44,6 @@ args = ["-c", "make --no-print-directory validate-rules 1>&2"]
 help = "Review-skill rules/index.md matches the category files"
 category = "Code Quality"
 
-[commands.validate-actions]
-program = "sh"
-args = ["-c", "make --no-print-directory validate-actions 1>&2"]
-help = "Third-party actions are SHA-pinned with a version comment"
-category = "Code Quality"
-
 [commands.fmt-check]
 program = "sh"
 args = ["-c", "make --no-print-directory fmt-check 1>&2"]
@@ -73,7 +67,7 @@ commands = [
   "check-tools",
   "validate-skills",
   "validate-rules",
-  "validate-actions",
+  "lint-actions",
   "fmt-check",
   "lint-check",
 ]
