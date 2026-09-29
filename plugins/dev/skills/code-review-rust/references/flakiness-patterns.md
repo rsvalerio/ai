@@ -5,7 +5,7 @@ Root-cause explanations for TEST-16--21. Use these to understand *why* each rule
 | Pattern | Why it's flaky | Typical severity | Rule |
 |---------|----------------|-----------------|------|
 | **Random without seed** | Non-deterministic; different runs give different results | Medium (High if masking real bugs) | TEST-16 |
-| **Time / sleep** | Timing varies by load; `thread::sleep` in tests is inherently unreliable. Runtime-specific: tokio has `time::pause()`, other runtimes (async-std, smol) need mock clocks or channel-based sync | High in CI (timing is load-dependent); Medium locally | TEST-13, TEST-15 |
+| **Time / sleep** | Timing varies by load; `thread::sleep` in tests is inherently unreliable. Runtime-specific: tokio has `time::pause()`, other runtimes (smol) need mock clocks or channel-based sync | High in CI (timing is load-dependent); Medium locally | TEST-13, TEST-15 |
 | **Shared mutable state** | Order of test execution or parallelism changes outcome | High (can mask real race conditions) | TEST-18 |
 | **File system / env** | Depends on cwd, env vars, or files that change between runs | Medium (Low if test-only paths) | TEST-19 |
 | **Network / external services** | Service availability or latency varies; hardcoded ports cause collisions | High (non-deterministic failures erode CI trust) | TEST-17, TEST-20 |

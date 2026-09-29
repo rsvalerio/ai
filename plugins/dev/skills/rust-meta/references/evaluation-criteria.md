@@ -21,9 +21,9 @@ Technically sound, clear rationale, actionable, correct and complete examples.
 
 ## 2. Still Valid
 
-Compatible with current Rust stable; stable features (not deprecated); applies to the target edition (2021; 2024 for projects that have migrated — check project's `Cargo.toml`; 2015/2018 only for legacy compatibility). No deprecated crates/patterns; no newer alternatives that supersede it. Minimum baseline: Rust 1.87+ (last reviewed: 2026-03-13; review and bump periodically). This baseline applies to knowledge ingestion — individual projects may have a lower MSRV; check `rust-version` in `Cargo.toml`.
+Compatible with current Rust stable; stable features (not deprecated); applies to the target edition (2021; 2024 for projects that have migrated — check project's `Cargo.toml`; 2015/2018 only for legacy compatibility). No deprecated crates/patterns; no newer alternatives that supersede it. Minimum baseline: Rust 1.98+ (last reviewed: 2026-09-29; review and bump periodically). This baseline applies to knowledge ingestion — individual projects may have a lower MSRV; check `rust-version` in `Cargo.toml`.
 
-**Reject**: Deprecated features/APIs, pre-1.85 only, newer alternatives exist, unmaintained crates.
+**Reject**: Deprecated features/APIs, pre-1.85 only (the 2024-edition floor — this cutoff does not track the ingestion baseline above), newer alternatives exist, unmaintained crates.
 
 **Flag**: Version unspecified or may be version-dependent; feature stability unclear.
 
