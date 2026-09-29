@@ -39,6 +39,7 @@ Additions are mostly **std APIs that remove a panic or a dependency**: `floor_ch
 | C5 | ASYNC.md header, flakiness-patterns.md | `async-std` as an alternative runtime | discontinued; a project on it is a SEC-27 finding | RUSTSEC-2025-0052 |
 | C6 | owasp-2021.md note | "no final 2025 ranking has been published" | 2025 list is published; mapping pending migration (new backlog task) | owasp.org/Top10 → top10.owasp.org/2025 |
 | C7 | TIME-1 | "pre-1.0, so expect breaking minor releases" | 0.2.x releases are semver-compatible; the breaking step is 0.2 → 1.0 | jiff README, issue #622 |
+| C8 | TIME-1 | jiff "with a bundled tzdb" | reads the system tzdb by default on Unix; bundles only on Windows/wasm (`tzdb-bundle-platform`); `tzdb-bundle-always` opts in everywhere | jiff `crates/jiff/Cargo.toml`: default features, and the `cfg(any(windows, target_family = "wasm"))` dependency on `jiff-tzdb-platform` |
 
 ## Detailed Results — Approved additions
 
