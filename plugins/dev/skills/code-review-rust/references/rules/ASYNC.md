@@ -2,7 +2,7 @@
 
 ## Async (typical severity: Medium--High)
 
-> ASYNC rules assume **tokio** as the async runtime. If the project uses a different runtime (e.g., `async-std`, `smol`), adapt API references accordingly.
+> ASYNC rules assume **tokio** as the async runtime. If the project uses a different runtime (e.g., `smol`), adapt API references accordingly. `async-std` is discontinued (RUSTSEC-2025-0052): a project still on it is a SEC-27 finding, not a runtime to adapt to.
 
 - **ASYNC-1.** `spawn_blocking` for CPU-heavy work
 - **ASYNC-2.** *Retired.* Channel selection is owned by **CONC-8**. For async-vs-sync `Mutex` choice, use `parking_lot::Mutex` / `std::sync::Mutex` when the critical section is short and never crosses `.await`; reach for `tokio::sync::Mutex` only when you must hold the guard across `.await` (see CONC-2)

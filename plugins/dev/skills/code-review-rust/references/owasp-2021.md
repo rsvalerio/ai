@@ -1,6 +1,6 @@
 # OWASP Top 10:2021 Mapping
 
-> **Version note**: This maps to the OWASP Top 10 2021 release, which remains the current published edition as of 2026-04-16. OWASP has signalled work on a 2025 edition (release-candidate drafts circulating) but no final ranking has been published — continue mapping to 2021 categories until a final 2025 release is announced at [owasp.org/Top10](https://owasp.org/Top10/). When the 2025 list is finalized, revisit SEC rule mappings for category renames or splits (historically e.g. 2017 A07 Cross-Site Scripting was folded into A03 Injection in 2021).
+> **Version note**: This maps to the OWASP Top 10 2021 release. As of 2026-09-29 [owasp.org/Top10](https://owasp.org/Top10/) redirects to the published 2025 list (A01–A10:2025, with A03 now Software Supply Chain Failures), so this mapping is **pending migration** to 2025 — tracked in the skills repo's backlog. Until then keep citing the 2021 categories below consistently rather than mixing editions; when migrating, revisit SEC rule mappings for category renames or splits (historically e.g. 2017 A07 Cross-Site Scripting was folded into A03 Injection in 2021).
 
 - **A01** Broken Access Control → missing authz, IDOR, privilege escalation
 - **A02** Crypto Failures → weak crypto, hardcoded secrets

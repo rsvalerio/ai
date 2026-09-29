@@ -1,9 +1,10 @@
 ---
 id: TASK-0009
 title: 'Refresh code-review-rust''s Rust baseline past 1.87 and re-check TIME-1 (jiff, time MSRV)'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-29 13:35'
+updated_date: '2026-09-29 17:21'
 labels:
   - rust
   - rules
@@ -29,7 +30,14 @@ dedup_key: 'followup:rust-baseline-refresh'
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Baseline bumped to the current stable Rust, with a rust-meta evaluation report under reports/
-- [ ] #2 TIME-1 re-checked: time MSRV figure current, jiff's position decided against its 1.0 status
-- [ ] #3 make validate-rules and ops verify pass
+- [x] #1 Baseline bumped to the current stable Rust, with a rust-meta evaluation report under reports/
+- [x] #2 TIME-1 re-checked: time MSRV figure current, jiff's position decided against its 1.0 status
+- [x] #3 make validate-rules and ops verify pass
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Report: reports/rust-meta-evaluation-2026-09-29-baseline-1.98.md. Baseline 1.98+ (1.98.1 current stable). 7 corrections (TEST-29 import path E0432, VER-9 dates, PERF-8 hasher, let-chains edition, async-std discontinued, OWASP note, TIME-1 wording), 17 additions incl. new VER-10..14; every API compile-verified on rustc 1.98. jiff still 0.2.37: promotion not triggered. OWASP 2025 migration split out as TASK-0013. 7 items left as Needs Clarification in the report.
+<!-- SECTION:NOTES:END -->

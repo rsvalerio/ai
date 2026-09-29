@@ -31,7 +31,7 @@ Default: prefer reducing cognitive load. Accept higher cognitive load for librar
 
 When flagging complexity or readability issues, suggest concrete refactoring:
 
-- **Deep nesting** → early returns + guard clauses + extract to named functions; flatten `if let Some(x) = ... { if let Some(y) = ... { } }` chains into sequential let-else guards
+- **Deep nesting** → early returns + guard clauses + extract to named functions; flatten `if let Some(x) = ... { if let Some(y) = ... { } }` chains into sequential let-else guards, or — on edition 2024 with MSRV ≥ 1.88 — a single let-chain when the inner block is not an early exit (FN-2)
 - **Complex boolean logic** → extract named predicates: `let is_eligible = has_permission && !is_expired && meets_threshold;`
 - **Long parameter lists** → group into config/options struct or builder pattern; `fn connect(opts: ConnectionOpts)` instead of 6 positional args
 - **Nested matches** → simplify with combinators: `opt.as_ref().map(|v| v.field)` instead of `match opt { Some(v) => Some(v.field), None => None }`
