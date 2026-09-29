@@ -1,9 +1,10 @@
 # Implementation Guardrail Activation
 
-`code-review-rust` has two modes:
+`code-review-rust` has three modes:
 
 1. **Formal review** (default) — scan, file backlog findings, exit. Review-shaped prompts ("review this crate", "audit our NATS usage").
 2. **Implementation guardrail** — read the rules *before* writing or editing Rust, treat them as acceptance criteria, and do not file backlog tasks unless the user asked for a formal review.
+3. **Ad-hoc review** — code pasted into the chat, or a question about one function ("what is wrong with this?"): read the rules for the categories it touches and answer in chat with rule IDs, filing nothing.
 
 Use both: the guardrail stops known violations from shipping; formal review catches drift and subtle cross-rule issues. Install and invoke the skill via the repository [README](../README.md). This document is only about *activating* guardrail mode deterministically.
 

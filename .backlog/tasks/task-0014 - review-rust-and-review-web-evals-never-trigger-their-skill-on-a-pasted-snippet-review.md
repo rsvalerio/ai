@@ -1,9 +1,10 @@
 ---
 id: TASK-0014
 title: 'review-rust and review-web evals never trigger their skill on a pasted-snippet review'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-29 18:13'
+updated_date: '2026-09-29 18:28'
 labels:
   - evals
   - skill-trigger
@@ -32,7 +33,17 @@ dedup_key: 'followup:review-evals-no-trigger'
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Decision (a) or (b) recorded in the notes
-- [ ] #2 review-rust and review-web show a positive with/without delta, or are replaced by cases that do
-- [ ] #3 make eval results recorded in the notes
+- [x] #1 Decision (a) or (b) recorded in the notes
+- [x] #2 review-rust and review-web show a positive with/without delta, or are replaced by cases that do
+- [x] #3 make eval results recorded in the notes
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Decision: (a), widen the descriptions (user, 2026-09-29).
+
+Fixed on chore/eval-baseline-2026-09-29. Widening the descriptions alone would have loaded the skill into an Execution Contract that forbids a chat answer ('a text-only report is a failed run'). So both skills gained an ad-hoc review mode that answers in chat with rule IDs and files nothing, and the Execution Contract is now scoped to formal review. Descriptions name pasted-snippet review. Both cases gained a cites-rule-id grader. Results, Claude Code 2.1.284, 3+3 runs: guardrail-rust +1.00 (unchanged), review-rust 1.00/0.00 +1.00, review-web 1.00/0.33 +0.67. cites-rule-id passed in every with-plugin run and failed in every run without the plugin.
+
+<!-- SECTION:NOTES:END -->
