@@ -153,7 +153,10 @@ honest answer is usually no.
 
 Write only the approved edits, in the profile's file roles and formats (record fields:
 [assets/product-record.md](assets/product-record.md),
-[assets/vendor-record.md](assets/vendor-record.md)). An edit the user did not ask for —
+[assets/vendor-record.md](assets/vendor-record.md)). A record's unknowns are part of the
+record: write them with it, where the profile's format puts them (see
+[project-profile.md](references/project-profile.md), Record formats), never only in the
+chat or a PR description. An edit the user did not ask for —
 a related row elsewhere, a fix to a neighbouring record, a new research gap — becomes a
 **proposal** in the final message, not a write. Update any "last surveyed" dates the
 profile names.
