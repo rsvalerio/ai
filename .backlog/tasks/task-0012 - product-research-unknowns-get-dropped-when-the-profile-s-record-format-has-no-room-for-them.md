@@ -1,9 +1,10 @@
 ---
 id: TASK-0012
 title: 'product-research: unknowns get dropped when the profile''s record format has no room for them'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-29 17:02'
+updated_date: '2026-09-29 17:08'
 labels:
   - product
   - product-research
@@ -35,8 +36,15 @@ dedup_key: 'followup:pr-unknowns-dropped'
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 project-profile.md: Unknowns are a field a record format may not drop
-- [ ] #2 The profile schema and assets/profile.md name where unknowns go when a row format has no room
-- [ ] #3 SKILL.md Step 5 writes a record's unknowns with the record, not as an unrequested edit
-- [ ] #4 The research-no-profile eval still passes; ops verify passes
+- [x] #1 project-profile.md: Unknowns are a field a record format may not drop
+- [x] #2 The profile schema and assets/profile.md name where unknowns go when a row format has no room
+- [x] #3 SKILL.md Step 5 writes a record's unknowns with the record, not as an unrequested edit
+- [x] #4 The research-no-profile eval still passes; ops verify passes
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Fixed on fix/product-research-unknowns. Unknowns joined source/license/business-model as fields a record format may not drop. A row format with no room names where they go; the default is a notes block under the table, so valysec's existing profile works unchanged. Step 5 writes a record's unknowns with the record. evidence-contract and proposal.md say the same. Minor items left alone: coverage-marker confidence stays in the proposal, because markers are already recognisable as judgements in the written record and forcing a confidence column would reshape every consumer's coverage table. The missing package-registry search was a miss in the run; the contract already requires it. ops verify passes; product eval with 1.00 / without 0.20, delta +0.80 over 3+3 runs, 2026-09-29.
+<!-- SECTION:NOTES:END -->

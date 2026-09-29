@@ -51,7 +51,9 @@ where translation into this project's vocabulary belongs instead.
 ## Record formats
 
 Optional. TODO: row or page format per file role, if the defaults do not fit. Formats may
-lay fields out differently but may not drop sources, license or business model.
+lay fields out differently but may not drop sources, license, business model or unknowns.
+For a one-row-per-record table, say where a record's unknowns go (default: a notes block
+under the table).
 
 ## Private context
 

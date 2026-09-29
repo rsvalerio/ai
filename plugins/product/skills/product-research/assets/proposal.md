@@ -51,7 +51,8 @@ An exception is flagged, not smoothed over.
 
 ## Proposed Edits
 
-Per file (by profile role): the exact rows or sections to add or change. Then, separately,
+Per file (by profile role): the exact rows or sections to add or change, including where
+each record's unknowns are written. Then, separately,
 **edits not asked for**, such as neighbouring records and research gaps, each as a
 proposal only.
 

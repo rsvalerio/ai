@@ -75,8 +75,10 @@ Kept in separate lists in the proposal, and distinguishable in the written recor
   at a pinned release.
   ```
 
-An unknown stays an unknown in the written record. It is not rounded to the product's
-favour and not silently dropped.
+An unknown stays an unknown in the written record — in a file of the reference folder,
+next to the record it belongs to, not only in the chat or a PR description. It is not
+rounded to the product's favour and not silently dropped. A format with no room for it
+does not excuse dropping it; [project-profile.md](project-profile.md) says where it goes.
 
 ## Unable to Verify
 
