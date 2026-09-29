@@ -1,10 +1,10 @@
 ---
 id: TASK-0005
 title: 'Add a product-research skill to the product plugin: project-independent product, vendor, license and business-model research'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-09-27 14:02'
-updated_date: '2026-09-28 11:05'
+updated_date: '2026-09-29 09:59'
 labels:
   - product
   - new-skill
@@ -101,4 +101,7 @@ Implemented on feat/product-research.
 - AC #3/#4 are enforced by the skill's contract (evidence-contract, license-taxonomy, business-model, assets/*-record.md). No real run yet; the first one is the valysec follow-up (Tailscale).
 - AC #6: plugins/product/evals/research-no-profile. Gated tools (Write, Edit, WebSearch, WebFetch) are withheld from both arms unless --allow-tools grants them, so the no-write / no-research graders passed vacuously at first (baseline 0.80). make eval now grants them: with 1.00 / without 0.20, delta +0.80 over 3+3 runs on 2026-09-28.
 - plugin.json needed no change; Makefile (eval grant) was touched in addition.
+
+Merged in #22 (16a3102). First real run (valysec, Tailscale) is tracked outside this repo; findings from it get filed here as new tasks.
+
 <!-- SECTION:NOTES:END -->
