@@ -39,9 +39,12 @@ SKILL_GLOBS = ("plugins/*/skills/*", "skills/*")
 # That error fails even without --strict. The nesting is what keeps ~50k tokens
 # of rule text out of the counted budget, so the warning and the error cannot
 # both be satisfied without deleting rules. Nesting is the cheaper of the two.
+# code-review-lovable shares the layout so validate-rules.py and the tier-3 read
+# path work the same across all three review skills.
 ALLOWED: set[tuple[str, str]] = {
     ("code-review-rust", "deep nesting detected: references/rules/"),
     ("code-review-web", "deep nesting detected: references/rules/"),
+    ("code-review-lovable", "deep nesting detected: references/rules/"),
 }
 
 
