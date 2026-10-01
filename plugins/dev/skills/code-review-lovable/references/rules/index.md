@@ -15,6 +15,7 @@ full text in the category file linked from its heading. Never file from the inde
 - **RLS-8** Schema changes are new migrations. Never edit an applied one or change the dashboard only.
 - **RLS-9** Data invariants are enforced by DB constraints, not only by the form's zod schema.
 - **RLS-10** Wrap `auth.uid()` as `(select auth.uid())` in policies and index the compared columns.
+- **RLS-11** Grants match intent: no broad `anon` grants on private tables, and every client-used table is granted.
 
 ## SUPA — Supabase client · [rules/SUPA.md](SUPA.md)
 

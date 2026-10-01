@@ -14,6 +14,7 @@ step. Work the SQL rows against the **final** migration state, not a single file
 | A policy on table T whose expression selects from T; `infinite recursion` in issues/logs | RLS-7, AUTH-1 |
 | Same migration file modified after a later one exists (`git log`); schema objects used in `src/` with no migration | RLS-8, SUPA-10 |
 | Columns with zod `.min`/`.max`/`.email`/enum in a form but no `check`/`not null`/`unique` in SQL | RLS-9, FORM-2 |
+| `grant all` / write grants `to anon`; a table used in `src/` with no `grant … to authenticated` in any migration | RLS-11 |
 | Policy using bare `auth.uid()` (not `(select auth.uid())`); policy column with no index | RLS-10 |
 | `const { data } = await supabase` / `.then(({ data }) =>` with no `error` read; `functions.invoke` result unchecked | SUPA-1, QRY-2 |
 | `.single()` on a lookup that may have no row | SUPA-2 |
