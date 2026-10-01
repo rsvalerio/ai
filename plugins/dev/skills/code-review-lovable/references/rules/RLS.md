@@ -57,7 +57,6 @@ level security`; `using (true)` / `with check (true)`; `to anon`; `grant .* to a
   it works by accident and stops when the policy changes. Move the lookup into a
   `security definer` helper (see AUTH-1) that obeys RLS-4. The helper must be owned by a role that
   bypasses RLS on the looked-up table, such as `postgres`.
-
 - **RLS-11.** Grants match intent. A `grant all … to anon` (or `to anon` on a write privilege) on a
   table holding private data widens the surface RLS has to hold alone, so grant the privileges
   the client uses to the role that uses them. Conversely, a table created after the explicit-grants

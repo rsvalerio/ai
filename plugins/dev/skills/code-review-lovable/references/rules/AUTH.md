@@ -20,11 +20,16 @@ type; `ProtectedRoute` / `AdminRoute`; `if (user.email === '…')`; `.update({ r
 
 ## Session lifecycle (typical severity: High)
 
-- **AUTH-3.** One auth provider owns the session. It registers `onAuthStateChange` **before**
-  calling `getSession()`, so no event is missed between them. It stores both `session` and
-  `user`, and it unsubscribes in its Effect cleanup. Do not `await` other supabase calls inside
-  the callback, because the callback holds the auth lock and an awaited client call can
-  deadlock. Defer with `setTimeout(…, 0)`.
+- **AUTH-3.** One auth provider owns the session. It subscribes to `onAuthStateChange` once,
+  right after the client is created, stores both `session` and `user`, and unsubscribes in its
+  Effect cleanup. The listener receives `INITIAL_SESSION` once the stored session loads, so a
+  separate `getSession()` call is optional, and two sources that disagree are a race. Lovable's
+  generated provider registers the listener first, then calls `getSession()`, and that order is
+  fine. Version matters for what the callback may do. Before supabase-js 2.107, the callback ran
+  under the auth lock, so awaiting another Supabase call inside it could deadlock, and the fix is
+  to defer with `setTimeout(…, 0)`. From 2.107 callbacks may be `async` and call auth methods.
+  On every version, never trigger a refresh from a `TOKEN_REFRESHED` event. Check the installed
+  version in the lockfile before filing the deadlock half of this rule.
   — supabase.com/docs/reference/javascript/auth-onauthstatechange
 - **AUTH-4.** On sign-out (and on user change), clear user-scoped client state: call
   `queryClient.clear()` or remove user-keyed queries, and reset stores and `localStorage` drafts.
@@ -37,8 +42,8 @@ type; `ProtectedRoute` / `AdminRoute`; `if (user.email === '…')`; `.update({ r
 
 - **AUTH-6.** `signUp` / `signInWithOtp` / `signInWithOAuth` / `resetPasswordForEmail` pass an
   explicit `emailRedirectTo` / `redirectTo` built from `window.location.origin`, and that URL is in
-  the project's allowed redirect list. Without it, confirmation links point at the Site URL
-  (often the Lovable preview domain) and break in production.
+  the project's Redirect URLs allow list. Without it, links fall back to the Site URL, which is
+  often the Lovable preview domain, and break in production.
   — supabase.com/docs/guides/auth/redirect-urls
 - **AUTH-7.** A post-login `?redirect=` / `?next=` parameter is validated as a same-origin
   relative path before `navigate()` / `window.location` uses it. Otherwise it is an open

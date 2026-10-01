@@ -34,7 +34,7 @@ full text in the category file linked from its heading. Never file from the inde
 
 - **AUTH-1** Roles live in a non-writable `user_roles` table checked via a `has_role()` definer function, not a profile column.
 - **AUTH-2** Client-side gating is UX. Enforce the same rule in RLS or the Edge Function.
-- **AUTH-3** One provider registers `onAuthStateChange` before `getSession()`, unsubscribes, and never awaits client calls in the callback.
+- **AUTH-3** One provider subscribes to `onAuthStateChange` once and unsubscribes. Before supabase-js 2.107, never await client calls in the callback.
 - **AUTH-4** Clear user-scoped caches and stores on sign-out and on user change.
 - **AUTH-5** Do not persist tokens yourself. The client manages the session.
 - **AUTH-6** Auth emails and OAuth pass an explicit, allow-listed `redirectTo` / `emailRedirectTo`.
@@ -42,7 +42,7 @@ full text in the category file linked from its heading. Never file from the inde
 
 ## EDGE — Edge Functions · [rules/EDGE.md](EDGE.md)
 
-- **EDGE-1** Derive the user from a verified JWT, never the body. Justify every `verify_jwt = false`.
+- **EDGE-1** Derive the user in the handler, never from the body. `verify_jwt` alone is not user auth. Justify every `verify_jwt = false`.
 - **EDGE-2** Prefer the caller-scoped client. Scope every service-role query to the verified user.
 - **EDGE-3** Paid or quota-spending functions require auth and a per-user limit.
 - **EDGE-4** Check the method and schema-validate the body before any side effect.

@@ -19,7 +19,7 @@ step. Work the SQL rows against the **final** migration state, not a single file
 | `const { data } = await supabase` / `.then(({ data }) =>` with no `error` read; `functions.invoke` result unchecked | SUPA-1, QRY-2 |
 | `.single()` on a lookup that may have no row | SUPA-2 |
 | `.select(` on a list with no `.range(`/`.limit(`; `select('*')` | SUPA-3 |
-| `service_role` / `SERVICE_ROLE` / `sb_secret_` anywhere under `src/` or in a `VITE_` var | SUPA-4 |
+| `service_role` / `SERVICE_ROLE` / `sb_secret_` / `SECRET_KEY` anywhere under `src/` or in a `VITE_` var | SUPA-4 |
 | `.or(` / `.filter(` / `.order(` built from a template literal or user value | SUPA-5 |
 | Two or more dependent `.insert`/`.update`/`.delete` in one handler | SUPA-6 |
 | `createClient(` outside `src/integrations/supabase/` | SUPA-7 |
@@ -28,13 +28,13 @@ step. Work the SQL rows against the **final** migration state, not a single file
 | `supabase as any`; `from('…' as any)`; hand-written row interfaces duplicating `types.ts` | SUPA-10 |
 | `role` / `is_admin` column on `profiles`; hardcoded admin email/ID in `src/` | AUTH-1, AUTH-2 |
 | `ProtectedRoute` / `AdminRoute` / `isPro` gating with no matching policy or function check | AUTH-2 |
-| `onAuthStateChange` after `getSession()`, without unsubscribe, or with `await supabase…` in the callback | AUTH-3 |
+| `onAuthStateChange` subscribed more than once or without unsubscribe; `await supabase…` in the callback on supabase-js < 2.107 | AUTH-3 |
 | `signOut(` with no `queryClient.clear`/`removeQueries` nearby | AUTH-4 |
 | `localStorage.setItem` with `token`/`session`/`access_token` | AUTH-5 |
 | `signUp(` / `signInWithOtp(` / `signInWithOAuth(` / `resetPasswordForEmail(` without `emailRedirectTo`/`redirectTo` | AUTH-6 |
 | `searchParams.get('redirect'\|'next'\|'returnTo')` passed to `navigate`/`location` | AUTH-7 |
 | `verify_jwt = false` in `supabase/config.toml`; `user_id` read from `req.json()` | EDGE-1 |
-| `SUPABASE_SERVICE_ROLE_KEY` in a function | EDGE-2 |
+| `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_SECRET_KEYS` in a function | EDGE-2 |
 | Function calling OpenAI / Lovable AI gateway / Resend / Twilio / another paid API | EDGE-3 |
 | `await req.json()` destructured with no schema parse | EDGE-4 |
 | Function named or handling `webhook` / `stripe` / `svix` | EDGE-5 |
