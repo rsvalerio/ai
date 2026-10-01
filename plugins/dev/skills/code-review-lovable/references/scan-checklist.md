@@ -44,11 +44,11 @@ step. Work the SQL rows against the **final** migration state, not a single file
 | `useMutation(` with no `onSuccess`/`onSettled` invalidation; `onMutate` without `onError` rollback | QRY-3 |
 | `useEffect` + `useState` + `supabase.from` in one component; `useState(query.data)` | QRY-4 |
 | `useQuery` with an argument that may be `undefined` and no `enabled`; `new QueryClient()` inside a component | QRY-5 |
-| `isLoading` branch with no `isError`/`error` branch | QRY-6 |
+| `isLoading`/`isPending` branch with no `isError`/`error` branch; v5 code branching on `isLoading` | QRY-6 |
 | `useForm(` without `resolver`; per-field `useState` forms | FORM-1 |
-| `type="number"` input with `z.number()` and no coercion; `""` written to nullable columns | FORM-3 |
+| `type="number"` input with `z.number()` and no coercion; `z.coerce.number()` with no `""` pre-processing; `""` written to nullable columns | FORM-3 |
 | Submit button without `disabled={isSubmitting\|isPending}`; mutation error not shown | FORM-4 |
-| `register(` inputs outside `FormField`; error `<p>` without `aria-describedby` | FORM-5 |
+| `register(` inputs outside `FormField` / `Field`; error `<p>` without `aria-describedby` | FORM-5 |
 | `bg-(blue\|gray\|slate\|…)-\d+`, `text-white`, `bg-[#…]` in feature components | UI-1 |
 | `` `bg-${`` / `` `text-${`` / `` `border-${`` template-literal classes | UI-2 |
 | `className` prop merged by `+` or template literal instead of `cn(` | UI-3 |
@@ -56,13 +56,13 @@ step. Work the SQL rows against the **final** migration state, not a single file
 | `DialogContent` / `SheetContent` / `AlertDialogContent` / `DrawerContent` without a `Title` | UI-5 |
 | `<Link>` wrapping `<Button>`; `asChild` with more than one child | UI-6 |
 | Both `<Toaster />` and `<Sonner />` mounted; both `useToast` and `toast` from `sonner` imported | UI-7 |
-| `strict`/`strictNullChecks`/`noImplicitAny` false; `no-unused-vars` off | LOV-1 |
+| `strict`/`strictNullChecks`/`noImplicitAny` false in `tsconfig.app.json` or root `tsconfig.json`; `no-unused-vars` off; no `typecheck` script | LOV-1 |
 | `componentTagger()` not gated on development mode; `lovable-tagger` in `dependencies` | LOV-2 |
 | More than one lockfile at the root | LOV-3 |
-| Hand edits in `git log -p` of `src/integrations/supabase/{client,types}.ts` | LOV-4 |
+| Hand edits in `git log -p` of `src/integrations/supabase/{client,types}.ts` or `previewAuthStorage.ts` | LOV-4 |
 | Pages/components with no importer; `*New.tsx`/`*2.tsx`/`*Old.tsx`; unused `src/components/ui/*` | LOV-5 |
 | Submit handlers that only `console.log`/`toast`; `setTimeout` simulating saves; `mock*`/`sample*`/`dummy*` data rendered; `isAuthenticated = true` | LOV-6 |
-| `index.html` title/description/`og:image` still scaffold defaults | LOV-7 |
+| `index.html` title/description/`og:image` still scaffold defaults; `cdn.gpteng.co/gptengineer.js` script | LOV-7 |
 
 ## Sweep — categories with no signal
 

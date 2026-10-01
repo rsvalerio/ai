@@ -23,9 +23,8 @@ type; `ProtectedRoute` / `AdminRoute`; `if (user.email === '…')`; `.update({ r
 - **AUTH-3.** One auth provider owns the session. It subscribes to `onAuthStateChange` once,
   right after the client is created, stores both `session` and `user`, and unsubscribes in its
   Effect cleanup. The listener receives `INITIAL_SESSION` once the stored session loads, so a
-  separate `getSession()` call is optional, and two sources that disagree are a race. Lovable's
-  generated provider registers the listener first, then calls `getSession()`, and that order is
-  fine. Version matters for what the callback may do. Before supabase-js 2.107, the callback ran
+  separate `getSession()` call is optional, and two sources that disagree are a race. A provider
+  that registers the listener first and then calls `getSession()` is fine. Version matters for what the callback may do. Before supabase-js 2.107, the callback ran
   under the auth lock, so awaiting another Supabase call inside it could deadlock, and the fix is
   to defer with `setTimeout(…, 0)`. From 2.107 callbacks may be `async` and call auth methods.
   On every version, never trigger a refresh from a `TOKEN_REFRESHED` event. Check the installed

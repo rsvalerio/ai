@@ -21,7 +21,8 @@ on a component that accepts `className`.
 - **UI-2.** Never build class names dynamically (`` `bg-${color}-500` ``). Tailwind's compiler only
   sees complete class strings in source, so the class is never generated. Map values to full
   class strings with a lookup object or a `cva` variant.
-  — tailwindcss.com/docs/detecting-classes-in-source-files#dynamic-class-names
+  — v3.tailwindcss.com/docs/content-configuration#dynamic-class-names (the scaffold's v3),
+  tailwindcss.com/docs/detecting-classes-in-source-files#dynamic-class-names (v4)
 - **UI-3.** Components that accept `className` merge it with `cn()` (clsx + tailwind-merge) so
   that caller overrides win. Plain concatenation leaves conflicting utilities whose winner depends
   on stylesheet order.
@@ -32,8 +33,12 @@ on a component that accepts `className`.
   `cva` variants that stay generic, and keep app logic, data fetching and copy out of it. Do not
   fork copies (`button-2.tsx`, `CustomDialog.tsx` reimplementing Dialog) beside it.
 - **UI-5.** `Dialog`, `Sheet`, `AlertDialog` and `Drawer` content include a `…Title` (visually
-  hidden if the design has none) and a `…Description` or `aria-describedby={undefined}`. Radix
-  logs an accessibility error without them, and screen readers announce an unnamed dialog.
+  hidden if the design has none) so that the dialog has an accessible name. Without one, screen
+  readers announce an unnamed dialog. A `…Description` is optional. On
+  `@radix-ui/react-dialog` 1.1.16 and older, omitting either logs a console warning, and omitting
+  the description needs `aria-describedby={undefined}`. From 1.1.20 there are no warnings and no
+  broken ARIA references. File the missing Title. File the description opt-out only on the
+  older versions.
   — radix-ui.com/primitives/docs/components/dialog#accessibility
 - **UI-6.** Use `asChild` to render a primitive as another element (`<Button asChild><Link …/></Button>`)
   instead of nesting interactive elements (`<Link><Button/></Link>`, a `<button>` inside a

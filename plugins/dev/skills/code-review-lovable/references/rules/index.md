@@ -57,15 +57,15 @@ full text in the category file linked from its heading. Never file from the inde
 - **QRY-3** Mutations invalidate or update affected queries. Optimistic updates roll back on error.
 - **QRY-4** Keep server state in the cache. No `useEffect` fetches and no copying `data` into state.
 - **QRY-5** Use `enabled` for dependent queries. Create the `QueryClient` once.
-- **QRY-6** Render the pending, error and empty states, not just loading.
+- **QRY-6** Render the pending, error and empty states. Branch on `isPending`, not `isLoading`.
 
 ## FORM — Forms · [rules/FORM.md](FORM.md)
 
 - **FORM-1** Validate with zod through `zodResolver`. The form type is `z.infer` of the schema.
 - **FORM-2** Enforce protective schema rules server-side too (constraint or Edge Function).
-- **FORM-3** Coerce numbers and dates. Map empty optional fields to `null`.
+- **FORM-3** Coerce numbers and dates, mapping `""` away first so it does not become `0`. Map empty optional fields to `null`.
 - **FORM-4** Disable submit while pending, surface server errors, and act only on success.
-- **FORM-5** Use the `FormField` composition so labels and errors are ARIA-linked.
+- **FORM-5** Use the `Form*` or `Field` composition so labels and errors are ARIA-linked.
 
 ## UI — Design system · [rules/UI.md](UI.md)
 
@@ -73,13 +73,13 @@ full text in the category file linked from its heading. Never file from the inde
 - **UI-2** Never build Tailwind class names dynamically. Map to full class strings.
 - **UI-3** Merge `className` with `cn()` so overrides win.
 - **UI-4** Keep `src/components/ui/` generic and vendored. Use variants, not forks.
-- **UI-5** Dialog-like content has a Title and a Description, or opts out explicitly.
+- **UI-5** Dialog-like content has a Title. On Radix 1.1.16 and older, it also has a Description or opts out explicitly.
 - **UI-6** Use `asChild` instead of nesting interactive elements. Give the slot one child.
 - **UI-7** Use one toast system, not both shadcn Toaster and sonner.
 
 ## LOV — Scaffold hygiene · [rules/LOV.md](LOV.md)
 
-- **LOV-1** Tighten the scaffold's loose tsconfig/ESLint baseline in stages, starting with `strictNullChecks`.
+- **LOV-1** Add a real typecheck gate, then tighten the scaffold's loose tsconfig/ESLint baseline in stages, starting with `strictNullChecks`.
 - **LOV-2** Run `componentTagger()` only in development. `lovable-tagger` is a devDependency.
 - **LOV-3** Use one package manager and one committed lockfile.
 - **LOV-4** Do not hand-edit Lovable-generated Supabase client/types files.

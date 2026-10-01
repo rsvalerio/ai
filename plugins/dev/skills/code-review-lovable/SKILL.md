@@ -45,15 +45,24 @@ Their rule prefixes do not overlap and their identity keys cannot collide.
 ## Relationship to code-review-web and the tooling baseline
 
 `code-review-web` assumes `tsc --strict` and a configured ESLint are a real baseline and skips
-what they catch. The Lovable scaffold ships a deliberately loose one (`strict: false`,
-`strictNullChecks: false`, `noImplicitAny: false`, `no-unused-vars` off). Check the actual config
-before you trust it: a weak baseline is itself finding LOV-1, and while it stands, do not skip a
-rule on the grounds that "the tooling catches it".
+what they catch. The Lovable scaffold ships a deliberately loose one: `strict: false` and
+`noImplicitAny: false` in `tsconfig.app.json`, `strictNullChecks: false` in the root
+`tsconfig.json`, and `no-unused-vars` off. The root `tsconfig.json` has `"files": []`, so a bare
+`tsc --noEmit` checks nothing. Check the actual config before you trust it: a weak baseline is
+itself finding LOV-1, and while it stands, do not skip a rule on the grounds that "the tooling
+catches it".
+
+The scaffold is also **React 18** (with Vite 5 and Tailwind v3). `code-review-web`'s React 19
+rules (REACT-13 `forwardRef`, REACT-14 `<Context value>`, REACT-18 to REACT-20 Actions, `use()`
+and metadata) do not apply until the app upgrades. Check `react` in `package.json` before filing
+them.
 
 Do not re-file here what `code-review-web` owns. A raw `dangerouslySetInnerHTML` is SEC-1
 there, an `any` is TS-1 there, and a missing `alt` is A11Y-2 there. File here only when the
 stack is what makes the code wrong. An unchecked `{ data }` from supabase-js is SUPA-1, not
-ASYNC-4.
+ASYNC-4. A third-party secret (an OpenAI, Stripe or Resend key) in `src/` or a `VITE_*` variable
+is `code-review-web` SEC-10 / SEC-11. In this stack the fix it names is a Supabase secret read by
+an Edge Function (EDGE-7).
 
 ## Loading rules (token discipline)
 
@@ -84,10 +93,13 @@ Identical to `code-review-web`'s contract. In short:
 1. **Survey** — Requires `ops` 0.74.0 or newer (`ops --version`). Confirm the stack fingerprints
    above and note which categories are in play. List migrations in order, Edge Functions,
    `config.toml` function settings, routes (`src/App.tsx`), and pages. Read `tsconfig*.json` and
-   the ESLint config so you know the real baseline (LOV-1). **Exclude** `node_modules/`, `dist/`,
+   the ESLint config so you know the real baseline (LOV-1). If the repo carries output from
+   Lovable's security scan or the Supabase database advisors, read it as input. Those tools check
+   that RLS **exists**, not that the policies are correct, so an open finding there is a
+   candidate and a clean report proves nothing about RLS-2 / RLS-3. **Exclude** `node_modules/`, `dist/`,
    `supabase/.temp/` and `src/components/ui/` (vendored shadcn, scanned only for UI-4). Also
    exclude `src/integrations/supabase/types.ts`, which is generated and scanned only for SUPA-10
-   and LOV-3 drift.
+   and LOV-4 drift.
 2. **Scan** — Walk [scan-checklist.md](references/scan-checklist.md). For the SQL categories,
    reconstruct the **final** schema state from the ordered migrations before judging a table: a
    later migration may enable RLS or drop a policy. A finding against an intermediate state is
@@ -103,7 +115,8 @@ Identical to `code-review-web`'s contract. In short:
 
 - **The anon / publishable key is public by design.** `VITE_SUPABASE_URL` and
   `VITE_SUPABASE_PUBLISHABLE_KEY` (or `..._ANON_KEY`) in `client.ts` or a committed `.env` are
-  not a secret leak. Do not file SEC-10 or SUPA-4 for them. Only a **service-role** key or a
+  not a secret leak. Neither is the anon JWT that the generated `client.ts` often hardcodes as a
+  literal. Do not file SEC-10 or SUPA-4 for them. Only a **service-role** key or a
   third-party secret is a leak.
 - **Judge RLS on the final migration state**, as in step 2.
 - **`using (true)` is not always wrong.** On a `SELECT` policy for data that is public by design

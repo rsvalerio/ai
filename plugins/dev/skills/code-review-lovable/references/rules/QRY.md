@@ -13,11 +13,11 @@ Query Functions, Invalidation, Dependent Queries, Optimistic Updates) and
 - **QRY-1.** A query key includes every value its `queryFn` reads: the user ID, filters, page
   and search term. `['tasks']` for "tasks of the current user with filter X" serves one user's
   or filter's results to another from cache. *(Enforced by
-  `@tanstack/query/exhaustive-deps` when configured. If it is not, the finding also recommends
-  enabling it.)* — tanstack.com/query/v5/docs/framework/react/guides/query-keys
+  `@tanstack/query/exhaustive-deps` when configured. The scaffold does not install
+  `@tanstack/eslint-plugin-query`, so the finding usually also recommends adding it.)* — tanstack.com/query/v5/docs/framework/react/guides/query-keys
 - **QRY-2.** A `queryFn` / `mutationFn` **throws** on failure: `if (error) throw error`. Because
   supabase-js does not throw (SUPA-1), a function that returns `data` regardless puts failures
-  into the success state with `undefined` data. Error boundaries, `isError` and retries then
+  into the success state with `null` data. Error boundaries, `isError` and retries then
   never fire. — tanstack.com/query/v5/docs/framework/react/guides/query-functions
 - **QRY-3.** Every mutation invalidates or updates the queries it changes, in `onSuccess` or
   `onSettled` via `queryClient.invalidateQueries({ queryKey })` or `setQueryData`. Without it,
@@ -34,6 +34,8 @@ Query Functions, Invalidation, Dependent Queries, Optimistic Updates) and
 - **QRY-5.** Dependent queries use `enabled: !!userId` rather than running with an `undefined`
   argument and filtering the error away. The `QueryClient` is created once, at module scope or in
   `useState(() => new QueryClient())`, never in a component body.
-- **QRY-6.** Components render all three states: pending, **error**, and empty. A screen that
+- **QRY-6.** Components render all three states: pending, **error**, and empty. In v5, branch on
+  `isPending` / `status === 'pending'`, not `isLoading`. v5 renamed the old `isLoading` to
+  `isPending`, and the new `isLoading` (`isPending && isFetching`) is false for a disabled query. A screen that
   branches only on `isLoading` shows a blank or "no items" view on failure, which hides the bug
   that SUPA-1 / QRY-2 just surfaced.
