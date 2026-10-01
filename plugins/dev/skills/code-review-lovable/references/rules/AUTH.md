@@ -10,7 +10,8 @@ type; `ProtectedRoute` / `AdminRoute`; `if (user.email === '…')`; `.update({ r
 
 - **AUTH-1.** Roles live in a dedicated table (`user_roles (user_id, role app_role)`) that users
   cannot write. They are checked through a `security definer` function (`has_role(auth.uid(),
-  'admin')`) that obeys RLS-4 and is used in RLS policies. A `role` / `is_admin` column on a
+  'admin')`) that is used in RLS policies and follows RLS-4's policy-helper case: unexposed
+  schema, still executable by `authenticated`. A `role` / `is_admin` column on a
   `profiles` row the user can `UPDATE` is a self-service privilege escalation: RLS is row-level
   and cannot stop a user changing one column of their own row.
 - **AUTH-2.** Gating a route, a button or a feature on the client (`<AdminRoute>`,

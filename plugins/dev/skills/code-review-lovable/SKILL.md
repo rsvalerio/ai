@@ -97,7 +97,8 @@ Identical to `code-review-web`'s contract. In short:
    Lovable's security scan or the Supabase database advisors, read it as input. Those tools check
    that RLS **exists**, not that the policies are correct, so an open finding there is a
    candidate and a clean report proves nothing about RLS-2 / RLS-3. **Exclude** `node_modules/`, `dist/`,
-   `supabase/.temp/` and `src/components/ui/` (vendored shadcn, scanned only for UI-4). Also
+   `supabase/.temp/` and `src/components/ui/` (vendored shadcn, scanned only for UI-4 and for
+   LOV-5's unused primitives). Also
    exclude `src/integrations/supabase/types.ts`, which is generated and scanned only for SUPA-10
    and LOV-4 drift.
 2. **Scan** — Walk [scan-checklist.md](references/scan-checklist.md). For the SQL categories,
@@ -105,9 +106,14 @@ Identical to `code-review-web`'s contract. In short:
    later migration may enable RLS or drop a policy. A finding against an intermediate state is
    a false positive.
 3. **Deduplicate** — Identity key `<RULE-ID>:<path>:<enclosing item>`. The enclosing item is the
-   component, hook or function, the Edge Function name, or for SQL the **table, policy or function
-   name**, not the migration file. One table's missing RLS is one finding however many
-   migrations touch it. List every `file:line` in the description.
+   component, hook or function, or the Edge Function name. For SQL, the key must come out the same
+   on every run, so fix both parts. `<path>` is the **earliest migration that creates the object
+   the rule is about**: the table for RLS-1/2/3/9/10/11, the function for RLS-4, the view for
+   RLS-5, the bucket for RLS-6, and the policy for RLS-7. `<enclosing item>` is that object's
+   schema-qualified name (`public.notes`, `public.has_role`). Use it even when the defect sits
+   in a later migration, and never key the migration that happened to show the defect. One
+   table's missing RLS is one finding however many migrations touch it. List every `file:line`
+   in the description.
 4. **Create tasks** — see below.
 5. **Summarize** — `ops backlog task list --status 'Triage' --plain`.
 
@@ -154,7 +160,7 @@ EOF
 
 **`--modified-file` is required**, one per touched path, repo-root-relative, no `:<line>`. An
 RLS fix is a **new** migration, not an edit to an applied one (RLS-8). For an RLS finding, pass
-the migration that introduced the table so triage can order the wave, and say in the
+the same migration as the identity key's `<path>` so triage can order the wave, and say in the
 acceptance criteria that the fix lands as a new migration file.
 
 `<category>` is the lowercased prefix (`rls`, `supa`, `auth`, `edge`, `qry`, `form`, `ui`, `lov`).

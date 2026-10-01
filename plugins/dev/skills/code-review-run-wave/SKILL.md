@@ -20,7 +20,7 @@ for the first time; this file assumes it.
 ## Hard requirements
 
 Member fixes **must** follow **code-review-rust** in **implementation guardrail** mode
-(**code-review-web** for frontend) — without it a wave clears old findings and creates new
+(**code-review-web** / **code-review-lovable** for frontend) — without it a wave clears old findings and creates new
 ones, repeating triage and review.
 
 **Read only the rule files the wave needs.** Members are titled `<RULE-ID>: <Title>`, so
@@ -165,9 +165,8 @@ For each member task ID, in the order `wave members` returned them:
    ```
 
 2. Before and while applying the fix, apply the guardrail skill for the member's own
-   domain — **code-review-rust** for Rust, **code-review-web** for frontend. The rule ID
-   names both: `ERR-5` → that skill's `references/rules/ERR.md`, `REACT-3` → only
-   `code-review-web` has `rules/REACT.md`. Read once per category, nothing else (see Hard
+   domain: the skill holding `references/rules/<PREFIX>.md` — `ERR-5` → code-review-rust,
+   `REACT-3` → code-review-web, `RLS-2` → code-review-lovable. Read once per category, nothing else (see Hard
    requirements). Apply the fix **inside the wave worktree**. Respect repo conventions
    (`CLAUDE.md`) and the task's acceptance criteria. Keep the change minimal — no
    drive-by refactors.

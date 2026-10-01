@@ -37,11 +37,22 @@ level security`; `using (true)` / `with check (true)`; `to anon`; `grant .* to a
   fine. An explicit `with check (true)` is the bug. — postgresql.org/docs/current/sql-createpolicy.html
 - **RLS-4.** `security definer` functions run as their owner and bypass RLS. Each one must
   (a) `set search_path = ''` (or a fixed schema) so a caller cannot shadow `public` objects,
-  (b) perform its own authorization check against `auth.uid()`, and (c) live in a non-exposed
-  schema or have `revoke execute on function … from public, anon, authenticated` when it is not
-  meant to be an RPC. Postgres grants `EXECUTE` to `PUBLIC` on every new function, so a revoke from
-  `anon` alone changes nothing. Functions in `public` are callable via `supabase.rpc()` by anyone
-  with the publishable key. Advisor lint: `function_search_path_mutable`.
+  (b) perform its own authorization check against `auth.uid()`, and (c) be reachable only by the
+  callers it is meant for. Postgres grants `EXECUTE` to `PUBLIC` on every new function, so a revoke
+  from `anon` alone changes nothing, and every function in `public` is callable via
+  `supabase.rpc()` by anyone with the publishable key. Pick the fix by what the function is for:
+  - **Called only by triggers or other SQL:** `revoke execute on function … from public, anon,
+    authenticated`.
+  - **Called inside RLS policies** (a `has_role()` helper, see AUTH-1 / RLS-7): the policy runs as
+    the querying role, so that role needs `EXECUTE`. Revoking it from `authenticated` makes every
+    policy that calls the helper fail with `permission denied` for signed-in users. Move the helper
+    to a schema the Data API does not expose (for example `private`), `revoke … from public`, and
+    `grant execute … to authenticated` (and to `anon` only if an `anon` policy calls it). It then
+    keeps working in policies without being an RPC.
+  - **A deliberate RPC:** keep it in `public`, grant it only to the roles that should call it, and
+    rely on check (b).
+
+  Advisor lint: `function_search_path_mutable`.
   — supabase.com/docs/guides/database/functions#security-definer-vs-invoker
 - **RLS-5.** Views in `public` run with the **view owner's** privileges and bypass the base
   tables' RLS. Create them `with (security_invoker = true)` (Postgres 15+), or keep them out of
@@ -55,7 +66,7 @@ level security`; `using (true)` / `with check (true)`; `to anon`; `grant .* to a
 - **RLS-7.** No policy may query the table it protects (a `profiles` policy that selects from
   `profiles` to check a role). It fails with `infinite recursion detected in policy` (42P17), or
   it works by accident and stops when the policy changes. Move the lookup into a
-  `security definer` helper (see AUTH-1) that obeys RLS-4. The helper must be owned by a role that
+  `security definer` helper (see AUTH-1) that follows RLS-4's policy-helper case. The helper must be owned by a role that
   bypasses RLS on the looked-up table, such as `postgres`.
 - **RLS-11.** Grants match intent. A `grant all … to anon` (or `to anon` on a write privilege) on a
   table holding private data widens the surface RLS has to hold alone, so grant the privileges

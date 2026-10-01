@@ -34,11 +34,13 @@ on a component that accepts `className`.
   fork copies (`button-2.tsx`, `CustomDialog.tsx` reimplementing Dialog) beside it.
 - **UI-5.** `Dialog`, `Sheet`, `AlertDialog` and `Drawer` content include a `…Title` (visually
   hidden if the design has none) so that the dialog has an accessible name. Without one, screen
-  readers announce an unnamed dialog. A `…Description` is optional. On
-  `@radix-ui/react-dialog` 1.1.16 and older, omitting either logs a console warning, and omitting
-  the description needs `aria-describedby={undefined}`. From 1.1.20 there are no warnings and no
-  broken ARIA references. File the missing Title. File the description opt-out only on the
-  older versions.
+  readers announce an unnamed dialog. A `…Description` is optional, but how to omit it depends
+  on the `@radix-ui/react-dialog` version. Before 1.1.20, the content always points
+  `aria-describedby` at a description ID, so omitting the description needs
+  `aria-describedby={undefined}` or the reference is broken. Up to 1.1.16 Radix also logs a
+  console warning for it, while 1.1.17 to 1.1.19 are silent but still broken. From 1.1.20 there
+  are no warnings and no broken references. File the missing Title on any version. File the
+  missing description opt-out only below 1.1.20.
   — radix-ui.com/primitives/docs/components/dialog#accessibility
 - **UI-6.** Use `asChild` to render a primitive as another element (`<Button asChild><Link …/></Button>`)
   instead of nesting interactive elements (`<Link><Button/></Link>`, a `<button>` inside a

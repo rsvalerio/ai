@@ -57,7 +57,7 @@ full text in the category file linked from its heading. Never file from the inde
 - **QRY-3** Mutations invalidate or update affected queries. Optimistic updates roll back on error.
 - **QRY-4** Keep server state in the cache. No `useEffect` fetches and no copying `data` into state.
 - **QRY-5** Use `enabled` for dependent queries. Create the `QueryClient` once.
-- **QRY-6** Render the pending, error and empty states. Branch on `isPending`, not `isLoading`.
+- **QRY-6** Render loading, error, empty and not-yet-enabled states. `isPending` never clears on a disabled query.
 
 ## FORM — Forms · [rules/FORM.md](FORM.md)
 
@@ -73,7 +73,7 @@ full text in the category file linked from its heading. Never file from the inde
 - **UI-2** Never build Tailwind class names dynamically. Map to full class strings.
 - **UI-3** Merge `className` with `cn()` so overrides win.
 - **UI-4** Keep `src/components/ui/` generic and vendored. Use variants, not forks.
-- **UI-5** Dialog-like content has a Title. On Radix 1.1.16 and older, it also has a Description or opts out explicitly.
+- **UI-5** Dialog-like content has a Title. Below Radix 1.1.20, it also has a Description or opts out explicitly.
 - **UI-6** Use `asChild` instead of nesting interactive elements. Give the slot one child.
 - **UI-7** Use one toast system, not both shadcn Toaster and sonner.
 

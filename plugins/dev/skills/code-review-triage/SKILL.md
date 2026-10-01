@@ -64,7 +64,7 @@ easy merge.
 For each group, build the union of the files its members touch:
 
 1. Prefer the machine-readable field. Each finding filed by `code-review-rust` /
-   `code-review-web` carries one `--modified-file` entry per file; read them from
+   `code-review-web` / `code-review-lovable` carries one `--modified-file` entry per file; read them from
    `ops backlog task view <taskid> --json` (`.task.modifiedFiles`).
 2. Fall back to parsing the `**File**: \`<path>:<line>\`` line in the task description for
    older tasks filed before that field existed. Strip the `:<line>` suffix.
@@ -151,8 +151,8 @@ at once, so it must not run alongside anything else that writes task state:
 - Do not run triage while any wave is in progress — `code-review-run-wave` flips member
   task status as it works, and the two would race.
 
-Run triage to completion first, then start waves. `code-review-rust` / `code-review-web`
-reviews are safe to run concurrently with each other (each finding is its own new task
+Run triage to completion first, then start waves. `code-review-rust` / `code-review-web` /
+`code-review-lovable` reviews are safe to run concurrently with each other (each finding is its own new task
 file), but finish them before triaging so the wave captures everything.
 
 ## References

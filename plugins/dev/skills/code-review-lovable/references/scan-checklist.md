@@ -8,7 +8,7 @@ step. Work the SQL rows against the **final** migration state, not a single file
 |--------|----------------|
 | `create table` in `public` with no later `enable row level security` for it | RLS-1 |
 | `using (true)` / `with check (true)`; policy `to public` / `to anon` on a write; write policy with no `auth.uid()` | RLS-2, RLS-3 |
-| `security definer` without `set search_path`; no `revoke execute … from anon` on a non-RPC helper | RLS-4 |
+| `security definer` without `set search_path`; a `public` function with no `revoke execute … from public` (a revoke from `anon` alone does not count); a policy helper revoked from the role its policies run as | RLS-4 |
 | `create view` in `public` without `security_invoker` | RLS-5 |
 | `storage.buckets` row with `public` true for user content; `storage.objects` policy not keyed on `foldername` | RLS-6, SUPA-9 |
 | A policy on table T whose expression selects from T; `infinite recursion` in issues/logs | RLS-7, AUTH-1 |
@@ -44,7 +44,7 @@ step. Work the SQL rows against the **final** migration state, not a single file
 | `useMutation(` with no `onSuccess`/`onSettled` invalidation; `onMutate` without `onError` rollback | QRY-3 |
 | `useEffect` + `useState` + `supabase.from` in one component; `useState(query.data)` | QRY-4 |
 | `useQuery` with an argument that may be `undefined` and no `enabled`; `new QueryClient()` inside a component | QRY-5 |
-| `isLoading`/`isPending` branch with no `isError`/`error` branch; v5 code branching on `isLoading` | QRY-6 |
+| `isLoading`/`isPending` branch with no `isError`/`error` branch; spinner on `isPending` for a query with `enabled` | QRY-6 |
 | `useForm(` without `resolver`; per-field `useState` forms | FORM-1 |
 | `type="number"` input with `z.number()` and no coercion; `z.coerce.number()` with no `""` pre-processing; `""` written to nullable columns | FORM-3 |
 | Submit button without `disabled={isSubmitting\|isPending}`; mutation error not shown | FORM-4 |

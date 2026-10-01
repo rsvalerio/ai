@@ -34,8 +34,12 @@ Query Functions, Invalidation, Dependent Queries, Optimistic Updates) and
 - **QRY-5.** Dependent queries use `enabled: !!userId` rather than running with an `undefined`
   argument and filtering the error away. The `QueryClient` is created once, at module scope or in
   `useState(() => new QueryClient())`, never in a component body.
-- **QRY-6.** Components render all three states: pending, **error**, and empty. In v5, branch on
-  `isPending` / `status === 'pending'`, not `isLoading`. v5 renamed the old `isLoading` to
-  `isPending`, and the new `isLoading` (`isPending && isFetching`) is false for a disabled query. A screen that
-  branches only on `isLoading` shows a blank or "no items" view on failure, which hides the bug
-  that SUPA-1 / QRY-2 just surfaced.
+- **QRY-6.** Components render every state: loading, **error**, empty, and, for a query gated by
+  `enabled` (QRY-5), not-yet-enabled. In v5 the old `isLoading` was renamed `isPending`, which
+  means "no data yet", and a disabled query stays `isPending` indefinitely. The new `isLoading`
+  (`isPending && isFetching`) means "first fetch in flight". So branch on `isPending` for an
+  always-enabled query. For a gated query, show the spinner on `isLoading` and handle the disabled
+  case (`isPending && fetchStatus === 'idle'`, or the gating condition itself) separately.
+  Spinning on `isPending` there never ends. A screen that branches only on the loading flag shows
+  a blank or "no items" view on failure, which hides the bug that SUPA-1 / QRY-2 just surfaced.
+  — tanstack.com/query/v5/docs/framework/react/guides/disabling-queries
