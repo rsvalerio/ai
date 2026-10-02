@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SKILLS = ("code-review-rust", "code-review-web")
+SKILLS = ("code-review-rust", "code-review-web", "code-review-lovable")
 
 RULE_ID = re.compile(r"\*\*([A-Z][A-Z0-9]*)-(\d+)\.?\*\*")
 CHECKLIST_ID = re.compile(r"\b([A-Z][A-Z0-9]*)-(\d+)(?:--(\d+))?\b")

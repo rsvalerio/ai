@@ -25,6 +25,7 @@ This repo is a monorepo of AI tooling, published as a Claude Code plugin marketp
 │   │   └── skills/
 │   │       ├── code-review-rust/
 │   │       ├── code-review-web/
+│   │       ├── code-review-lovable/
 │   │       ├── code-review-triage/
 │   │       ├── code-review-run-wave/
 │   │       ├── code-review-run-waves/
@@ -45,6 +46,7 @@ Paths inside a skill that name another skill (`skills/code-review-run-wave/refer
 Skill purposes are listed in the [README overview](README.md#overview). Relationships that matter when editing the `dev` skills:
 
 - **code-review-rust** / **code-review-web** — formal review, implementation-guardrail and ad-hoc review engines. Only a formal review files backlog tasks; the other two answer in chat, and the Execution Contract is scoped to formal review so a pasted snippet never lands in a mode that forbids a chat answer. Rules live in three tiers: `references/scan-checklist.md` (signal → rule IDs), `references/rules/index.md` (one line per rule), and `references/rules/<CATEGORY>.md` (full text). A **scan** reads tier 1 then tier 3 — tier 2 is not a scan step, because tier 1 already emits rule IDs and tier 3 is what decides a finding. Tier 2 is for resolving an ID you hold without a signal (a backlog task, a `rust-meta` lookup); guardrail mode reads tier 3 alone. Keeping tier 2 out of the scan path is worth ~10,700 tokens a review, and the same again per wave runner. `references/rules.md` holds the category table and severity scale. Adding or changing a rule means updating its category file **and** `rules/index.md`; if the rule's observable signal changes, update `scan-checklist.md` too — and a brand-new category needs either a signal row there or a `## Sweep` entry, or it is unreachable. `rules/index.md` is maintained by hand — its one-liners carry deliberate wording and are not regenerated from the category files.
+- **code-review-lovable** — stack overlay on `code-review-web` for Lovable-style apps (Vite + React + shadcn/ui + Tailwind on Supabase, TanStack Query, react-hook-form + zod). Same three-tier rule layout, same three modes (formal, guardrail, ad-hoc) and filing contract, its own prefixes (`RLS`, `SUPA`, `AUTH`, `EDGE`, `QRY`, `FORM`, `UI`, `LOV`) that must never overlap `code-review-web`'s. A rule belongs here only when the stack is what makes the code wrong; generic React/TS rules go to `code-review-web`, and a formal review of such an app runs both. SQL rules are judged on the final state of the replayed migrations.
 - **code-review-triage** — groups `Triage` backlog findings into `code-review-plan-waveN` parents and stamps file scope via `--modified-file` for merge ordering. A wave is a task labelled `code-review-wave` whose members carry `parent_task_id`; the runners enumerate them with `ops backlog wave list` / `wave members`.
 - **code-review-run-wave** — claims one open wave (`ops backlog wave claim`), applies fixes in an isolated git worktree, runs QA, merges under `ops lock code-review-merge` (one command covering rebase → integration verify → fast-forward, with conflicts fixed outside the lock), commits bookkeeping with `ops backlog commit`, parks with `ops backlog wave park`. Protocol: `skills/code-review-run-wave/references/worktree-protocol.md`.
 - **code-review-run-waves** — fans out across open waves; delegates per-wave work to `code-review-run-wave`.
@@ -70,18 +72,18 @@ each skill relies on:
 
 | ops feature | Used by |
 |-------------|---------|
-| `ops backlog task create --unless-exists` (idempotent filing) | code-review-rust, code-review-web, rust-make-clippy-pedantic, rust-make-build-fast |
+| `ops backlog task create --unless-exists` (idempotent filing) | code-review-rust, code-review-web, code-review-lovable, rust-make-clippy-pedantic, rust-make-build-fast |
 | `ops backlog wave create` / `wave overlap` | code-review-triage, code-review-run-waves |
 | `ops backlog wave claim` / `wave park`, `ops backlog commit`, `ops lock` | code-review-run-wave, code-review-run-waves |
 | `ops clippy-findings --schema-version 2` (camelCase report) | rust-make-clippy-pedantic |
 | `ops explain`, `ops about machine` (incl. `cargo.incremental` / `incrementalProfiles`), `ops about dependencies --duplicates [--target]` (host-filtered by default) | rust-make-build-fast |
 | `ops init --rust` (rendered into scratch, never the repo) and `ops init --rust --check` (drift) — the Rust foundation | rust-make-clippy-pedantic, rust-make-build-fast |
 | `ops about crates` / `ops about loc` | code-review-rust, rust-make-clippy-pedantic, rust-make-build-fast |
-| `ops typecheck` / `ops lint` (vite/node stack) | code-review-web |
+| `ops typecheck` / `ops lint` (vite/node stack) | code-review-web, code-review-lovable |
 
 ### Finding output
 
-`code-review-rust` and `code-review-web` file one task per finding through `ops backlog task create --unless-exists <identity key>` — one markdown file under `.backlog/tasks/` as `task-<N> - <slug>.md` (YAML frontmatter + body); the task id prefixes the title. Task files are written only through the CLI: field types and marker layout are load-bearing for the triage and wave skills. Parallel skill runs are fine — one file per finding. Every finding must record one `--modified-file` per touched path (repo-root-relative, no line numbers) so triage can compute wave scope and merge order.
+`code-review-rust`, `code-review-web` and `code-review-lovable` file one task per finding through `ops backlog task create --unless-exists <identity key>` — one markdown file under `.backlog/tasks/` as `task-<N> - <slug>.md` (YAML frontmatter + body); the task id prefixes the title. Task files are written only through the CLI: field types and marker layout are load-bearing for the triage and wave skills. Parallel skill runs are fine — one file per finding. Every finding must record one `--modified-file` per touched path (repo-root-relative, no line numbers) so triage can compute wave scope and merge order.
 
 ## Skill Conventions
 
@@ -152,15 +154,15 @@ Checks YAML frontmatter, required `name`/`description`, lowercase-hyphen naming,
 
 `make validate` runs this over every skill (`plugins/*/skills/*/` and `skills/*/`) through [`scripts/validate-skills.py`](scripts/validate-skills.py), which propagates per-skill failures — a plain shell loop kept only the last skill's exit code, so the gate silently passed while four skills were failing — and carries one allowlist entry:
 
-**`deep nesting detected: references/rules/` (both review skills) is allowed, and cannot be fixed.** Flattening the corpus to `references/rules-<CAT>.md` makes those 21 files counted top-level references and trips a hard error from the same validator (`total reference files: 74055 tokens`), which fails even without `--strict`. The nesting is what keeps ~50k tokens of rule text out of the counted budget; the warning and the error cannot both be satisfied without deleting rules. An allowlist entry that stops firing fails the build, so it cannot rot into a licence to regress.
+**`deep nesting detected: references/rules/` (all three review skills) is allowed, and cannot be fixed.** Flattening the corpus to `references/rules-<CAT>.md` makes those 21 files counted top-level references and trips a hard error from the same validator (`total reference files: 74055 tokens`), which fails even without `--strict`. The nesting is what keeps ~50k tokens of rule text out of the counted budget; the warning and the error cannot both be satisfied without deleting rules. An allowlist entry that stops firing fails the build, so it cannot rot into a licence to regress.
 
 `references/rules/index.md` lives inside `rules/` for the same reason — as a counted top-level reference it exceeded the validator's 10,000-token-per-file limit. Note what that does and does not achieve: it satisfies the checker, it does not reduce what an agent loads. Splitting the index was the alternative and would have cost the "one place to find any rule" property.
 
 ### Rule-index drift
 
 `make validate-rules` compares every `**<CAT>-<N>**` id in
-`references/rules/*.md` against `references/rules/index.md`, for both
-`code-review-rust` and `code-review-web`. A rule that lands in a category file
+`references/rules/*.md` against `references/rules/index.md`, for
+`code-review-rust`, `code-review-web` and `code-review-lovable`. A rule that lands in a category file
 without an index line is invisible to a scan — the skill silently stops
 enforcing it — and a ghost index line points at a rule that no longer exists.
 Part of `make ci`.
@@ -175,6 +177,7 @@ fire", not "is the markdown well-formed".
 |------|---------|
 | `review-rust` | A pasted-snippet Rust review loads `code-review-rust`, reads a `references/rules/` category file and cites a rule ID in the chat answer |
 | `review-web` | A pasted React/TS review loads `code-review-web`, not the Rust skill, and cites a web rule ID |
+| `review-lovable` | A pasted Supabase migration + supabase-js review loads `code-review-lovable`, reads an `RLS`/`SUPA`/`QRY` rule file and cites a lovable rule ID |
 | `guardrail-rust` | The verification prompt from [docs/implementation-guardrail.md](docs/implementation-guardrail.md) loads the skill and names a rule id |
 | `research-no-profile` (product) | A "research product X" request loads `product-research` and, with no profile in the sandbox, stops and asks for `.product-research.md`: no web search or fetch, no write or edit attempt |
 

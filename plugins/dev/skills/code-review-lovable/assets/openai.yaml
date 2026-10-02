@@ -1,0 +1,7 @@
+# Agent settings
+model: gpt-4o
+temperature: 0.2
+max_tokens: 16384
+display_name: Lovable Stack Code Review
+short_description: Review Lovable-style apps (Vite + React + shadcn/ui + Tailwind on Supabase with TanStack Query and react-hook-form + zod) for RLS gaps, supabase-js error handling, Edge Function auth, cache-key bleed, client-only validation, design-token drift and scaffold hygiene. Overlay on code-review-web.
+default_prompt: "Run a formal code-review-lovable. Confirm the stack fingerprints, replay supabase/migrations to the final schema, then scan migrations, supabase/functions, config.toml and src/ against RLS, SUPA, AUTH, EDGE, QRY, FORM, UI and LOV; leave generic React/TS findings to code-review-web; create one backlog task per finding via CLI; print a summary table."
