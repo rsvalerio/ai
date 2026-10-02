@@ -1,6 +1,6 @@
 ---
 name: code-review-web
-description: Reviews React and TypeScript code in Vite SPAs for hooks and type safety, async error handling, rendering performance, accessibility, XSS and Web Crypto security, and test quality including socket.io real-time patterns. Use while writing or editing frontend code as an implementation guardrail, or run a formal review that files one backlog task per finding.
+description: Reviews React and TypeScript code in Vite SPAs for hooks and type safety, async error handling, rendering performance, accessibility, XSS and Web Crypto security, and test quality including socket.io real-time patterns. Use whenever asked to review React or TypeScript code or say what is wrong with it, including a snippet pasted into the chat; while writing or editing frontend code as an implementation guardrail; or to run a formal review that files one backlog task per finding.
 allowed-tools: Read Grep Glob Bash(git rev-parse:*) Bash(git log:*) Bash(ops --version) Bash(ops backlog:*) Bash(ops typecheck) Bash(ops lint) Bash(ops explain:*)
 license: Apache-2.0
 ---
@@ -11,9 +11,10 @@ Review React + TypeScript + Vite frontend code against all rule categories: Reac
 
 ## Applicability
 
-- Use this skill for formal frontend code reviews (React/TypeScript/Vite SPAs).
+- Use this skill for formal frontend code reviews (React/TypeScript/Vite SPAs). A formal review covers a package, directory or repository, or is any request to file findings; the Execution Contract and Process below apply to it only.
 - Also use this skill as an implementation guardrail when making non-trivial frontend code changes: read the relevant rules, keep the change within those constraints, and avoid introducing new violations.
 - In implementation guardrail mode, do not create backlog tasks unless the user explicitly asked for a formal review. Treat the rules as acceptance criteria for the code change and run the project's relevant QA gates (`ops typecheck`, `ops lint`, the test runner) before finishing.
+- **Ad-hoc review** — code pasted into the conversation, or a question about one function or snippet ("what is wrong with this?"): answer in chat. Read the tier-3 file for each category the code touches, cite the rule ID for every problem you name, order them by the severity scale in [rules.md](references/rules.md#design-philosophy), and file no backlog tasks unless the user asks for them. A problem no rule covers is still worth naming; say it has no rule.
 
 ## Purpose
 
@@ -41,12 +42,12 @@ before the first grep.
 [rules.md](references/rules.md) holds the category table, severity scale, and design philosophy;
 it is small and safe to read at any point.
 
-In implementation-guardrail mode, skip tier 1 entirely: read the tier-3 file for the one or
-two categories your change touches (e.g. `rules/ASYNC.md` for an async change) and nothing else.
+In implementation-guardrail and ad-hoc review modes, skip tier 1 entirely: read the tier-3 file for the one or
+two categories your change, or the code under review, touches (e.g. `rules/ASYNC.md` for async code) and nothing else.
 
 ## Execution Contract (MUST follow)
 
-You are running unattended — nobody is watching to course-correct. Follow these rules strictly:
+Formal review only — guardrail and ad-hoc review modes answer in chat instead. A formal review runs unattended: nobody is watching to course-correct. Follow these rules strictly:
 
 1. **Findings are emitted ONLY via `ops backlog task create --plain`.** Do NOT print findings as prose, markdown, or a summary report in lieu of creating tasks. A text-only report is a failed run. If you identify a finding, the next action is a `ops backlog task create --plain` call — not text output.
 2. **Never ask for confirmation.** Do not ask "Would you like me to create these tasks?" or pause for approval. You are pre-authorized. Findings → `ops backlog task create --plain` immediately, no intermediate prompt. Questions to the user = failed run.

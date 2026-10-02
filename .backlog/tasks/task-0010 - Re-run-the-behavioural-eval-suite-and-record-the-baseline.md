@@ -1,9 +1,10 @@
 ---
 id: TASK-0010
 title: 'Re-run the behavioural eval suite and record the baseline'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-29 13:35'
+updated_date: '2026-09-29 18:13'
 labels:
   - evals
 dependencies: []
@@ -25,7 +26,19 @@ dedup_key: 'followup:eval-rerun'
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 make eval run on the current Claude Code and model; versions noted
-- [ ] #2 Per-case with/without/delta recorded in implementation notes
-- [ ] #3 Any regressed case filed as a separate task
+- [x] #1 make eval run on the current Claude Code and model; versions noted
+- [x] #2 Per-case with/without/delta recorded in implementation notes
+- [x] #3 Any regressed case filed as a separate task
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Run 2026-09-29, Claude Code 2.1.284, default model, make eval grants (Write Edit WebSearch WebFetch), 3+3 runs per case.
+- guardrail-rust: with 1.00 / without 0.00, delta +1.00 ($1.14)
+- review-rust: with 0.00 / without 0.00, delta 0.00 ($0.42): loads-rust-skill and reads-rule-tiers fail in both arms
+- review-web: with 0.50 / without 0.50, delta 0.00 ($0.41): only no-rust-skill passes
+- product research-no-profile (earlier today, during TASK-0012): with 1.00 / without 0.20, delta +0.80
+review-rust/review-web are identical to the 2026-09-27 run on 2.1.283, so this predates PR #26 and the version bump. Filed as TASK-0014 with the traced cause.
+<!-- SECTION:NOTES:END -->
