@@ -1,6 +1,6 @@
 ---
 name: code-review-lovable
-description: Reviews Lovable-style apps — Vite + React + TypeScript + Tailwind + shadcn/ui on Supabase (Postgres RLS, Auth, Storage, Edge Functions) with TanStack Query and react-hook-form + zod — for the stack layer generic React review misses, such as missing or permissive RLS policies, unchecked supabase-js errors, service-role leaks, unauthenticated Edge Functions, cache-key bleed, client-only validation, design-token drift and scaffold hygiene. Use while writing or editing such an app as an implementation guardrail, or run a formal review that files one backlog task per finding.
+description: Reviews Lovable-style apps — Vite + React + TypeScript + Tailwind + shadcn/ui on Supabase (Postgres RLS, Auth, Storage, Edge Functions) with TanStack Query and react-hook-form + zod — for the stack layer generic React review misses, such as missing or permissive RLS policies, unchecked supabase-js errors, service-role leaks, unauthenticated Edge Functions, cache-key bleed, client-only validation, design-token drift and scaffold hygiene. Use whenever asked to review such code or say what is wrong with it, including a Supabase migration, Edge Function or supabase-js snippet pasted into the chat; while writing or editing such an app as an implementation guardrail; or to run a formal review that files one backlog task per finding.
 allowed-tools: Read Grep Glob Bash(git rev-parse:*) Bash(git log:*) Bash(ops --version) Bash(ops backlog:*) Bash(ops typecheck) Bash(ops lint) Bash(ops explain:*)
 license: Apache-2.0
 ---
@@ -22,11 +22,20 @@ Their rule prefixes do not overlap and their identity keys cannot collide.
   a `supabase/` directory (`migrations/`, `functions/`, `config.toml`), `components.json`
   (shadcn), `@tanstack/react-query` in `package.json`, or `lovable-tagger` in `vite.config.ts`.
   A stack with only some of these fingerprints still qualifies. Categories whose code is absent
-  cost nothing.
+  cost nothing. A formal review covers a package, directory or repository, or is any request to
+  file findings; the Execution Contract and Process below apply to it only.
 - Also use it as an implementation guardrail for non-trivial changes in such an app, especially
   any change that touches a migration, an RLS policy, an Edge Function or auth. Read the tier-3
   file for the category you touch, keep the change inside it, and run the QA gates. Do not file
   backlog tasks in guardrail mode unless the user asked for a formal review.
+- **Ad-hoc review** — a migration, policy, Edge Function or component pasted into the
+  conversation, or a question about one snippet ("what is wrong with this?"): answer in chat.
+  Read the tier-3 file for each category the code touches, cite the rule ID for every problem you
+  name, order them by the [severity scale](references/rules.md#severity-scale), and file no backlog
+  tasks unless the user asks for them. Generic React/TS problems in the same snippet cite
+  `code-review-web`'s IDs. A problem no rule covers is still worth naming; say it has no rule.
+  The calibration rules below still apply: the publishable key is not a leak, and a single
+  migration may be superseded by one you cannot see, so say so rather than assert the final state.
 - Most of the stack's real authorization lives in SQL. A review that reads only `src/` has
   skipped the part most likely to hold a Critical finding.
 
@@ -74,12 +83,14 @@ Same three tiers as `code-review-web`. Read only as deep as the finding requires
 | 2 | [rules/index.md](references/rules/index.md) | **Not part of a scan.** For resolving a rule ID you hold without a signal. |
 | 3 | `references/rules/<CATEGORY>.md` | Full rule text. **Required before filing** — never file from a one-liner. |
 
-In guardrail mode skip tier 1: read the tier-3 file for the category your change touches
-(`rules/RLS.md` for a migration, `rules/EDGE.md` for a function) and nothing else.
+In guardrail and ad-hoc review modes skip tier 1: read the tier-3 file for the category your
+change, or the code under review, touches (`rules/RLS.md` for a migration, `rules/EDGE.md` for a
+function) and nothing else.
 
 ## Execution Contract (MUST follow)
 
-Identical to `code-review-web`'s contract. In short:
+Formal review only — guardrail and ad-hoc review modes answer in chat instead. Identical to
+`code-review-web`'s contract. In short:
 
 1. Findings are emitted **only** via `ops backlog task create --plain`. A prose report in their
    place is a failed run.
