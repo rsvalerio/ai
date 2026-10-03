@@ -11,19 +11,30 @@ Everything is passed on the command line, after `--`, so the repository is never
 
 The lint flags are not listed here. SKILL.md Step 3 derives them from the lint policy of ops's
 Rust foundation, rendered by the running `ops` ([apply-config.md](apply-config.md)), so the
-sweep enables exactly what `--apply` writes. With the foundation rendered at `$FND`, this
-writes the flags, one per line, to `$SCRATCH/lint-flags`:
+sweep enables exactly what `--apply` writes. A lint the repository waives
+([apply-config.md](apply-config.md#waivers)) is one `--apply` does not write, so it gets no
+flag. With the foundation rendered at `$FND` and the check saved to `$SCRATCH/check.txt`,
+this writes the flags, one per line, to `$SCRATCH/lint-flags`:
 
 ```bash
-python3 - "$FND/Cargo.toml" > "$SCRATCH/lint-flags" <<'EOF'
-import sys, tomllib
+python3 - "$FND/Cargo.toml" "$SCRATCH/check.txt" > "$SCRATCH/lint-flags" <<'EOF'
+import re, sys, tomllib
 
 # Rendered foundation lints -> clippy flags. Groups carry priority -1 and come
 # first, so the named lints after them win. rustdoc lints are not clippy's.
 lints = tomllib.load(open(sys.argv[1], "rb"))["lints"]
+# `waived  Cargo.toml:workspace.lints.clippy.unwrap_used: ...` -> lints.clippy.unwrap_used.
+# A waiver on a whole table (`lints`, `lints.clippy`) covers every lint under it.
+waived = set()
+for line in open(sys.argv[2]):
+    m = re.match(r"waived\s+Cargo\.toml:(?:workspace\.)?(lints(?:\.[\w-]+)*):", line)
+    if m:
+        waived.add(m.group(1))
 rows = []
 for tool, prefix in (("rust", ""), ("clippy", "clippy::")):
     for name, spec in lints.get(tool, {}).items():
+        if {"lints", f"lints.{tool}", f"lints.{tool}.{name}"} & waived:
+            continue
         spec = spec if isinstance(spec, dict) else {"level": spec}
         flag = "-A" if spec["level"] == "allow" else "-W"  # a survey never denies
         rows.append((spec.get("priority", 0), flag, prefix + name))
@@ -32,7 +43,8 @@ for _, flag, lint in sorted(rows, key=lambda r: r[0]):
 EOF
 ```
 
-Read the flag list off the run. It is recorded in the report. In shape it is:
+Read the flag list off the run. It is recorded in the report. A waived group drops only the
+group's flag: the named lints the repository did not waive keep theirs. In shape it is:
 
 | Part of the foundation policy | Flags | Effect |
 |-------------------------------|-------|--------|
@@ -56,9 +68,57 @@ Deliberately **not** enabled:
 `clippy::correctness`, `suspicious`, `style`, `complexity`, and `perf` are on by default and
 so appear in the baseline run too. Findings from them are labelled `clippy-default`.
 
+## Lint groups
+
+A task's label and its severity need the lint's group, and the report row does not carry it.
+Ask the installed Clippy, once per run, rather than recalling it. A lint moves between
+groups across releases, which is how `nursery` lints graduate:
+
+```bash
+clippy-driver -W help | python3 -c '
+import json, re, sys
+
+# `clippy-driver -W help` -> {lint: group}. Every Clippy lint is in exactly one
+# category group; `clippy::all` is the union of five of them and is skipped.
+text = sys.stdin.read().split("Lint groups loaded by this crate:", 1)[1]
+groups = {}
+for name, members in re.findall(r"^\s*clippy::([\w-]+)\s{2,}(clippy::.+)$", text, re.M):
+    if name == "all":
+        continue
+    for lint in members.split(","):
+        groups[lint.strip().removeprefix("clippy::").replace("-", "_")] = name.replace("-", "_")
+json.dump(groups, sys.stdout, indent=0, sort_keys=True)
+' > "$SCRATCH/lint-groups.json"
+jq -r '.use_self' "$SCRATCH/lint-groups.json"    # nursery
+```
+
+Run it from the repository root, so a `rust-toolchain.toml` selects the same Clippy the
+sweep used. The group is one of `correctness`, `suspicious`, `style`, `complexity`, `perf`,
+`pedantic`, `nursery`, `restriction` or `cargo`, and it is the `<group>` in the task's
+label and `**Lint**` line and the row of the Severity Scale. A lint missing from the file
+has been renamed or removed in this toolchain: label it `unknown`, give it `low`, and name
+it in the report.
+
 ## Effort classes
 
 Every lint maps to one of four classes. The class, not the lint, drives the estimate.
+
+### Default class by group
+
+The lists below name the lints this skill has seen often enough to place. A run on a real
+workspace always meets others: on dbsec, 12 of the 37 lints that fired in production code
+were in no list. Such a lint takes its group's default:
+
+| Group | Default class | Why |
+|-------|---------------|-----|
+| `style`, `complexity`, `perf`, `pedantic` | M | Most of these suggest one local rewrite |
+| `nursery` | J | Lower confidence: each instance needs a look to decide whether the lint is right at all |
+| `correctness`, `suspicious` | J | The code may be wrong, and what it should do is the decision |
+| `restriction` | J | A named foundation lint, see Class J |
+
+A named list always wins over the default. In the report, list every lint that was classed
+by default, with its count, so the estimate shows how much of it rests on a default and the
+lint can be placed here.
 
 ### Class M — mechanical (~2 min per instance)
 
@@ -67,14 +127,15 @@ A rename or a local rewrite with no design decision. Safe to batch by the dozen.
 `redundant_closure_for_method_calls`, `explicit_iter_loop`, `explicit_into_iter_loop`,
 `semicolon_if_nothing_returned`, `uninlined_format_args`, `unnested_or_patterns`, `manual_let_else`, `map_unwrap_or`,
 `redundant_else`, `match_same_arms`, `single_match_else`, `implicit_clone`,
-`inefficient_to_string`, `cloned_instead_of_copied`.
+`inefficient_to_string`, `cloned_instead_of_copied`, `use_self` (nursery).
 
 ### Class D — documentation (~3 min per instance)
 
 Pure prose. Zero behavioural risk, and the ideal content for a first wave — it makes the
 count fall fast without touching semantics.
 
-`missing_errors_doc`, `missing_panics_doc`, `doc_markdown` (all `pedantic`), and
+`missing_errors_doc`, `missing_panics_doc`, `doc_markdown` (all `pedantic`),
+`too_long_first_doc_paragraph` (nursery), and
 `missing_safety_doc` (`style`, so it reaches the report as `clippy-default`).
 `missing_docs_in_private_items` is **not** listed: it is a `restriction` lint the foundation
 does not name, so it cannot appear in a run.
@@ -87,7 +148,9 @@ behaviour. Never batch-apply these.
 `cast_possible_truncation`, `cast_sign_loss`, `cast_precision_loss`, `cast_lossless`,
 `cast_possible_wrap`, `checked_conversions`, `float_cmp`, `similar_names`,
 `unreadable_literal` (where the grouping is domain-meaningful), `struct_excessive_bools`,
-`fn_params_excessive_bools`, `option_if_let_else` (nursery — often less readable after).
+`fn_params_excessive_bools`, `option_if_let_else` (nursery — often less readable after),
+`significant_drop_tightening` (nursery — moving a guard's drop changes what the lock covers),
+`future_not_send` (nursery — whether the future must be `Send` is an API decision).
 
 The foundation's named `restriction` lints are Class J too, with the exceptions below. Each
 instance replaces a panic, an index or an unchecked operation with an error path or a checked
@@ -96,7 +159,7 @@ one, and choosing what the failure should do is the decision: `unwrap_used`, `ex
 `unchecked_time_subtraction`, `unreachable`, `exit`. The exceptions are `todo` and
 `unimplemented`, which are Class S, because each marks missing code, not a missing check.
 `panic_in_result_fn` is Class S when the fix changes the function's error type. A named lint
-this list does not cover is Class J until someone classifies it here.
+this list does not cover takes the `restriction` default, Class J.
 
 ### Class S — structural (~90 min per instance)
 
