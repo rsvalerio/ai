@@ -1,9 +1,10 @@
 ---
 id: TASK-0013
 title: 'Migrate code-review-rust''s OWASP mapping from Top 10:2021 to Top 10:2025'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-29 17:21'
+updated_date: '2026-10-02 23:27'
 labels:
   - rust
   - security
@@ -29,8 +30,15 @@ dedup_key: 'followup:owasp-2025'
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Mapping file cites Top 10:2025, with the source URL and date checked
-- [ ] #2 Every SEC rule's OWASP category reference uses 2025 ids; no 2021 ids remain
-- [ ] #3 code-review-web checked for the same edition
-- [ ] #4 make validate-rules and ops verify pass
+- [x] #1 Mapping file cites Top 10:2025, with the source URL and date checked
+- [x] #2 Every SEC rule's OWASP category reference uses 2025 ids; no 2021 ids remain
+- [x] #3 code-review-web checked for the same edition
+- [x] #4 make validate-rules and ops verify pass
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Renamed code-review-rust references/owasp-2021.md to owasp-2025.md and remapped every SEC rule by CWE against top10.owasp.org/2025 (final 2025-12-24, checked 2026-10-03); updated SKILL.md, rules.md and the nats-security.md OWASP column. Memory safety and DoS rules have no 2025 category and cite CWEs; SSRF (A01) and update-signature checks (A08) noted as coverage gaps. code-review-web already cited 2025 but with 2021 numbering and a wrong CORS claim; owasp-2025.md and SEC-15 corrected. validate-rules and ops verify pass.
+<!-- SECTION:NOTES:END -->
