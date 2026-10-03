@@ -205,7 +205,8 @@ When the comparison's conditions do not hold, the cost is **unmeasured**, and
 the task says which condition failed.
 
 **`--measure-cold`**: runs the same comparison when the test binaries need a
-build first. That build is what the flag pays for.
+build first, or when the suite ran past the default-mode deadline. The build
+and the unbounded run are what the flag pays for.
 
 **Class**: **safe**. `--apply` uses template `gate-nextest`, which swaps the
 step for the stack's `next` (or `next-ignored`). When the gate is the stack's own

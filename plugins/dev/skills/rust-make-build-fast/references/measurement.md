@@ -169,6 +169,12 @@ its place, each with the gate's own arguments:
 | Today | The gate's test step, for example `cargo test --workspace --all-features` |
 | After | The stack's `next` step, plus `test-doc` when the template would add it |
 
+Every run has a deadline of five minutes, set as the timeout of the command
+that runs it. A side that reaches it is stopped and has no time: record
+**unmeasured — the suite exceeds the default-mode deadline**, do not run the
+other side, and leave the comparison to `--measure-cold`, which has no
+deadline. The default mode stays cheap, and a hung test cannot hold the survey.
+
 Run the first side once. A run over 60 seconds is taken once per side and
 marked **single run**. Anything shorter is taken three times per side, and the
 median is reported, per the [noise](#noise) rule. Both sides carry the timing
