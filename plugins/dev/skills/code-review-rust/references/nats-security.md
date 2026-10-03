@@ -6,6 +6,6 @@ NATS-specific instantiation of SEC rules. Each row maps to the owning SEC rule â
 
 | SEC Rule | What to find (NATS-specific) | OWASP | Severity |
 |----------|------------------------------|-------|----------|
-| **SEC-8** (hardcoded secrets) | NATS URLs with embedded credentials (`nats://user:pass@host`); hardcoded NKey seeds or NKeys committed to VCS | A02, A05 | Critical |
-| **SEC-21** (secrets in logs/errors) | Connection errors logged with full URL containing secrets; JWT tokens logged or in error messages | A02, A09 | High |
-| **SEC-29** (secure defaults) | `connect()` without `.require_tls()` in production; missing `.user_and_password()`, `.token()`, or `.credentials_file()`; using `connect()` defaults (no TLS, no auth) in production | A02, A05, A07 | Critical |
+| **SEC-8** (hardcoded secrets) | NATS URLs with embedded credentials (`nats://user:pass@host`); hardcoded NKey seeds or NKeys committed to VCS | A04, A07 | Critical |
+| **SEC-21** (secrets in logs/errors) | Connection errors logged with full URL containing secrets; JWT tokens logged or in error messages | A09, A10 | High |
+| **SEC-29** (secure defaults) | `connect()` without `.require_tls()` in production; missing `.user_and_password()`, `.token()`, or `.credentials_file()`; using `connect()` defaults (no TLS, no auth) in production | A02, A04, A07 | Critical |

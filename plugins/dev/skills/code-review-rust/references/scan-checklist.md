@@ -96,7 +96,9 @@ further.
 | `with_capacity`/`read_to_end` sized from a parsed length, or a size limit applied only before decompression | SEC-33 |
 | `canonicalize` used to validate a path that does not exist yet | SEC-14 |
 | `Regex::new` on a user-supplied pattern (no `RegexBuilder` size limits), or inside a loop | SEC-16, CONC-10 |
+| HTTP client request (`reqwest`, `hyper`, `ureq`, `curl`) to a URL or host taken from request input, a stored webhook or callback address, or tenant-supplied config | SEC-43 |
 | New `build.rs` or proc-macro crate in a lockfile diff, or CI building without `--locked` | SEC-27, SEC-28 |
+| Downloaded bytes executed, swapped over the running binary (`self_update`), or loaded via `libloading` / `Module::deserialize` with no signature or pinned-digest check; a network fetch in `build.rs` | SEC-44, SEC-27 |
 | Concurrency primitive implemented by hand (custom lock, lock-free queue, explicit `Ordering`) with no `loom` test | TEST-35, CONC-9 |
 | `Box<dyn Trait>` built only to unify two branches of an `if`/`match` in a `let` | PATTERN-10 |
 | Field or getter returning `Option<T>` that some call sites know is always `Some` | PATTERN-1, API-2 |

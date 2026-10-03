@@ -35,7 +35,7 @@ Frontend/browser security rules. Each finding maps to an OWASP Top 10:2025 categ
 
 - **SEC-13.** Validate and schema-check untrusted responses (fetch, WebSocket, `postMessage`, `localStorage`) before use — never trust the shape of data crossing a boundary; a compromised or changed endpoint otherwise breaks runtime assumptions or injects bad data. Prefer a runtime validator (e.g. Zod) for security-relevant payloads. — owasp.org AJAX Security Cheat Sheet
 - **SEC-14.** Do not log tokens, PII, or full request/response bodies to the console or telemetry; client logs are user-accessible and frequently shipped to third parties (mirrors SEC-8, READ-8). — owasp.org Logging Cheat Sheet
-- **SEC-15.** Send credentials (`credentials: "include"`, cookies, auth headers) only to trusted origins; do not broaden CORS or attach auth to third-party requests. Authorize sensitive actions server-side — client-side checks are UX, not security (OWASP 2025 folds CORS under A01 Broken Access Control). — owasp.org/Top10/2025 A01
+- **SEC-15.** Send credentials (`credentials: "include"`, cookies, auth headers) only to trusted origins; do not broaden CORS or attach auth to third-party requests. Authorize sensitive actions server-side — client-side checks are UX, not security (OWASP 2025: the missing server-side authorization is A01, a permissive CORS policy is A02). — owasp.org/Top10/2025 A01, A02
 
 ## Security: Build & Dependencies (typical severity: High)
 
