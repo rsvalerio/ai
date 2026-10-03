@@ -11,7 +11,8 @@ Where the values come from. None of them is this skill's own copy:
   by the running `ops`. See `nextest-leak-timeout`.
 - **The gate templates** edit `.ops.toml` relative to the `ops` rust stack's built-in
   commands (`next`, `test-doc`, the staged `verify`), read with `ops explain`. They add or
-  swap steps and never restate the stack's list.
+  swap steps and never restate the stack's list, with one exception: `gate-nextest` on a
+  [gate the stack owns](#a-gate-the-stack-owns).
 - **`test-profile-align`** is a rule (keep `test` inheriting `dev`), not a file. The
   foundation deliberately does not template a test profile.
 
@@ -83,6 +84,58 @@ Keep the order and the other steps as they are, and keep the gate's
 steps. If the swapped step was the gate's own override with extra arguments
 (say `--features x`), carry those arguments over to a `[commands.next]`
 override. Otherwise the swap quietly drops them.
+
+### A gate the stack owns
+
+The swap above edits a list that `.ops.toml` holds. A gate the repository only extends has
+none: dbsec's `qa` is the stack's composite plus `[extend.qa]`, and the `test` step to swap
+is in the stack's half. Recognise the case from the plan, not from the file:
+
+```bash
+ops explain <gate> --json | jq '.composites[] | select(.name == "<gate>")'
+# origin.source "stack": the stack owns the list. "config": the list is in .ops.toml, swap it there
+```
+
+An extension cannot remove or replace a step, so the swap needs the list in `.ops.toml`.
+Write a `[commands.<gate>]` that holds **the stack's own list with the swap applied**, and
+leave `[extend.<gate>]` exactly as it is. An extension applies to a redefined gate the same
+way, so the repository's extra steps keep their place:
+
+```toml
+# before: the stack's qa (deps, test, test-doc, sec) plus two steps
+[extend.qa]
+commands = ["fuzz-deny", "foundation"]
+
+# after
+# A redefinition, not an extension: it swaps the stack's `test` for `next`, and an
+# extension can only append. This is the rust stack's `qa` list as of ops 0.77.0 with that
+# one swap. It no longer follows the stack: compare with the stack's list on an ops upgrade.
+[commands.qa]
+commands = ["deps", "next", "test-doc", "sec"]
+parallel = false
+fail_fast = true
+
+[extend.qa]
+commands = ["fuzz-deny", "foundation"]
+```
+
+The stack's own list is the composite's `commands` from `ops explain`, minus the trailing
+steps that `[extend.<gate>]` lists. Copy `parallel` and `failFast` from the same object, and
+put the running `ops --version` in the comment. Add `test-doc` only if the list lacks it;
+the stack's `qa` already has it.
+
+This restates the stack's list, which every other gate template refuses to do, and the cost
+is real: a step a later ops release adds to the stack's gate does not reach this one. The
+comment is what makes that visible, so never write the table without it. Say the same in the
+report and on the task.
+
+Check before and after with `ops explain <gate> --json`, and do not apply when a check fails.
+Mark the task manual and quote what differed:
+
+| When | Must hold |
+|------|-----------|
+| Before | The composite's `commands` end with exactly the `[extend.<gate>]` list, so the rest is the stack's own |
+| After | `commands` equals the list from before with only the swap, `parallel` and `failFast` are unchanged, and `origin.source` is `config` |
 
 **Verify by running the gate once.** If a test fails under nextest that passes
 under `cargo test`, the test shares process-global state across tests. Revert

@@ -193,13 +193,25 @@ process, all at once across binaries, so it does not wait on the slowest
 binary.
 
 **Default mode**: check that `cargo nextest --version` works, and record which
-gate runs which runner. Cost: **unmeasured**.
+gate runs which runner. Then time the suite under each runner with the
+[runner comparison](measurement.md#runner-comparison), which needs no cold
+build when the warm build already produced the test binaries. On dbsec, three
+runs of each took under a minute in total: `cargo test` 9.5s, nextest 6.9s
+(medians). Cost: the difference between the two medians. A difference inside
+the [noise](measurement.md#noise) band is not a finding: report both numbers
+and file nothing.
 
-**`--measure-cold`**: after a warm build, time the suite with each runner.
-The build is already done, so this only times running the tests.
+When the comparison's conditions do not hold, the cost is **unmeasured**, and
+the task says which condition failed.
+
+**`--measure-cold`**: runs the same comparison when the test binaries need a
+build first. That build is what the flag pays for.
 
 **Class**: **safe**. `--apply` uses template `gate-nextest`, which swaps the
-step for the stack's `next` (or `next-ignored`). Doctests are the one thing
+step for the stack's `next` (or `next-ignored`). When the gate is the stack's own
+composite and `.ops.toml` only extends it, the swap has to
+[redefine the gate](apply-templates.md#a-gate-the-stack-owns), and the task
+says so. Doctests are the one thing
 nextest does not run, so the same edit has to handle TEST-2. Tests that share
 process-global state can break when each runs in its own process. `--apply`
 therefore runs the new gate once, and if it fails where the old runner passed,

@@ -58,6 +58,7 @@ than 30 minutes under load, and a survey nobody can afford to run gets skipped.
 | Profiles, config | Read the root `Cargo.toml` and the files in `cargo.configFiles` | PROF-*, CACHE-1 |
 | Gates | `ops explain <gate>… --json`, `Makefile`/`justfile`, `.github/workflows/*.yml` | TEST-*, GATE-* |
 | nextest | `.config/nextest.toml`, `cargo nextest --version` | TEST-1, TEST-4 |
+| Runner comparison | See below, after the warm build | TEST-1 |
 | Members | `ops about crates --json` | PROF-5 |
 | Graph | `ops about dependencies --duplicates --json`; `cargo metadata --locked --format-version 1` for the transitive count | DEP-1, PROF-1 |
 | Unused deps | `cargo machete` or `cargo shear`, if installed | DEP-2 |
@@ -135,11 +136,58 @@ output, and the cost of step 3 is paid on every alternation: that is TGT-1.
 Step 2's time tells you whether B has a GATE-3 problem: the first time B runs
 it pays for a full second fingerprint.
 
+### Runner comparison
+
+Times the test suite under `cargo test` and under nextest, for TEST-1. It runs
+tests and builds nothing, so it belongs to the default mode, but only when the
+warm build left both runners' binaries in `target/`. Three conditions, in
+order. The first two are read from what the survey already has; the third
+confirms them:
+
+1. `cargo nextest --version` works.
+2. The warm build covered the test targets: it ran with `--all-targets` and
+   the same feature flags as the gate's test step (`steps[].args` in
+   `ops explain`), and PROF-2 did not fire, so `test` compiles as `dev` does.
+3. `--no-run` under each runner prints no `Compiling` line:
+
+   ```bash
+   cargo test <the gate step's args> --locked --no-run 2>&1 | grep -c '^ *Compiling'       # 0
+   cargo nextest run <the stack `next` step's args> --locked --no-run 2>&1 | grep -c '^ *Compiling'   # 0
+   ```
+
+If condition 1 or 2 fails, do not run `--no-run`: it would start the build the
+default mode promises not to run. Record **unmeasured — run with
+`--measure-cold`** and name the condition. If condition 3 compiles something
+after 1 and 2 held, the build has already happened. Record its wall time as a
+catch-up, which is not a finding, and carry on.
+
+Then time what the gate runs today against what `gate-nextest` would put in
+its place, each with the gate's own arguments:
+
+| Side | Command |
+|------|---------|
+| Today | The gate's test step, for example `cargo test --workspace --all-features` |
+| After | The stack's `next` step, plus `test-doc` when the template would add it |
+
+Run the first side once. A run over 60 seconds is taken once per side and
+marked **single run**. Anything shorter is taken three times per side, and the
+median is reported, per the [noise](#noise) rule. Both sides carry the timing
+record.
+
+A side that fails has no comparable time. Record the failing test names and
+leave the cost **unmeasured**. Check `git status --porcelain` afterwards, as
+after any gate run: a suite that writes into the tree is reported, not cleaned
+up.
+
+The task records both medians. They are what Step 9 compares the gate against
+after `--apply`.
+
 ## `--measure-cold`: the opt-in cold measurement
 
 This is the only mode that runs a cold build, and it runs one only for the
-checks that need it: PROF-1 to PROF-4 and TEST-1. PROF-3 is evaluated nowhere
-else. List those checks first,
+checks that need it: PROF-1 to PROF-4, and TEST-1 when its
+[runner comparison](#runner-comparison) needs the test binaries built first.
+PROF-3 is evaluated nowhere else. List those checks first,
 state in the report how many cold builds they will take, and then run them.
 Each one costs as much as the project's full cold build.
 
