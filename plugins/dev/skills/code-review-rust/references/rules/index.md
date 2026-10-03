@@ -278,7 +278,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **DUP-9** Context matters: some duplication is better than the wrong abstraction; don't DRY prematurely
 - **DUP-10** Test code has a higher duplication tolerance than production code; prefer clarity over DRY in tests.
 
-## SEC — SEC · [rules/SEC.md](SEC.md) (29 KB)
+## SEC — SEC · [rules/SEC.md](SEC.md) (34 KB)
 
 ### Security: Memory Safety (typical severity: Critical)
 
@@ -305,6 +305,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **SEC-15** Integer overflow: use checked/saturating arithmetic for untrusted input; audit `as` casts between integer types for truncation (e.g., `u64 as u32`) …
 - **SEC-16** Regex limits — but be precise about which risk applies, because the generic ReDoS advice misdescribes the Rust ecosystem.
 - **SEC-33** Bound resource consumption on untrusted input: enforce size limits on buffers, collections, and strings; cap iteration counts; set timeouts on operations processing external data …
+- **SEC-43** Server-side request forgery: an outbound request whose URL, host, or port comes from a caller must be allowlisted, or checked by parsed host, resolved address, pinned connection and every redirect hop …
 
 ### Security: Access Control (typical severity: High--Critical)
 
@@ -340,6 +341,7 @@ category file linked from its heading. Never file a finding from the index line 
 
 - **SEC-27** Review unmaintained or abandoned dependencies; check for known vulnerabilities; vet dependency source trustworthiness (unverified registries, unknown maintainers, weak security track record).
 - **SEC-28** Pin dependency versions; ensure `Cargo.lock` is committed (missing lockfile allows silent dependency drift); audit lockfile changes in PRs …
+- **SEC-44** Verify code and trusted data fetched at run time (self-updates, plugins, dynamic libraries, WASM modules) against a signature or digest shipped in the running binary before using it; HTTPS and a checksum fetched beside the artifact are not that check …
 
 ### Security: Configuration (typical severity: High)
 
