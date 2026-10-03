@@ -34,12 +34,23 @@ At report level:
   from any checkout path. That is what makes the baseline diff in Step 4 and the
   `--unless-exists` key in Step 5 stable.
 
+## Finding identity
+
+Step 5's `--unless-exists` key is the full row. A narrower key merges distinct findings:
+`(file, line)` merges two lints, the lint alone a whole crate, and dropping the message
+merges two problems one lint reports at one span. A reworded message in a newer Clippy then
+reads as a new finding. Prefer that over a lost one, and close the stale task.
+
+ops checks the key under the backlog's allocation lock, so it holds across concurrent runs.
+
 ## What the report does not do
 
 - **In-tree generated files** (a checked-in `include!`d module) are still listed. Recognize
   and skip them in Step 4, and report the count.
-- **Test-only findings** are still listed. The test-code exclusion in Step 4 is a judgement
-  about `#[cfg(test)]` modules and `#[test]` functions that no row field fully captures.
+- **Test code** has no row field. `targetKind` is `test` for a file under `tests/` but `lib`
+  for a `#[cfg(test)]` module, so no filter over the rows can tell test code from production
+  code. Step 4 does not try. The pedantic pass runs under the foundation's `clippy.toml`,
+  and Clippy applies the `allow-*-in-tests` keys itself while it lints.
 - **Feature coverage** is whatever the survey built: `--all-features` by default,
   `--no-all-features` or an explicit `--features` list when the workspace's features
   conflict. Steps 2, 3 and 7 must use the same choice.
