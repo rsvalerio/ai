@@ -1,9 +1,10 @@
 ---
 id: TASK-0020
 title: 'rust-make-clippy-pedantic: the test-code discard rule cannot be applied as written'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-03 09:23'
+updated_date: '2026-10-03 10:55'
 labels:
   - rust
   - dogfood
@@ -28,6 +29,13 @@ dedup_key: 'followup:ped-test-discard-rule'
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Step 4 gives one unambiguous discard rule and a mechanical way to decide whether a row is in test code
-- [ ] #2 ops verify passes
+- [x] #1 Step 4 gives one unambiguous discard rule and a mechanical way to decide whether a row is in test code
+- [x] #2 ops verify passes
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Fixed on fix/rust-make-dogfood-followups. One rule: nothing is discarded for being in test code. The pedantic pass now runs with CLIPPY_CONF_DIR pointing at the clippy.toml Step 7 would write, built in scratch, so Clippy itself applies the four allow-*-in-tests keys (and the foundation thresholds, which the sweep was also missing). Every remaining row is filed because the applied policy fires on it. No ops change needed; checked on a scratch crate that the override reaches Clippy through ops clippy-findings and exempts a cfg(test) helper but not a non-#[test] helper in tests/. Step 7's --apply procedure moved to apply-config.md to keep SKILL.md under the 5,000-token limit. Not re-run on dbsec.
+<!-- SECTION:NOTES:END -->

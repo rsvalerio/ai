@@ -1,9 +1,10 @@
 ---
 id: TASK-0021
 title: 'rust-make-clippy-pedantic: foundation waivers are ignored by the survey and leave --apply with no defined outcome'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-03 09:23'
+updated_date: '2026-10-03 10:56'
 labels:
   - rust
   - dogfood
@@ -28,6 +29,13 @@ dedup_key: 'followup:ped-waivers'
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 SKILL.md and apply-config.md say how waived lints are surveyed, filed and reported, and Step 7 defines the all-waived outcome
-- [ ] #2 ops verify passes
+- [x] #1 SKILL.md and apply-config.md say how waived lints are surveyed, filed and reported, and Step 7 defines the all-waived outcome
+- [x] #2 ops verify passes
+
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Fixed on fix/rust-make-dogfood-followups. Step 3 saves 'ops init --rust --check' to scratch before the sweep. Decision: a waived lint is not surveyed (no flag; a waived clippy.toml key keeps the repository's value), nothing is filed for it, and every waiver is reported verbatim in a new Step 6 section. Rationale: the sweep enables exactly what --apply writes, and --apply never overrides a waiver. The lint-flags script now takes the check output and skips waived lints; run against dbsec's real check output it leaves 7 of 19 flags. Step 7 gained a 'nothing to write' result (no drift line for clippy.toml, lint tables or member opt-in) verified by the tree check alone, with no rerun. apply-config.md has a new Waivers section. Not re-run end to end on dbsec.
+<!-- SECTION:NOTES:END -->
