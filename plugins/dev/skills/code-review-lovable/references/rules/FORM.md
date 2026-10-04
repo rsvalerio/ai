@@ -13,6 +13,11 @@ with a manual `onSubmit` validator; `<form onSubmit` with no pending guard; `z.n
   type is `z.infer<typeof schema>`. Hand-rolled per-field `useState` plus ad-hoc checks drift from
   the payload the database receives. With `z.coerce` or `.transform`, the schema's input and
   output types differ, so type the form as `useForm<z.input<S>, unknown, z.output<S>>`.
+  **Scanning guidance:** the rule targets drift between the validation and the payload, not the
+  library. A small dialog that holds fields in `useState` but runs `schema.safeParse(…)` on submit
+  and builds the insert from `parsed.data` meets it. Do not file it there, and do not file a
+  migration to react-hook-form. File it when there is no schema, or when the payload is built from
+  the raw state instead of `parsed.data`. On zod 4, `@hookform/resolvers` must be v5 or newer.
   — react-hook-form.com/docs/useform#resolver
 - **FORM-2.** Every rule the schema enforces that protects data (length, range, required, format,
   enum) is also enforced server-side, in a DB constraint (RLS-9) or in the Edge Function's
