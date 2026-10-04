@@ -17,7 +17,7 @@ A monorepo of AI tooling: [Agent Skills](https://agentskills.io/specification) g
 |-------|---------|
 | **code-review-rust** | Review Rust for idioms, security, complexity, duplication, test quality, and NATS patterns. One finding per file in `.backlog/tasks/`. Also answers ad-hoc reviews of pasted code in chat, with rule IDs, and works as an [implementation guardrail](docs/implementation-guardrail.md). |
 | **code-review-web** | Review React/TypeScript (Vite) frontends for hooks, types, async, a11y, security, and tests. Same finding, ad-hoc review and guardrail pattern as the Rust skill. |
-| **code-review-lovable** | Overlay on `code-review-web` for Lovable-style apps (shadcn/ui + Tailwind on Supabase, TanStack Query, react-hook-form + zod): RLS policies, supabase-js errors, Edge Function auth, cache keys, forms, design tokens, scaffold hygiene. |
+| **code-review-lovable** | Overlay on `code-review-web` for Lovable-style apps (shadcn/ui + Tailwind on Supabase or Lovable Cloud, TanStack Query, Zustand, zod, Shopify Storefront): RLS policies, supabase-js and GraphQL errors, Edge Function auth and value minting, cache keys, price truth, forms, design tokens, scaffold hygiene. |
 | **code-review-triage** | Group triaged backlog findings into semantic review waves (`code-review-plan-waveN` parents). |
 | **code-review-run-wave** | Run one planned wave in an isolated git worktree: apply fixes, QA, merge, close. |
 | **code-review-run-waves** | Run every open wave concurrently (one worktree each); land merges one at a time via a shared lock. |
