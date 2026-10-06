@@ -1,7 +1,7 @@
 ---
 name: rust-make-build-fast
 description: Surveys a Rust workspace's build cost without touching the tree, reading its profiles, cargo config, gates, nextest config and dependency graph, taking sccache stats and a warm cargo build --timings, and files one backlog task per finding, each with its measured cost, the date and machine load, and a safe or trade-off classification. A cold build is opt-in via --measure-cold, into a target directory on real disk, never tmpfs. Passing --apply writes the safe fixes into Cargo.toml profiles, .ops.toml gates and .config/nextest.toml; trade-offs such as dependency opt-level are never applied. Use when a Rust workspace's builds, tests or gates feel slow, or before tuning its profiles by hand.
-allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git show:*) Bash(cargo build:*) Bash(cargo metadata:*) Bash(cargo clippy:*) Bash(cargo doc:*) Bash(cargo nextest:*) Bash(cargo machete:*) Bash(cargo shear:*) Bash(cargo --version) Bash(ops --version) Bash(ops explain:*) Bash(ops about machine:*) Bash(ops about crates:*) Bash(ops about dependencies:*) Bash(ops backlog:*) Bash(ops init --rust:*) Bash(printf:*) Bash(touch:*) Bash(jq:*) Bash(python3:*) Bash(du:*) Bash(date:*) Bash(mktemp:*) Bash(mkdir -p:*) Bash(rg:*)
+allowed-tools: Read Edit Write Grep Glob Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git show:*) Bash(cargo build:*) Bash(cargo metadata:*) Bash(cargo clippy:*) Bash(cargo doc:*) Bash(cargo test:*) Bash(cargo nextest:*) Bash(cargo machete:*) Bash(cargo shear:*) Bash(cargo --version) Bash(ops --version) Bash(ops explain:*) Bash(ops about machine:*) Bash(ops about crates:*) Bash(ops about dependencies:*) Bash(ops backlog:*) Bash(ops init --rust:*) Bash(printf:*) Bash(touch:*) Bash(jq:*) Bash(python3:*) Bash(du:*) Bash(date:*) Bash(mktemp:*) Bash(mkdir -p:*) Bash(rg:*)
 license: Apache-2.0
 ---
 
@@ -98,7 +98,7 @@ writes to it anyway. Step 9 checks the tree against this same pathspec.
 
 Do not fetch, pull or stash to make the tree clean. If `Cargo.lock` is missing,
 or `--locked` refuses with `the lock file needs to be updated`, stop and report
-it. Refreshing the lock is a change to the repository.
+it.
 
 ### Step 2 — Record the machine
 
@@ -145,8 +145,8 @@ Take the first sccache snapshot, which is the `sccache` object of
 per-edit gate's build command twice with `--timings` into the project's
 `target/`: the catch-up run, then the no-op run. Follow
 [measurement.md](references/measurement.md#warm-build) for how to read them,
-and never treat the catch-up time as a finding. If the catch-up compiled
-nothing, per-unit costs are **unmeasured**. Do not force a rebuild. Take the
+and never treat the catch-up time as a finding. If it compiled nothing,
+per-unit costs are **unmeasured**. Do not force a rebuild. Take the
 second sccache snapshot and compute the difference (CACHE-1). With fewer than
 20 Rust compilations in the delta, CACHE-1 is not evaluated. **Never** run
 `--zero-stats`.
@@ -155,20 +155,22 @@ Then run the ping-pong probe for each pair of regularly run cargo invocations
 that share a target directory with different features or profiles
 ([measurement.md](references/measurement.md#ping-pong-probe)): TGT-1, GATE-3.
 
+If TEST-1 fired, time the suite under both runners when the
+[runner comparison](references/measurement.md#runner-comparison) conditions hold.
+
 ### Step 5 — Cold measurements (`--measure-cold` only)
 
-Without the flag, skip this step. Every check that needs it records its cost
-as **unmeasured — run with `--measure-cold`**.
+Without the flag, skip this step. Each check that needs it records
+**unmeasured — run with `--measure-cold`**.
 
 With the flag, first list the cold builds the pending findings need. Only
 checks that fired need one, and each variant needs its own. Print how many
 there are, then run them following
 [measurement.md](references/measurement.md#--measure-cold-the-opt-in-cold-measurement):
 
-- The target directory goes under `${XDG_CACHE_HOME:-$HOME/.cache}`, and you
-  check that it is not tmpfs before using it:
-  `CARGO_TARGET_DIR=<dir> ops about machine --json` reports `targetDir.tmpfs`
-  and `availableBytes` for that path. Never use `/tmp`
+- The target directory goes under `${XDG_CACHE_HOME:-$HOME/.cache}`, never
+  `/tmp`, and `CARGO_TARGET_DIR=<dir> ops about machine --json` must report
+  `targetDir.tmpfs` false before it is used
 - The compiler wrapper is off. The user's `jobs` setting stays on and is
   recorded
 - Variants are `--config` overrides, never file edits

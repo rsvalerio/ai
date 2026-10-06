@@ -144,11 +144,11 @@ Finish all reviews before running `code-review-triage`, so the resulting waves c
   - [`rules/API.md`](references/rules/API.md) — API design (25 KB)
   - [`rules/CL.md`](references/rules/CL.md) — Cognitive load (4 KB)
   - [`rules/DUP.md`](references/rules/DUP.md) — Duplication (2 KB)
-  - [`rules/SEC.md`](references/rules/SEC.md) — Security (OWASP) (29 KB)
+  - [`rules/SEC.md`](references/rules/SEC.md) — Security (OWASP) (34 KB)
   - [`rules/TEST.md`](references/rules/TEST.md) — Test quality (15 KB)
   - [`rules/NATS.md`](references/rules/NATS.md) — NATS / JetStream (4 KB)
 - [Classification notes](references/rules-classification.md) — justified violations and SEC/UNSAFE classification guidance
-- [OWASP Top 10:2021](references/owasp-2021.md) — A01--A10 mapping for security findings
+- [OWASP Top 10:2025](references/owasp-2025.md) — A01--A10 mapping for security findings
 - [Anti-patterns](references/anti-patterns.md) — Common cross-cutting anti-patterns
 - [NATS security](references/nats-security.md) — NATS-specific SEC rule mapping
 - [Flakiness patterns](references/flakiness-patterns.md) — Root causes and mitigations for flaky tests

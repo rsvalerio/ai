@@ -8,7 +8,8 @@ coarse: it sizes a backlog for planning, it does not quote a piece of work.
 From the pedantic run, per lint:
 
 - instance count
-- effort class (M, D, J, S) from [lint-catalog.md](lint-catalog.md)
+- effort class (M, D, J, S) from [lint-catalog.md](lint-catalog.md), which gives every lint
+  one: a named list, or its group's [default](lint-catalog.md#default-class-by-group)
 - origin (`pedantic-only` or `clippy-default`)
 
 ## Rates
@@ -41,6 +42,20 @@ Report four things, no more:
    but not including 5, **L** 5 up to and including 15, **XL** above 15.
 4. **The dominant terms** — the two or three lints contributing the most hours, with their
    share. This is the part a reader acts on: it says where a wave should start.
+
+## Signals to call out
+
+Name these in the report when they appear, because they change how the estimate reads:
+
+| Signal | Why it matters |
+|--------|----------------|
+| `clippy::missing_errors_doc` / `missing_panics_doc` in bulk | Documentation debt: high count, near-zero risk, ideal first wave |
+| `clippy::must_use_candidate` in bulk | Mechanical, but touches the public API surface — a semver review |
+| `clippy::module_name_repetitions` | Renames ripple through call sites; cheap per site, wide blast radius |
+| `clippy::cast_possible_truncation` / `cast_precision_loss` | Each one is a real numeric decision, not a rename — the expensive class |
+| `clippy::too_many_lines` / `cognitive_complexity` | Structural refactors; the dominant term in most estimates |
+| Findings concentrated in one crate | Suggests a single wave rather than a workspace-wide push |
+| A high `clippy-default` count | The current gate is not being enforced in CI — worth flagging on its own |
 
 ## Worked example
 

@@ -13,7 +13,7 @@ Rule IDs are grouped into the following categories (used for reporting and triag
 | Idioms & correctness | `OWN`, `ERR`, `TRAIT`, `CONC`, `ASYNC`, `PERF`, `UNSAFE`, `PATTERN`, `MACRO`, `TIME`, `VER`, `EDITION` | Ownership, errors, traits, concurrency, async, performance, unsafe, patterns, macro design, date/time correctness, version-specific features | `rules/OWN.md`, `rules/ERR.md`, `rules/TRAIT.md`, `rules/CONC.md`, `rules/ASYNC.md`, `rules/PERF.md`, `rules/UNSAFE.md`, `rules/PATTERN.md`, `rules/MACRO.md`, `rules/TIME.md`, `rules/VER.md`, `rules/EDITION.md` |
 | Structure & readability | `FN`, `READ`, `ARCH`, `API`, `CL` | Complexity, readability, architecture, API design, cognitive load | `rules/FN.md`, `rules/READ.md`, `rules/ARCH.md`, `rules/API.md`, `rules/CL.md` |
 | Duplication | `DUP` | Code duplication (production and test-helper) | `rules/DUP.md` |
-| Security | `SEC` | Security — maps to OWASP Top 10 (see `owasp-2021.md`) | `rules/SEC.md` |
+| Security | `SEC` | Security — maps to OWASP Top 10 (see `owasp-2025.md`) | `rules/SEC.md` |
 | Test quality | `TEST` | Test coverage, assertions, flakiness, organization | `rules/TEST.md` |
 | NATS / JetStream | `NATS` | `async-nats` patterns — see `nats-security.md` for security mapping | `rules/NATS.md` |
 | Classification notes | n/a | Severity adjustment and SEC/UNSAFE mapping guidance | [rules-classification.md](rules-classification.md) |

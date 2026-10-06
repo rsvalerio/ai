@@ -23,7 +23,7 @@ A monorepo of AI tooling: [Agent Skills](https://agentskills.io/specification) g
 | **code-review-run-waves** | Run every open wave concurrently (one worktree each); land merges one at a time via a shared lock. |
 | **commit-script** | Analyze git state and generate a script that stages grouped files into conventional commits — optionally on a topic branch that ends in a `gh` pull request. |
 | **rust-make-build-fast** | Survey a clean Rust checkout's build cost: profiles, gates, nextest, target directories, duplicate and unused dependencies, sccache hit rate. File one `build-fast` backlog task per finding with its measured cost, the date and machine load, classified `safe` or `trade-off`. Cold builds only with `--measure-cold`; with `--apply`, write the safe fixes (never the trade-offs). |
-| **rust-make-clippy-pedantic** | Lint a clean Rust checkout at pedantic strength via flags only, file one `pedantic`-labelled backlog task per warning — test-only style findings, generated files and out-of-tree warnings dropped, high-volume lints aggregated per crate — estimate the cleanup, and show (or with `--apply`, write) the matching `Cargo.toml` / `clippy.toml` lint policy. |
+| **rust-make-clippy-pedantic** | Lint a clean Rust checkout at pedantic strength via flags and a scratch `clippy.toml` only, file one `pedantic`-labelled backlog task per warning — generated files and out-of-tree warnings dropped, the policy's four in-tests lints exempt in test code, high-volume lints aggregated per crate — estimate the cleanup, and show (or with `--apply`, write) the matching `Cargo.toml` / `clippy.toml` lint policy. |
 | **rust-meta** | Process external Rust content and integrate new knowledge into `code-review-rust`. |
 
 ### product skills
