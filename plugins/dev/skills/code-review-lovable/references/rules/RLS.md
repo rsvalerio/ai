@@ -74,9 +74,14 @@ level security`; `using (true)` / `with check (true)`; `to anon`; `grant .* to a
   `(storage.foldername(name))[1] = (select auth.uid()::text)`, and uploads use that path.
   **Scanning guidance:** on Lovable Cloud a storage tool creates buckets, usually without a
   migration (look for a comment such as "bucket created via tool"), so the bucket's `public` flag
-  is not in the repo. Infer it from what you can see: a `SELECT` policy on `storage.objects` with
-  no role and no owner predicate, or `getPublicUrl(` on the bucket, means anyone can read it. State
-  in the finding that the flag itself was not visible. A missing bucket migration is not RLS-8.
+  is not in the repo. Judge the two access paths separately. A `SELECT` policy on
+  `storage.objects` that applies to `anon` (no `to` clause, or `to anon` / `to public`) with no
+  owner predicate is exposure in itself: anyone holding the publishable key can list and download
+  the bucket's objects through the API, whatever the flag says. File that. `getPublicUrl(` proves
+  nothing on its own. It only builds a URL, which works only if the bucket is public, so it is a
+  signal that the app expects a public bucket and a reason to ask. Do not assert the bucket is
+  public from it. Say the flag was not visible and name it as the thing to check. A missing bucket
+  migration is not RLS-8.
   — supabase.com/docs/guides/storage/security/access-control
 - **RLS-7.** No policy may query the table it protects (a `profiles` policy that selects from
   `profiles` to check a role). It fails with `infinite recursion detected in policy` (42P17), or
@@ -111,7 +116,11 @@ level security`; `using (true)` / `with check (true)`; `to anon`; `grant .* to a
   requests skip them. Unwrapped calls on a large table are a full scan with a function call per
   row. Advisor lint: `auth_rls_initplan`. Two permissive policies for the same role and command
   (often a second `create policy` added by a later prompt, sometimes inside an `if not exists`
-  block under a new name) are all evaluated and `OR`ed together. That costs time on every row and
-  hides which one is meant to govern, so drop the duplicate. Advisor lint:
+  block under a new name) are all evaluated and `OR`ed together. Compare their predicates before
+  recommending anything. When they are equivalent, or one implies the other (two `with check
+  (true)` inserts), the extra one costs time on every row and hides which is meant to govern, so
+  drop it. When they grant **different** access (an owner policy and an admin policy), both are
+  intended. Never recommend dropping one. The only fix on offer is merging them into a single
+  policy whose predicate `OR`s the two, which is a performance change and *Low*. Advisor lint:
   `multiple_permissive_policies`. *(Typical severity: Medium.)*
   — supabase.com/docs/guides/database/postgres/row-level-security-performance

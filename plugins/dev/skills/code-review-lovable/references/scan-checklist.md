@@ -10,7 +10,7 @@ step. Work the SQL rows against the **final** migration state, not a single file
 | `using (true)` / `with check (true)`; policy `to public` / `to anon` on a write; write policy with no `auth.uid()`; guest `INSERT` on a table with a nullable `user_id` | RLS-2, RLS-3 |
 | `security definer` without `set search_path`; a `public` function with no `revoke execute … from public` (a revoke from `anon` alone does not count); a policy helper revoked from the role its policies run as | RLS-4 |
 | `create view` in `public` without `security_invoker` | RLS-5 |
-| `storage.buckets` row with `public` true for user content; `storage.objects` policy not keyed on `foldername`; a `storage.objects` `SELECT` policy with no role or owner predicate on a tool-made bucket | RLS-6, SUPA-9 |
+| `storage.buckets` row with `public` true for user content; `storage.objects` policy not keyed on `foldername`; a `storage.objects` `SELECT` policy open to `anon` with no owner predicate | RLS-6, SUPA-9 |
 | A policy on table T whose expression selects from T; `infinite recursion` in issues/logs | RLS-7, AUTH-1 |
 | Same migration file modified after a later one exists (`git log`); schema objects used in `src/` with no migration | RLS-8, SUPA-10 |
 | Columns with zod `.min`/`.max`/`.email`/enum in a form but no `check`/`not null`/`unique` in SQL | RLS-9, FORM-2 |
@@ -40,7 +40,7 @@ step. Work the SQL rows against the **final** migration state, not a single file
 | Function named or handling `webhook` / `stripe` / `svix` | EDGE-5 |
 | `Access-Control-Allow-Origin` reflecting `req.headers.get('origin')`; missing `OPTIONS` branch | EDGE-6 |
 | Response body containing `error.message` / upstream text; `fetch(` without `signal`; secret literal in a function | EDGE-7 |
-| External call (Shopify Admin, payment, email) before the `.insert(`/`.update(` that records it; a read-then-mint "already claimed?" check with no `unique` constraint or status claim | EDGE-8 |
+| External call (Shopify Admin, payment, email) before the `.insert(`/`.update(` that records it; a read-then-mint "already claimed?" check with no `unique` constraint or status claim; a retried external create with no idempotency key or deterministic identifier | EDGE-8 |
 | `deno.land/std@…/http/server.ts` `serve`; `esm.sh/@supabase/supabase-js@2.<old>`; constants copied across functions | EDGE-9 |
 | `queryKey: [` with only string literals while `queryFn` closes over variables; the same literal key in several files with different `queryFn` arguments | QRY-1 |
 | `useMutation(` with no `onSuccess`/`onSettled` invalidation; `onMutate` without `onError` rollback | QRY-3 |

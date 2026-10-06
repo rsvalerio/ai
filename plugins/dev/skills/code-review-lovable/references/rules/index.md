@@ -10,11 +10,11 @@ full text in the category file linked from its heading. Never file from the inde
 - **RLS-3** INSERT/UPDATE policies constrain the new row's owner column. An explicit `with check (true)` lets users reassign rows or file them as someone else.
 - **RLS-4** `security definer` functions set `search_path`, authorize internally, and are not RPC-exposed unless intended.
 - **RLS-5** Views in `public` use `security_invoker = true`, or they bypass base-table RLS.
-- **RLS-6** User-private storage buckets are not public. Object policies scope by the user's folder. Tool-made buckets: infer publicity from policies.
+- **RLS-6** User-private storage buckets are not public. Object policies scope by the user's folder. Tool-made buckets: an anon `SELECT` policy is exposure; `getPublicUrl` is only a signal.
 - **RLS-7** No policy queries its own table. Use a `security definer` helper to avoid recursion.
 - **RLS-8** Schema changes are new migrations. Never edit an applied one or change the dashboard only. Lovable Cloud tool-made buckets and secrets are not this.
 - **RLS-9** Data invariants are enforced by DB constraints, not only by the form's zod schema.
-- **RLS-10** Wrap `auth.uid()` as `(select auth.uid())` in policies, index the compared columns, and drop duplicate permissive policies.
+- **RLS-10** Wrap `auth.uid()` as `(select auth.uid())` in policies, index the compared columns, and drop a permissive policy only when another already implies it.
 - **RLS-11** Grants match intent: no broad `anon` grants on private tables, and every client-used table is granted.
 
 ## SUPA — Supabase client · [rules/SUPA.md](SUPA.md)
@@ -49,7 +49,7 @@ full text in the category file linked from its heading. Never file from the inde
 - **EDGE-5** Webhooks verify the signature on the raw body and are idempotent on the event ID.
 - **EDGE-6** Handle preflight. Restrict origins for privileged functions. Never reflect Origin with credentials.
 - **EDGE-7** Secrets from env, fail closed. Generic error bodies with correct statuses. Timeouts on outbound fetch.
-- **EDGE-8** Reserve the DB row before an irreversible external side effect, and make it idempotent.
+- **EDGE-8** Reserve the DB row before an irreversible external side effect, make it idempotent, and reconcile unknown outcomes before retrying.
 - **EDGE-9** Current, pinned imports (`Deno.serve`, `npm:` supabase-js); shared constants in `_shared/`.
 
 ## QRY — Server state · [rules/QRY.md](QRY.md)

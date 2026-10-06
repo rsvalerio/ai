@@ -74,7 +74,15 @@ another paid upstream; `X-Shopify-Access-Token` / `/admin/api/` / `price_rules` 
   constraint or a timeout. It also mints twice when the client retries or two tabs race the
   "already claimed?" check. A loop that mints per row, such as rewarding each pending referral,
   claims each row first: `update … set status = 'processing' where id = … and status = 'joined'
-  returning id`. Only then does it call out. Webhooks are EDGE-5. *(Typical severity: High.)*
+  returning id`. Only then does it call out. The call's outcome can also be **unknown**: a
+  timeout or a dropped connection after the request left says nothing about whether it happened,
+  so a blind retry can mint or charge twice and a blind give-up can strand a live code. Make the
+  retry safe at the provider. Send its idempotency key where it has one (Stripe's
+  `Idempotency-Key`), built from the reserved row's id. Where it has none, make the external
+  identifier deterministic from that row, such as a discount code derived from the row id, so a
+  second create collides instead of minting. Failing both, look the result up at the provider
+  before retrying, and leave the row in its `processing` state for a reconciler rather than
+  resetting it. Webhooks are EDGE-5. *(Typical severity: High.)*
 - **EDGE-9.** Imports are current and pinned in one place. Lovable's older function template
   imports `serve` from `https://deno.land/std@0.168.0/http/server.ts`, which `Deno.serve`
   replaces, and `https://esm.sh/@supabase/supabase-js@2.x` pinned at whatever version was current
