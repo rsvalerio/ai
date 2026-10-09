@@ -1,15 +1,17 @@
 ---
 name: code-review-lovable
-description: Reviews Lovable-style apps — Vite + React + TypeScript + Tailwind + shadcn/ui on Supabase (Postgres RLS, Auth, Storage, Edge Functions) with TanStack Query and react-hook-form + zod — for the stack layer generic React review misses, such as missing or permissive RLS policies, unchecked supabase-js errors, service-role leaks, unauthenticated Edge Functions, cache-key bleed, client-only validation, design-token drift and scaffold hygiene. Use whenever asked to review such code or say what is wrong with it, including a Supabase migration, Edge Function or supabase-js snippet pasted into the chat; while writing or editing such an app as an implementation guardrail; or to run a formal review that files one backlog task per finding.
-allowed-tools: Read Grep Glob Bash(git rev-parse:*) Bash(git log:*) Bash(ops --version) Bash(ops backlog:*) Bash(ops typecheck) Bash(ops lint) Bash(ops explain:*)
+description: Reviews Lovable-style apps — Vite + React + TypeScript + Tailwind + shadcn/ui on Supabase or Lovable Cloud (Postgres RLS, Auth, Storage, Edge Functions), TanStack Query, Zustand, react-hook-form + zod, and Shopify Storefront commerce — for the stack layer generic React review misses, such as missing or permissive RLS policies, unchecked supabase-js or GraphQL errors, service-role or Shopify Admin token leaks, unauthenticated or value-minting Edge Functions, cache-key bleed, prices checkout does not charge, client-only validation, design-token drift and scaffold hygiene. Use whenever asked to review such code or say what is wrong with it, including a Supabase migration, Edge Function or supabase-js snippet pasted into the chat; while writing or editing such an app as an implementation guardrail; or to run a formal review that files one backlog task per finding.
+allowed-tools: Read Grep Glob Bash(git rev-parse:*) Bash(git log:*) Bash(ops --version) Bash(ops backlog:*) Bash(ops typecheck) Bash(ops lint) Bash(ops explain:*) Bash(npm run lint) Bash(npm test) Bash(npx tsc:*) Bash(npx vitest:*)
 license: Apache-2.0
 ---
 
 # Lovable Stack Code Review
 
 Review the **stack layer** of a Lovable-generated (or Lovable-shaped) app: Supabase schema and
-RLS migrations, supabase-js usage, Supabase Auth, Edge Functions, TanStack Query, forms
-(react-hook-form + zod), shadcn/ui + Tailwind, and the Lovable scaffold itself.
+RLS migrations, supabase-js usage, Supabase Auth (including Lovable Cloud's managed OAuth), Edge
+Functions, TanStack Query and persisted Zustand stores, forms (zod, with or without
+react-hook-form), shadcn/ui + Tailwind, Shopify Storefront commerce when the app uses Lovable's
+Shopify integration, and the Lovable scaffold itself.
 
 This skill is an **overlay on `code-review-web`**, not a replacement. Generic React, TypeScript,
 async, a11y, XSS and test rules stay in `code-review-web`. Rules here exist only because this
@@ -20,13 +22,21 @@ Their rule prefixes do not overlap and their identity keys cannot collide.
 
 - Use this skill when the repo has the stack's fingerprints: `src/integrations/supabase/client.ts`,
   a `supabase/` directory (`migrations/`, `functions/`, `config.toml`), `components.json`
-  (shadcn), `@tanstack/react-query` in `package.json`, or `lovable-tagger` in `vite.config.ts`.
-  A stack with only some of these fingerprints still qualifies. Categories whose code is absent
+  (shadcn), `@tanstack/react-query` in `package.json`, `lovable-tagger` in `vite.config.ts`, or a
+  `.lovable/` directory. `@lovable.dev/cloud-auth-js` or `src/integrations/lovable/` means
+  **Lovable Cloud**: the same Supabase stack, but buckets, secrets and auth settings are managed
+  by Lovable's tools and are not in the repo. `X-Shopify-Storefront-Access-Token` or a
+  `*.myshopify.com` domain (usually in `src/lib/shopify.ts`) puts the `SHOP` category in play.
+  `zustand` with `persist` puts QRY-7 in play. A stack with only some of these fingerprints still
+  qualifies. Categories whose code is absent
   cost nothing. A formal review covers a package, directory or repository, or is any request to
   file findings; the Execution Contract and Process below apply to it only.
 - Also use it as an implementation guardrail for non-trivial changes in such an app, especially
   any change that touches a migration, an RLS policy, an Edge Function or auth. Read the tier-3
-  file for the category you touch, keep the change inside it, and run the QA gates. Do not file
+  file for the category you touch, keep the change inside it, and run the QA gates: `ops
+  typecheck` / `ops lint` where the repo has an `.ops.toml`, otherwise the repo's own scripts
+  (`npm run lint`, `npx tsc -p tsconfig.app.json --noEmit`, `npm test`). A scaffold's root
+  `tsconfig.json` has `"files": []`, so point `tsc` at the app config. Do not file
   backlog tasks in guardrail mode unless the user asked for a formal review.
 - **Ad-hoc review** — a migration, policy, Edge Function or component pasted into the
   conversation, or a question about one snippet ("what is wrong with this?"): answer in chat.
@@ -44,7 +54,8 @@ Their rule prefixes do not overlap and their identity keys cannot collide.
 - Create one backlog task per finding via `ops backlog task create --plain`.
 - Scan `supabase/migrations/*.sql`, `supabase/functions/**/*.ts`, `supabase/config.toml`, the
   `.ts`/`.tsx` sources under `src/`, `package.json`, `tsconfig*.json`, `eslint.config.*`,
-  `vite.config.*`, `tailwind.config.*`, `src/index.css`, `components.json` and `index.html`.
+  `vite.config.*`, `tailwind.config.*`, `src/index.css`, `components.json`, `index.html` and,
+  as context rather than code, `.lovable/plan.md`.
 - Cover every rule category: work from [scan-checklist.md](references/scan-checklist.md)
   straight to the rule files it names.
 - Apply the severity scale in [rules.md](references/rules.md#severity-scale). One stack-specific
@@ -71,7 +82,9 @@ there, an `any` is TS-1 there, and a missing `alt` is A11Y-2 there. File here on
 stack is what makes the code wrong. An unchecked `{ data }` from supabase-js is SUPA-1, not
 ASYNC-4. A third-party secret (an OpenAI, Stripe or Resend key) in `src/` or a `VITE_*` variable
 is `code-review-web` SEC-10 / SEC-11. In this stack the fix it names is a Supabase secret read by
-an Edge Function (EDGE-7).
+an Edge Function (EDGE-7). A Shopify credential is the exception: the token class decides, so it
+is filed here as SHOP-1, and the **public** Storefront token is filed nowhere (see the
+calibration rules).
 
 ## Loading rules (token discipline)
 
@@ -107,7 +120,13 @@ Formal review only — guardrail and ad-hoc review modes answer in chat instead.
    the ESLint config so you know the real baseline (LOV-1). If the repo carries output from
    Lovable's security scan or the Supabase database advisors, read it as input. Those tools check
    that RLS **exists**, not that the policies are correct, so an open finding there is a
-   candidate and a clean report proves nothing about RLS-2 / RLS-3. **Exclude** `node_modules/`, `dist/`,
+   candidate and a clean report proves nothing about RLS-2 / RLS-3. Read `.lovable/plan.md` if
+   present, for what Lovable is mid-way through and what waits on setup outside the repo
+   (LOV-6). On Lovable Cloud, note what the repo cannot show: bucket `public` flags, secrets and
+   the auth redirect allow list. Findings that depend on them say so rather than guess. If the app
+   uses Shopify, list the Storefront helper, the cart store and every pinned API version. A formal
+   review needs `.backlog/tasks/`. If `ops backlog task list` reports none, stop and tell the user
+   to run `ops backlog init`; do not create it yourself. **Exclude** `node_modules/`, `dist/`,
    `supabase/.temp/` and `src/components/ui/` (vendored shadcn, scanned only for UI-4 and for
    LOV-5's unused primitives). Also
    exclude `src/integrations/supabase/types.ts`, which is generated and scanned only for SUPA-10
@@ -123,8 +142,10 @@ Formal review only — guardrail and ad-hoc review modes answer in chat instead.
    RLS-5, the bucket for RLS-6, and the policy for RLS-7. `<enclosing item>` is that object's
    schema-qualified name (`public.notes`, `public.has_role`). Use it even when the defect sits
    in a later migration, and never key the migration that happened to show the defect. One
-   table's missing RLS is one finding however many migrations touch it. List every `file:line`
-   in the description.
+   table's missing RLS is one finding however many migrations touch it. For the project-wide
+   findings, key the file the rule names: SHOP-5 at the browser file holding the version constant,
+   QRY-1's shared literal key at the first file using it (enclosing item: the key, `['products']`),
+   and QRY-7 at the store file. List every `file:line` in the description.
 4. **Create tasks** — see below.
 5. **Summarize** — `ops backlog task list --status 'Triage' --plain`.
 
@@ -135,6 +156,15 @@ Formal review only — guardrail and ad-hoc review modes answer in chat instead.
   not a secret leak. Neither is the anon JWT that the generated `client.ts` often hardcodes as a
   literal. Do not file SEC-10 or SUPA-4 for them. Only a **service-role** key or a
   third-party secret is a leak.
+- **The public Shopify Storefront token is public by design.** A hardcoded
+  `X-Shopify-Storefront-Access-Token` value in `src/lib/shopify.ts` is how Shopify intends browser
+  storefronts to work. Do not file SEC-10 or SHOP-1 for it. A private Storefront token, an Admin
+  token (`shpat_`) or an app secret (`shpss_`) in the browser is SHOP-1, Critical.
+- **Guest-submission tables are not open writes.** An insert-only `with check (true)` for `anon`
+  on a form table (restock alerts, contact, waitlist) is judged on its owner column and abuse
+  limits (RLS-2 / RLS-3), not filed as "anyone can modify everyone's data".
+- **Lovable Cloud objects made by tools are not migration drift.** A bucket or secret with no
+  migration is expected there (RLS-6, RLS-8).
 - **Judge RLS on the final migration state**, as in step 2.
 - **`using (true)` is not always wrong.** On a `SELECT` policy for data that is public by design
   (a published catalog, public profiles' display names), it is correct. Say why it is public, or
@@ -174,7 +204,8 @@ RLS fix is a **new** migration, not an edit to an applied one (RLS-8). For an RL
 the same migration as the identity key's `<path>` so triage can order the wave, and say in the
 acceptance criteria that the fix lands as a new migration file.
 
-`<category>` is the lowercased prefix (`rls`, `supa`, `auth`, `edge`, `qry`, `form`, `ui`, `lov`).
+`<category>` is the lowercased prefix (`rls`, `supa`, `auth`, `edge`, `qry`, `form`, `ui`, `shop`,
+`lov`).
 
 ## Finding ID Prefixes
 
@@ -184,9 +215,10 @@ acceptance criteria that the fix lands as a new migration file.
 | `SUPA` | supabase-js client usage (queries, errors, realtime, storage, types) | [rules/SUPA.md](references/rules/SUPA.md) |
 | `AUTH` | Supabase Auth flows, sessions, roles | [rules/AUTH.md](references/rules/AUTH.md) |
 | `EDGE` | Supabase Edge Functions (Deno) | [rules/EDGE.md](references/rules/EDGE.md) |
-| `QRY` | TanStack Query | [rules/QRY.md](references/rules/QRY.md) |
+| `QRY` | TanStack Query and persisted Zustand stores | [rules/QRY.md](references/rules/QRY.md) |
 | `FORM` | react-hook-form + zod | [rules/FORM.md](references/rules/FORM.md) |
 | `UI` | shadcn/ui + Tailwind design system | [rules/UI.md](references/rules/UI.md) |
+| `SHOP` | Shopify Storefront / Admin API (tokens, GraphQL errors, prices, cart, versions) | [rules/SHOP.md](references/rules/SHOP.md) |
 | `LOV` | Lovable scaffold and AI-iteration hygiene | [rules/LOV.md](references/rules/LOV.md) |
 
 ## Severity Scale
@@ -212,5 +244,6 @@ app. Finish both before `code-review-triage`.
 - Full rules, one file per category (tier 3): [RLS](references/rules/RLS.md),
   [SUPA](references/rules/SUPA.md), [AUTH](references/rules/AUTH.md),
   [EDGE](references/rules/EDGE.md), [QRY](references/rules/QRY.md),
-  [FORM](references/rules/FORM.md), [UI](references/rules/UI.md), [LOV](references/rules/LOV.md)
+  [FORM](references/rules/FORM.md), [UI](references/rules/UI.md), [SHOP](references/rules/SHOP.md),
+  [LOV](references/rules/LOV.md)
 - [OpenAI agent metadata](assets/openai.yaml)

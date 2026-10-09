@@ -1,7 +1,7 @@
 ---
 type: regex
 name: cites-rule-id
-pattern: "\\b(RLS|SUPA|AUTH|EDGE|QRY|FORM|UI|LOV)-[0-9]+\\b"
+pattern: "\\b(RLS|SUPA|AUTH|EDGE|QRY|FORM|UI|SHOP|LOV)-[0-9]+\\b"
 ---
 
 An ad-hoc review answers in chat and cites a rule ID for every problem it names

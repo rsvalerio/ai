@@ -34,7 +34,11 @@ type; `ProtectedRoute` / `AdminRoute`; `if (user.email === '…')`; `.update({ r
 - **AUTH-4.** On sign-out (and on user change), clear user-scoped client state: call
   `queryClient.clear()` or remove user-keyed queries, and reset stores and `localStorage` drafts.
   Otherwise the next user on the same browser sees the previous user's cached data until
-  refetch.
+  refetch. Zustand `persist` stores (QRY-7) survive `signOut` and reloads. Each one holding
+  per-user data, such as a wishlist, preferences, a referral code or a cart tied to an account, is
+  reset in the same handler (`useStore.persist.clearStorage()` plus a reset action). A store that
+  is deliberately per-device, such as a guest cart or a compare tray, says so in a comment. Put
+  the clearing in the one auth provider's `SIGNED_OUT` branch, not in each sign-out button.
 - **AUTH-5.** Do not persist tokens yourself. The supabase client already stores and refreshes
   the session. A copy in `localStorage` / a context goes stale on refresh and outlives sign-out.
 
@@ -43,7 +47,13 @@ type; `ProtectedRoute` / `AdminRoute`; `if (user.email === '…')`; `.update({ r
 - **AUTH-6.** `signUp` / `signInWithOtp` / `signInWithOAuth` / `resetPasswordForEmail` pass an
   explicit `emailRedirectTo` / `redirectTo` built from `window.location.origin`, and that URL is in
   the project's Redirect URLs allow list. Without it, links fall back to the Site URL, which is
-  often the Lovable preview domain, and break in production.
+  often the Lovable preview domain, and break in production. On Lovable Cloud, managed OAuth goes
+  through the generated `lovable.auth.signInWithOAuth(provider, { redirect_uri })`
+  (`src/integrations/lovable/index.ts`, `@lovable.dev/cloud-auth-js`), which then calls
+  `supabase.auth.setSession`. The same rule applies to its `redirect_uri`. Read its result too:
+  it returns `{ redirected }` or `{ error }` and does not throw (SUPA-1). The allow list lives in
+  the project's auth settings, in Lovable Cloud or the Supabase dashboard, not in the repo, so a
+  finding names the URL to allow rather than asserting it is missing.
   — supabase.com/docs/guides/auth/redirect-urls
 - **AUTH-7.** A post-login `?redirect=` / `?next=` parameter is validated as a same-origin
   relative path before `navigate()` / `window.location` uses it. Otherwise it is an open
