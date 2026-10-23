@@ -153,9 +153,11 @@ skill-validator validate structure --strict ./plugins/dev/skills/code-review-rus
 
 Checks YAML frontmatter, required `name`/`description`, lowercase-hyphen naming, directory structure, and that `name` matches the parent directory.
 
-`make validate` runs this over every skill (`plugins/*/skills/*/` and `skills/*/`) through [`scripts/validate-skills.py`](scripts/validate-skills.py), which propagates per-skill failures — a plain shell loop kept only the last skill's exit code, so the gate silently passed while four skills were failing — and carries one allowlist entry:
+`make validate` runs this over every skill (`plugins/*/skills/*/` and `skills/*/`) through [`scripts/validate-skills.py`](scripts/validate-skills.py), which propagates per-skill failures — a plain shell loop kept only the last skill's exit code, so the gate silently passed while four skills were failing — and carries two allowlist entries:
 
 **`deep nesting detected: references/rules/` (all three review skills) is allowed, and cannot be fixed.** Flattening the corpus to `references/rules-<CAT>.md` makes those 21 files counted top-level references and trips a hard error from the same validator (`total reference files: 74055 tokens`), which fails even without `--strict`. The nesting is what keeps ~50k tokens of rule text out of the counted budget; the warning and the error cannot both be satisfied without deleting rules. An allowlist entry that stops firing fails the build, so it cannot rot into a licence to regress.
+
+**`unrecognized field: "model"` (`commit-script`) is allowed.** `model` is a Claude Code frontmatter extension the Agent Skills spec does not define; `commit-script` pins `claude-haiku-5-5` because grouping a diff into commits does not need a larger model. Hosts that do not know the field ignore it.
 
 `references/rules/index.md` lives inside `rules/` for the same reason — as a counted top-level reference it exceeded the validator's 10,000-token-per-file limit. Note what that does and does not achieve: it satisfies the checker, it does not reduce what an agent loads. Splitting the index was the alternative and would have cost the "one place to find any rule" property.
 
