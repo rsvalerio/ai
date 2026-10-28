@@ -2,6 +2,7 @@
 name: commit-script
 description: Review unstaged/staged changes and git log, then generate a shell script that groups related files into conventional commits, optionally on a branch that ends in a pull request
 allowed-tools: Read Write Glob Bash(git status:*) Bash(git diff:*) Bash(git log:*) Bash(git rev-parse:*) Bash(git branch --show-current) Bash(git remote show:*) Bash(gh auth status) Bash(sed -n:*)
+model: claude-haiku-5-5
 license: Apache-2.0
 ---
 

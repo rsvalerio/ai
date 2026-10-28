@@ -41,10 +41,15 @@ SKILL_GLOBS = ("plugins/*/skills/*", "skills/*")
 # both be satisfied without deleting rules. Nesting is the cheaper of the two.
 # code-review-lovable shares the layout so validate-rules.py and the tier-3 read
 # path work the same across all three review skills.
+#
+# unrecognized field "model": a Claude Code frontmatter extension the Agent Skills
+# spec does not define. commit-script pins a small model because grouping a diff
+# into commits does not need a large one; other hosts ignore the field.
 ALLOWED: set[tuple[str, str]] = {
     ("code-review-rust", "deep nesting detected: references/rules/"),
     ("code-review-web", "deep nesting detected: references/rules/"),
     ("code-review-lovable", "deep nesting detected: references/rules/"),
+    ("commit-script", 'unrecognized field: "model"'),
 }
 
 
