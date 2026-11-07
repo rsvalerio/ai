@@ -42,6 +42,8 @@ ALLOWED: set[tuple[str, str]] = {
 
 
 def validate(path: Path) -> dict | None:
+    # --json needs a claude-code recent enough to have it (2.1.312 does, 2.1.235 does
+    # not); ci.yml pins one.
     proc = subprocess.run(
         ["claude", "plugin", "validate", "--json", str(path)], capture_output=True, text=True
     )
@@ -65,6 +67,10 @@ def main() -> int:
     for name, path in targets:
         report = validate(path)
         if report is None:
+            # No report means no warnings were seen, not that they stopped firing;
+            # keep this target's entries out of the stale check so the real error
+            # is not buried under "remove it" noise.
+            stale -= {entry for entry in stale if entry[0] == name}
             failed.append(name)
             continue
         manifest = report.get("manifest") or {}
