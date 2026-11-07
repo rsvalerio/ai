@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: babysit-mixed-states
+expected_outcome: |
+  Runs the skill's pr-state.py on prs.json, reports all five PRs in one table with their state, plans to read the failed ci / lint log for valysec#23 and fix it in a worktree, plans a rebase for forge#12, says someorg/notcloned has no local clone and suggests cloning, drafts a reply to the unanswered greptile thread on ai#33 that weighs the claim instead of just accepting it, ignores the thread the user already answered, marks ops#117 ready to merge, and pushes, posts or records nothing.
+context:
+  scaffold_script: place-files.sh

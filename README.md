@@ -15,6 +15,7 @@ A monorepo of AI tooling: [Agent Skills](https://agentskills.io/specification) g
 
 | Skill | Purpose |
 |-------|---------|
+| **babysit-prs** | One pass over every open PR you authored (the github.com/pulls list): fix failing CI, rebase conflicted or stale branches and apply requested review changes from an isolated worktree, then draft replies to review threads that are posted only once you approve. Never merges. Built for `/loop /babysit-prs`. |
 | **code-review-rust** | Review Rust for idioms, security, complexity, duplication, test quality, and NATS patterns. One finding per file in `.backlog/tasks/`. Also answers ad-hoc reviews of pasted code in chat, with rule IDs, and works as an [implementation guardrail](docs/implementation-guardrail.md). |
 | **code-review-web** | Review React/TypeScript (Vite) frontends for hooks, types, async, a11y, security, and tests. Same finding, ad-hoc review and guardrail pattern as the Rust skill. |
 | **code-review-lovable** | Overlay on `code-review-web` for Lovable-style apps (shadcn/ui + Tailwind on Supabase or Lovable Cloud, TanStack Query, Zustand, zod, Shopify Storefront): RLS policies, supabase-js and GraphQL errors, Edge Function auth and value minting, cache keys, price truth, forms, design tokens, scaffold hygiene. |

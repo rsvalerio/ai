@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: babysit-stops-retrying
+expected_outcome: |
+  Does not attempt a third fix for the ci / lint check on valysec#23 (it already has two recorded attempts) and reports it as needing the user. Re-presents the saved draft reply on thread PRRT_kwB1 instead of writing a new one, reports ops#117 as waiting on CI, and pushes, posts or records nothing.
+context:
+  scaffold_script: place-files.sh

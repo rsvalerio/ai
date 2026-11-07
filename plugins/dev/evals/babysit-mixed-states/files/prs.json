@@ -1,0 +1,281 @@
+{
+  "login": "rsvalerio",
+  "clones": {
+    "rsvalerio/ops": "/home/rsvalerio/projects/ops",
+    "valycorp/valysec": "/home/rsvalerio/projects/valysec",
+    "rsvalerio/ai": "/home/rsvalerio/projects/ai",
+    "rsvalerio/forge": "/home/rsvalerio/projects/forge"
+  },
+  "state": {},
+  "prs": [
+    {
+      "repo": "rsvalerio/ops",
+      "number": 117,
+      "title": "fix(lock): catch SIGINT/SIGTERM from before the lock is taken",
+      "url": "https://github.com/rsvalerio/ops/pull/117",
+      "isDraft": false,
+      "state": "OPEN",
+      "headRefName": "fix/lock-signal-window",
+      "headRefOid": "d583959018d86efe6bf72ebebcc3204390d159c0",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ops"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "rust-ci / verify",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "rust-ci / qa",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    },
+    {
+      "repo": "valycorp/valysec",
+      "number": 23,
+      "title": "docs(model): spike findings waves 4 and 6",
+      "url": "https://github.com/valycorp/valysec/pull/23",
+      "isDraft": false,
+      "state": "OPEN",
+      "headRefName": "docs/spike-waves-4-6",
+      "headRefOid": "aaaa111122223333444455556666777788889999",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "valycorp/valysec"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci / lint",
+                      "status": "COMPLETED",
+                      "conclusion": "FAILURE",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000123/job/1"
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci / test",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    },
+    {
+      "repo": "rsvalerio/ai",
+      "number": 33,
+      "title": "feat(commit-script): run on claude-haiku-5-5",
+      "url": "https://github.com/rsvalerio/ai/pull/33",
+      "isDraft": false,
+      "state": "OPEN",
+      "headRefName": "feat/commit-script-haiku",
+      "headRefOid": "bbbb111122223333444455556666777788889999",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ai"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": [
+          {
+            "id": "PRRT_kwA1",
+            "isResolved": false,
+            "isOutdated": false,
+            "path": "plugins/dev/skills/commit-script/SKILL.md",
+            "line": 5,
+            "comments": {
+              "nodes": [
+                {
+                  "databaseId": 901,
+                  "author": {
+                    "login": "greptile-apps"
+                  },
+                  "body": "**Model id may not exist**\n\n`claude-haiku-5-5` is not a model id I recognise. If the host cannot resolve it, the skill fails to load. Consider removing the `model` field.",
+                  "createdAt": "2026-10-28T10:00:00Z",
+                  "url": "https://github.com/x/pull/1#discussion_r901"
+                }
+              ]
+            }
+          },
+          {
+            "id": "PRRT_kwA2",
+            "isResolved": false,
+            "isOutdated": false,
+            "path": "AGENTS.md",
+            "line": 120,
+            "comments": {
+              "nodes": [
+                {
+                  "databaseId": 902,
+                  "author": {
+                    "login": "greptile-apps"
+                  },
+                  "body": "Typo: \"ovverrides\" should be \"overrides\".",
+                  "createdAt": "2026-10-28T10:00:00Z",
+                  "url": "https://github.com/x/pull/1#discussion_r902"
+                },
+                {
+                  "databaseId": 903,
+                  "author": {
+                    "login": "rsvalerio"
+                  },
+                  "body": "good catch",
+                  "createdAt": "2026-10-28T10:00:00Z",
+                  "url": "https://github.com/x/pull/1#discussion_r903"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "repo": "rsvalerio/forge",
+      "number": 12,
+      "title": "feat: add retry budget",
+      "url": "https://github.com/rsvalerio/forge/pull/12",
+      "isDraft": false,
+      "state": "OPEN",
+      "headRefName": "feat/retry-budget",
+      "headRefOid": "cccc111122223333444455556666777788889999",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/forge"
+      },
+      "mergeable": "CONFLICTING",
+      "mergeStateStatus": "DIRTY",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "build",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    },
+    {
+      "repo": "someorg/notcloned",
+      "number": 4,
+      "title": "chore: bump deps",
+      "url": "https://github.com/someorg/notcloned/pull/4",
+      "isDraft": false,
+      "state": "OPEN",
+      "headRefName": "chore/bump",
+      "headRefOid": "dddd111122223333444455556666777788889999",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "someorg/notcloned"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "FAILURE",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    }
+  ]
+}
