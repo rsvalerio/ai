@@ -39,10 +39,16 @@ just declining.
   But if Greptile has answered the user's pushback twice in the same thread, stop
   drafting. Report the thread as needing the user, because a third round with a bot
   rarely settles anything.
-- Greptile reviews every push on its own. When the checks are done but `greptile.reviewed_head`
+- Greptile reviews most pushes on its own. When the checks are done but `greptile.reviewed_head`
   is false, the PR classifies as `wait-bot`: check back in a few minutes. Do not post a
   mention or open the summary's "Retrigger" link to force a review. Both act under
   the user's name, and the review is usually already on its way.
+- Greptile also skips some pushes entirely (review filters, usage limits). After 30
+  minutes without a review of the head, the script sets `greptile.skipped_head` and the
+  PR falls through to its normal state (often `ready`). Add the note "Greptile hasn't
+  reviewed this push" to the report, and show the score as belonging to the older commit
+  (`Greptile 4/5, older commit`). That way the user knows the score doesn't cover the
+  latest change, and the loop isn't left waiting on a review that may never come.
 - Report the score next to the state, for example `ready · Greptile 4/5`. A score of 3 or
   lower with no open threads usually means the summary itself names a concern.
   Quote that concern's one-line reason in the report.

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: babysit-greptile-cutoff
+expected_outcome: |
+  Reports ai#50 (pushed 10 minutes ago) and ops#140 (old commit date, but CI started 5 minutes ago, so a fresh push) as waiting on Greptile. Reports ai#51 (pushed two hours ago, head never reviewed) as ready, with a note that Greptile hasn't reviewed this push and its 4/5 score belongs to an older commit. Posts no mention or retrigger and ends with a status line to check back in minutes.
+context:
+  scaffold_script: place-files.sh

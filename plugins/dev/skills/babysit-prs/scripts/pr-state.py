@@ -10,8 +10,8 @@ to babysit).
 Usage:
     pr-state.py                    # query GitHub through `gh`
     pr-state.py --from FILE.json   # classify a saved snapshot (tests, replays);
-                                   # its optional "clones"/"state" keys replace the
-                                   # clone scan and the state file
+                                   # its optional "clones"/"state"/"now" keys replace
+                                   # the clone scan, the state file and the clock
     pr-state.py --save FILE.json   # also write the raw snapshot for --from
     pr-state.py --record drafted OWNER/REPO#N THREAD_ID COMMENT_ID < reply.md
     pr-state.py --record ci-attempt OWNER/REPO#N CHECK_NAME HEAD_OID
@@ -30,7 +30,9 @@ Bot fields: `kind` is "own" or "dependabot"; a Dependabot PR carries
 `bot_managed` (every commit is Dependabot's, so `@dependabot rebase` is still
 safe) and `rebase_requested` (a `@dependabot rebase` was already posted at
 this head, so the pass waits for Dependabot's push). `greptile` is null unless Greptile reviewed the PR, else its confidence
-score, the commit it last reviewed and whether that is the head. A Greptile
+score, the commit it last reviewed, whether that is the head, and
+`skipped_head`: the head is unreviewed more than 30 minutes after its push, so
+the pass stops waiting for Greptile. A Greptile
 thread carries `severity` ("P0".."P3") from its badge, with the badge markup
 stripped from the comment bodies.
 
@@ -58,9 +60,9 @@ query($owner: String!, $name: String!, $number: Int!) {
       headRefName headRefOid baseRefName
       headRepository { nameWithOwner }
       mergeable mergeStateStatus reviewDecision
-      commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes {
+      commits(last: 1) { nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes {
         __typename
-        ... on CheckRun { name status conclusion detailsUrl }
+        ... on CheckRun { name status conclusion detailsUrl startedAt }
         ... on StatusContext { context state targetUrl }
       } } } } } }
       history: commits(last: 50) { nodes { commit { author { name } } } }
@@ -78,6 +80,10 @@ FAILED = {"FAILURE", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILU
 MAX_ATTEMPTS = 2  # fixes pushed for one check before the pass hands it to the user
 WRITERS = {"ADMIN", "MAINTAIN", "WRITE"}
 GREPTILE = "greptile-apps"
+# How long after a push to wait for Greptile before reporting the push unreviewed.
+# Greptile skips some PRs (filters, usage limits), and without a cutoff a /loop
+# would sit in wait-bot forever on one it never reviews.
+GREPTILE_WAIT = datetime.timedelta(minutes=30)
 DEPENDABOT = "dependabot"  # GraphQL login of the app; commits say "dependabot[bot]"
 PENDING = {"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "REQUESTED", "EXPECTED"}
 
@@ -203,7 +209,20 @@ def debadge(body):
     return (m.group(1) or m.group(2) if m else None), BADGE.sub("", body).strip()
 
 
-def greptile(pr):
+def head_time(pr):
+    """When the head was pushed, as best GitHub tells: the later of the commit's
+    committer date and its first check run, since CI starts on push and a commit
+    can be made long before it is pushed. None when neither is known."""
+    nodes = pr["commits"]["nodes"]
+    commit = nodes[0]["commit"] if nodes else {}
+    runs = ((commit.get("statusCheckRollup") or {}).get("contexts") or {}).get("nodes", [])
+    stamps = [commit.get("committedDate")] + [
+        min((c["startedAt"] for c in runs if c.get("startedAt")), default=None)]
+    stamps = [datetime.datetime.fromisoformat(t.replace("Z", "+00:00")) for t in stamps if t]
+    return max(stamps, default=None)
+
+
+def greptile(pr, now):
     reviews = [r for r in pr.get("reviews", {}).get("nodes", [])
                if (r.get("author") or {}).get("login") == GREPTILE]
     body = pr.get("body") or ""
@@ -212,8 +231,12 @@ def greptile(pr):
     score = re.search(r"greptile_confidence_score:(\d)", body)
     last = re.search(r"Last reviewed commit:.*?/commit/([0-9a-f]{40})", body)
     last = last.group(1) if last else (reviews[-1]["commit"]["oid"] if reviews else None)
+    reviewed = last == pr["headRefOid"]
+    pushed = head_time(pr)
     return {"confidence": int(score.group(1)) if score else None,
-            "last_reviewed": last, "reviewed_head": last == pr["headRefOid"]}
+            "last_reviewed": last, "reviewed_head": reviewed,
+            # an unknown push time keeps waiting: better a slow loop than skipping a review
+            "skipped_head": not reviewed and pushed is not None and now - pushed > GREPTILE_WAIT}
 
 
 def open_threads(pr, login, drafted):
@@ -255,7 +278,8 @@ def classify(pr):
         return "rebase"
     if pr["pending_checks"]:
         return "wait-ci"
-    if pr["greptile"] and not pr["greptile"]["reviewed_head"]:
+    if pr["greptile"] and not pr["greptile"]["reviewed_head"] \
+            and not pr["greptile"]["skipped_head"]:
         return "wait-bot"
     if pr["open_threads"]:
         return "await-approval"
@@ -283,6 +307,9 @@ def main():
         pathlib.Path(args.save).write_text(json.dumps(raw, indent=2))
 
     clones = raw.get("clones") or clone_index()
+    # a snapshot may pin "now" so --from replays classify the same on any day
+    now = datetime.datetime.fromisoformat(raw["now"].replace("Z", "+00:00")) if "now" in raw \
+        else datetime.datetime.now(datetime.timezone.utc)
     state = raw["state"] if "state" in raw else load_state()
     prs = []
     for pr in raw["prs"]:
@@ -297,7 +324,7 @@ def main():
             "kind": "dependabot" if is_bot else "own",
             "bot_managed": is_bot and authors <= {"dependabot[bot]"},
             "rebase_requested": pr["headRefOid"] in saved.get("rebase_requested", []),
-            "greptile": greptile(pr),
+            "greptile": greptile(pr, now),
             "repo": pr["repo"], "number": pr["number"], "title": pr["title"], "url": pr["url"],
             "isDraft": pr["isDraft"], "head": pr["headRefName"], "head_oid": pr["headRefOid"],
             "base": pr["baseRefName"],
