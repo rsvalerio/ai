@@ -15,6 +15,7 @@ This repo is a monorepo of AI tooling, published as a Claude Code plugin marketp
 ├── Makefile                  # validate, lint, link/unlink, eval — discovers skills by glob
 ├── scripts/
 │   ├── validate-skills.py    # strict skill-validator run + documented allowlist
+│   ├── validate-marketplace.py  # claude plugin validate --json + documented allowlist
 │   └── validate-rules.py     # rule-index parity for the review skills
 ├── .claude-plugin/
 │   └── marketplace.json      # The only root manifest; lists every plugin
@@ -240,7 +241,7 @@ Prerequisites: `make lint-and-validate` passes.
 
 **Local (Claude Code):** `make link` / `make unlink`.
 
-**Claude Code marketplace:** the repo root is a plugin marketplace (`.claude-plugin/marketplace.json`) listing every plugin under `plugins/`. Inside a plugin the skills reference each other's files, so they are not installable separately. No `version` field in any `plugin.json` — installs track the commit SHA, so pushing to `main` *is* the release. `claude plugin validate` warns about the missing version; that warning is expected and does not fail `make ci`. Each plugin's manifest is also what `claude plugin eval plugins/<name>` resolves to run its no-plugin baseline arm. Users install with:
+**Claude Code marketplace:** the repo root is a plugin marketplace (`.claude-plugin/marketplace.json`) listing every plugin under `plugins/`. Inside a plugin the skills reference each other's files, so they are not installable separately. No `version` field in any `plugin.json` — installs track the commit SHA, so pushing to `main` *is* the release. `claude plugin validate` warns about the missing version; [`scripts/validate-marketplace.py`](scripts/validate-marketplace.py) allowlists that warning, and fails on any other, so the expected ones no longer scroll by on every run. It also allowlists `ICON_MISSING` for both plugins, as a deferral rather than a fix: the plugin directory takes a plugin's icon only on its first submission, so add a real `.claude-plugin/icon.png` before submitting. The entry then stops firing and the script fails until it is removed. Each plugin's manifest is also what `claude plugin eval plugins/<name>` resolves to run its no-plugin baseline arm. Users install with:
 
 ```bash
 claude plugin marketplace add rsvalerio/ai
