@@ -188,6 +188,7 @@ fire", not "is the markdown well-formed".
 | `babysit-mixed-states` | A dry run of `babysit-prs` over a five-PR snapshot (`--from`) plans the right step for each PR, pins the rebase lease to the snapshot SHA, skips a thread the user already answered, and sends nothing |
 | `babysit-stops-retrying` | A check with two recorded fixes is reported `stuck` instead of fixed a third time, a saved draft is shown again rather than rewritten, and the pass ends with a status line the loop can pace on |
 | `babysit-review-bots` | Dependabot PRs get `@dependabot rebase` only while bot-owned, a normal rebase once edited, no repeat request; a Greptile PR not yet reviewed at head waits; a `P1` finding is checked against the code and a `P2` treated as a nit |
+| `babysit-greptile-cutoff` | A push Greptile has not reviewed waits only 30 minutes (judged by when CI started, not the commit date), then falls through to its normal state with the score marked as from an older commit; no retrigger is posted |
 | `research-no-profile` (product) | A "research product X" request loads `product-research` and, with no profile in the sandbox, stops and asks for `.product-research.md`: no web search or fetch, no write or edit attempt |
 
 Every grader is free (`tool_used` / `regex`), so a run costs agent turns but no

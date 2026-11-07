@@ -68,7 +68,7 @@ Group the PRs by `next`:
 | `address-review` | A reviewer (human or bot) has an unresolved thread the user has not answered and no reply has been drafted | Step 3c |
 | `stuck` | A check still fails after two fixes this skill pushed | Report what was tried; needs the user |
 | `wait-ci` | Checks still running | Report only |
-| `wait-bot` | Greptile has not reviewed the head yet, or a requested Dependabot rebase has not landed | Report only; check back in minutes |
+| `wait-bot` | Greptile has not reviewed the head yet (for up to 30 minutes after the push), or a requested Dependabot rebase has not landed | Report only; check back in minutes |
 | `await-approval` | Every open thread already has a draft waiting on the user | Re-present the drafts |
 | `wait-review` | Green, waiting for a reviewer | Report only |
 | `draft` | Green draft PR | Report only. Marking it ready is the user's call |

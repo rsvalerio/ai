@@ -1,0 +1,221 @@
+{
+  "login": "rsvalerio",
+  "now": "2026-11-07T12:00:00Z",
+  "state": {},
+  "clones": {
+    "rsvalerio/ai": "/home/rsvalerio/projects/ai",
+    "rsvalerio/ops": "/home/rsvalerio/projects/ops"
+  },
+  "prs": [
+    {
+      "repo": "rsvalerio/ai",
+      "number": 50,
+      "title": "docs: clarify eval table",
+      "url": "https://github.com/rsvalerio/ai/pull/50",
+      "isDraft": false,
+      "state": "OPEN",
+      "body": "Change.\n\n<!-- greptile_comment -->\n\n<h2>Confidence Score: 4/5</h2>\n\n<!-- greptile_confidence_score:4 -->\n\n<sub>Reviews (1) \u00b7 Last reviewed commit: [\"wip\"](https://github.com/x/commit/1111111111111111111111111111111111111111) \u00b7 Reviewed by Greptile</sub>\n\n<!-- /greptile_comment -->",
+      "author": {
+        "login": "rsvalerio"
+      },
+      "headRefName": "docs/eval-table",
+      "headRefOid": "5555555555555555555555555555555555555555",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ai"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "committedDate": "2026-11-07T11:50:00Z",
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "startedAt": "2026-11-07T11:50:30Z",
+                      "detailsUrl": "https://github.com/x/actions/runs/1/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "history": {
+        "nodes": [
+          {
+            "commit": {
+              "author": {
+                "name": "Rodrigo Valeri"
+              }
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "nodes": [
+          {
+            "author": {
+              "login": "greptile-apps"
+            },
+            "commit": {
+              "oid": "1111111111111111111111111111111111111111"
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    },
+    {
+      "repo": "rsvalerio/ai",
+      "number": 51,
+      "title": "feat: add skill index",
+      "url": "https://github.com/rsvalerio/ai/pull/51",
+      "isDraft": false,
+      "state": "OPEN",
+      "body": "Change.\n\n<!-- greptile_comment -->\n\n<h2>Confidence Score: 4/5</h2>\n\n<!-- greptile_confidence_score:4 -->\n\n<sub>Reviews (1) \u00b7 Last reviewed commit: [\"wip\"](https://github.com/x/commit/2222222222222222222222222222222222222222) \u00b7 Reviewed by Greptile</sub>\n\n<!-- /greptile_comment -->",
+      "author": {
+        "login": "rsvalerio"
+      },
+      "headRefName": "feat/skill-index",
+      "headRefOid": "6666666666666666666666666666666666666666",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ai"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "committedDate": "2026-11-07T10:00:00Z",
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "startedAt": "2026-11-07T10:00:40Z",
+                      "detailsUrl": "https://github.com/x/actions/runs/1/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "history": {
+        "nodes": [
+          {
+            "commit": {
+              "author": {
+                "name": "Rodrigo Valeri"
+              }
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "nodes": [
+          {
+            "author": {
+              "login": "greptile-apps"
+            },
+            "commit": {
+              "oid": "2222222222222222222222222222222222222222"
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    },
+    {
+      "repo": "rsvalerio/ops",
+      "number": 140,
+      "title": "fix(lock): release on panic",
+      "url": "https://github.com/rsvalerio/ops/pull/140",
+      "isDraft": false,
+      "state": "OPEN",
+      "body": "Change.\n\n<!-- greptile_comment -->\n\n<h2>Confidence Score: 4/5</h2>\n\n<!-- greptile_confidence_score:4 -->\n\n<sub>Reviews (1) \u00b7 Last reviewed commit: [\"wip\"](https://github.com/x/commit/3333333333333333333333333333333333333333) \u00b7 Reviewed by Greptile</sub>\n\n<!-- /greptile_comment -->",
+      "author": {
+        "login": "rsvalerio"
+      },
+      "headRefName": "fix/lock-panic",
+      "headRefOid": "7777777777777777777777777777777777777777",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ops"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "committedDate": "2026-11-04T09:00:00Z",
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "startedAt": "2026-11-07T11:55:00Z",
+                      "detailsUrl": "https://github.com/x/actions/runs/1/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "history": {
+        "nodes": [
+          {
+            "commit": {
+              "author": {
+                "name": "Rodrigo Valeri"
+              }
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "nodes": [
+          {
+            "author": {
+              "login": "greptile-apps"
+            },
+            "commit": {
+              "oid": "3333333333333333333333333333333333333333"
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    }
+  ]
+}
