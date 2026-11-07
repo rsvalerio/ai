@@ -1,0 +1,145 @@
+{
+  "login": "rsvalerio",
+  "clones": {
+    "rsvalerio/ops": "/home/rsvalerio/projects/ops",
+    "valycorp/valysec": "/home/rsvalerio/projects/valysec",
+    "rsvalerio/ai": "/home/rsvalerio/projects/ai"
+  },
+  "state": {
+    "valycorp/valysec": {
+      "23": {
+        "ci_attempts": {
+          "ci / lint": [
+            "1111aaaa",
+            "2222bbbb"
+          ]
+        },
+        "drafted": {
+          "PRRT_kwB1": {
+            "comment_id": 950,
+            "body": "Not changing this: the section names follow the model doc's existing headings, so renaming them here would split the two. Happy to rename both in a follow-up."
+          }
+        }
+      }
+    }
+  },
+  "prs": [
+    {
+      "repo": "valycorp/valysec",
+      "number": 23,
+      "title": "docs(model): spike findings waves 4 and 6",
+      "url": "https://github.com/valycorp/valysec/pull/23",
+      "isDraft": false,
+      "state": "OPEN",
+      "headRefName": "docs/spike-waves-4-6",
+      "headRefOid": "2222bbbb22223333444455556666777788889999",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "valycorp/valysec"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci / lint",
+                      "status": "COMPLETED",
+                      "conclusion": "FAILURE",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000999/job/1"
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci / test",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": [
+          {
+            "id": "PRRT_kwB1",
+            "isResolved": false,
+            "isOutdated": false,
+            "path": "docs/model.md",
+            "line": 40,
+            "comments": {
+              "nodes": [
+                {
+                  "databaseId": 950,
+                  "author": {
+                    "login": "coderabbitai"
+                  },
+                  "body": "Consider renaming these section headings to match the glossary.",
+                  "createdAt": "2026-10-28T10:00:00Z",
+                  "url": "https://github.com/x/pull/1#discussion_r950"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "repo": "rsvalerio/ops",
+      "number": 117,
+      "title": "fix(lock): catch SIGINT/SIGTERM from before the lock is taken",
+      "url": "https://github.com/rsvalerio/ops/pull/117",
+      "isDraft": false,
+      "state": "OPEN",
+      "headRefName": "fix/lock-signal-window",
+      "headRefOid": "d583959018d86efe6bf72ebebcc3204390d159c0",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ops"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "rust-ci / verify",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "rust-ci / qa",
+                      "status": "IN_PROGRESS",
+                      "conclusion": "",
+                      "detailsUrl": "https://github.com/x/actions/runs/40800000001/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    }
+  ]
+}

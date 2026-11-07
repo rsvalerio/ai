@@ -1,0 +1,379 @@
+{
+  "login": "rsvalerio",
+  "clones": {
+    "rsvalerio/ai": "/home/rsvalerio/projects/ai",
+    "rsvalerio/ops": "/home/rsvalerio/projects/ops"
+  },
+  "state": {
+    "rsvalerio/ops": {
+      "120": {
+        "rebase_requested": [
+          "ffffffffffffffffffffffffffffffffffffffff"
+        ]
+      }
+    }
+  },
+  "prs": [
+    {
+      "repo": "rsvalerio/ai",
+      "number": 40,
+      "title": "feat(babysit-prs): add the babysit-prs skill",
+      "url": "https://github.com/rsvalerio/ai/pull/40",
+      "isDraft": false,
+      "state": "OPEN",
+      "body": "Adds the thing.\n\n<!-- greptile_comment -->\n\n<h2>Confidence Score: 3/5</h2>\n\nThe state file write is not atomic.\n\n<!-- greptile_confidence_score:3 -->\n\n<sub>Reviews (2) \u00b7 Last reviewed commit: [\"feat: x\"](https://github.com/rsvalerio/ai/commit/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) \u00b7 Reviewed by Greptile</sub>\n\n<!-- /greptile_comment -->",
+      "author": {
+        "login": "rsvalerio"
+      },
+      "headRefName": "feat/babysit-prs",
+      "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ai"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/1/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "history": {
+        "nodes": [
+          {
+            "commit": {
+              "author": {
+                "name": "Rodrigo Valeri"
+              }
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "nodes": [
+          {
+            "author": {
+              "login": "greptile-apps"
+            },
+            "commit": {
+              "oid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": [
+          {
+            "id": "PRRT_g1",
+            "isResolved": false,
+            "isOutdated": false,
+            "path": "plugins/dev/skills/babysit-prs/scripts/pr-state.py",
+            "line": 130,
+            "comments": {
+              "nodes": [
+                {
+                  "databaseId": 701,
+                  "author": {
+                    "login": "greptile-apps"
+                  },
+                  "body": "<a href=\"#\"><img alt=\"P1\" src=\"https://greptile-static-assets.s3.amazonaws.com/badges/p1.svg?v=9\" align=\"top\"></a> **State file write is not atomic**\n\n`record()` reads, mutates and rewrites `state.json` with `write_text`. Two `/loop` passes recording at the same time can lose one update, and a crash mid-write leaves a truncated file that `load_state()` then silently treats as empty, so drafts and CI attempt counts are forgotten. Write to a temp file and `os.replace` it.",
+                  "createdAt": "2026-10-29T09:00:00Z",
+                  "url": "https://github.com/rsvalerio/ai/pull/40#discussion_r701"
+                }
+              ]
+            }
+          },
+          {
+            "id": "PRRT_g2",
+            "isResolved": false,
+            "isOutdated": false,
+            "path": "plugins/dev/skills/babysit-prs/scripts/pr-state.py",
+            "line": 62,
+            "comments": {
+              "nodes": [
+                {
+                  "databaseId": 702,
+                  "author": {
+                    "login": "greptile-apps"
+                  },
+                  "body": "<a href=\"#\"><img alt=\"P2\" src=\"https://greptile-static-assets.s3.amazonaws.com/badges/p2.svg?v=9\" align=\"top\"></a> **Constant name could be clearer**\n\n`MAX_ATTEMPTS` could be `MAX_CI_FIX_ATTEMPTS` to make clear it only counts CI fixes.",
+                  "createdAt": "2026-10-29T09:00:00Z",
+                  "url": "https://github.com/rsvalerio/ai/pull/40#discussion_r702"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "repo": "rsvalerio/ai",
+      "number": 41,
+      "title": "docs: tidy README overview",
+      "url": "https://github.com/rsvalerio/ai/pull/41",
+      "isDraft": false,
+      "state": "OPEN",
+      "body": "Adds the thing.\n\n<!-- greptile_comment -->\n\n<h2>Confidence Score: 5/5</h2>\n\nThe state file write is not atomic.\n\n<!-- greptile_confidence_score:5 -->\n\n<sub>Reviews (2) \u00b7 Last reviewed commit: [\"feat: x\"](https://github.com/rsvalerio/ai/commit/9999999999999999999999999999999999999999) \u00b7 Reviewed by Greptile</sub>\n\n<!-- /greptile_comment -->",
+      "author": {
+        "login": "rsvalerio"
+      },
+      "headRefName": "docs/readme-tidy",
+      "headRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ai"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/1/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "history": {
+        "nodes": [
+          {
+            "commit": {
+              "author": {
+                "name": "Rodrigo Valeri"
+              }
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "nodes": [
+          {
+            "author": {
+              "login": "greptile-apps"
+            },
+            "commit": {
+              "oid": "9999999999999999999999999999999999999999"
+            }
+          }
+        ]
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    },
+    {
+      "repo": "rsvalerio/ops",
+      "number": 118,
+      "title": "build(deps): bump serde from 1.0.228 to 1.0.230",
+      "url": "https://github.com/rsvalerio/ops/pull/118",
+      "isDraft": false,
+      "state": "OPEN",
+      "body": "",
+      "author": {
+        "login": "dependabot"
+      },
+      "headRefName": "dependabot/cargo/serde-1.0.230",
+      "headRefOid": "cccccccccccccccccccccccccccccccccccccccc",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ops"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "BEHIND",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/1/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "history": {
+        "nodes": [
+          {
+            "commit": {
+              "author": {
+                "name": "dependabot[bot]"
+              }
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "nodes": []
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    },
+    {
+      "repo": "rsvalerio/ops",
+      "number": 119,
+      "title": "build(deps): bump clap from 4.5.40 to 4.6.0",
+      "url": "https://github.com/rsvalerio/ops/pull/119",
+      "isDraft": false,
+      "state": "OPEN",
+      "body": "",
+      "author": {
+        "login": "dependabot"
+      },
+      "headRefName": "dependabot/cargo/clap-4.6.0",
+      "headRefOid": "dddddddddddddddddddddddddddddddddddddddd",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ops"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "BEHIND",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/1/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "history": {
+        "nodes": [
+          {
+            "commit": {
+              "author": {
+                "name": "dependabot[bot]"
+              }
+            }
+          },
+          {
+            "commit": {
+              "author": {
+                "name": "Rodrigo Valeri"
+              }
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "nodes": []
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    },
+    {
+      "repo": "rsvalerio/ops",
+      "number": 120,
+      "title": "build(deps): bump tokio from 1.47.0 to 1.48.0",
+      "url": "https://github.com/rsvalerio/ops/pull/120",
+      "isDraft": false,
+      "state": "OPEN",
+      "body": "",
+      "author": {
+        "login": "dependabot"
+      },
+      "headRefName": "dependabot/cargo/tokio-1.48.0",
+      "headRefOid": "ffffffffffffffffffffffffffffffffffffffff",
+      "baseRefName": "main",
+      "headRepository": {
+        "nameWithOwner": "rsvalerio/ops"
+      },
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "BEHIND",
+      "reviewDecision": "",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "statusCheckRollup": {
+                "contexts": {
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "ci",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/x/actions/runs/1/job/1"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "history": {
+        "nodes": [
+          {
+            "commit": {
+              "author": {
+                "name": "dependabot[bot]"
+              }
+            }
+          }
+        ]
+      },
+      "reviews": {
+        "nodes": []
+      },
+      "reviewThreads": {
+        "nodes": []
+      }
+    }
+  ]
+}

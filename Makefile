@@ -49,10 +49,11 @@ validate:
 # marketplace.json) listing every plugin under plugins/. Validate the marketplace
 # and each plugin's own manifest. claude-code is expected on PATH rather than
 # pinned in .tool-versions: anyone developing skills already runs it, and CI
-# installs its own pinned copy.
+# installs its own pinned copy. scripts/validate-marketplace.py reads the --json
+# report and fails on any warning it does not allowlist, so the expected ones stop
+# scrolling by and a new one cannot hide among them.
 validate-marketplace:
-	@claude plugin validate .
-	@for plugin in $(PLUGINS); do claude plugin validate $$plugin || exit 1; done
+	@python3 scripts/validate-marketplace.py
 
 # Homebrew works on macOS and Linuxbrew. Without it, install the pinned releases
 # from github.com/rvcas/rumdl and github.com/agent-ecosystem/skill-validator, or

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: babysit-review-bots
+expected_outcome: |
+  Plans @dependabot rebase only for ops#118 (bot-owned), a normal worktree rebase for ops#119 (the user pushed to it), and nothing new for ops#120 (rebase already requested). Reports ai#41 as waiting on Greptile's review of the head. For ai#40 it checks the P1 non-atomic-write finding against pr-state.py (which already locks and replaces atomically) and answers it accordingly, treats the P2 rename as an optional nit, shows Greptile 3/5, and posts nothing.
+context:
+  scaffold_script: place-files.sh

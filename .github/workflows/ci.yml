@@ -67,7 +67,7 @@ jobs:
           node-version: 24
 
       - name: Install pinned claude-code
-        run: npm install -g @anthropic-ai/claude-code@2.1.235
+        run: npm install -g @anthropic-ai/claude-code@2.1.312
 
       - name: Install ops
         uses: rsvalerio/forge/actions/setup-ops@e63b91a8c5f245be0885f453d1d77722151ef182 # v1
