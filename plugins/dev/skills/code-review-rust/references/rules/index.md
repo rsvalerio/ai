@@ -39,7 +39,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **ERR-15** `std::panic::catch_unwind` is a last resort, and continuing after it is a defect on its own.
 - **ERR-16** Indexing panics; the fallible accessor does not.
 
-## TRAIT — Traits & Generics (typical severity: Low--Medium) · [rules/TRAIT.md](TRAIT.md) (8 KB)
+## TRAIT — Traits & Generics (typical severity: Low--Medium) · [rules/TRAIT.md](TRAIT.md) (9 KB)
 
 - **TRAIT-1** `From`/`Into` for conversions
 - **TRAIT-2** `impl Trait` in return position for flexibility; in 2024 edition, all lifetimes are captured by default (use `+ use<>` to opt out)
@@ -56,7 +56,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **TRAIT-13** Public types should be `Send`, and so should the futures they produce, unless the crate deliberately targets a single-threaded runtime and says so.
 - **TRAIT-14** A bound repeated across a struct, its `impl` blocks, and its signatures should be *named*, not just reformatted.
 
-## CONC — Concurrency (typical severity: High--Critical) · [rules/CONC.md](CONC.md) (24 KB)
+## CONC — Concurrency (typical severity: High--Critical) · [rules/CONC.md](CONC.md) (25 KB)
 
 - **CONC-1** Choose the right shared ownership primitive: `Arc<T>` for immutable shared state; `Arc<RwLock<T>>` when reads dominate and writes are rare; `Arc<Mutex<T>>` for occasional writes …
 - **CONC-2** Hold locks briefly; never across `.await`
@@ -73,6 +73,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **CONC-13** A spawned task's failure does not reach anyone unless something joins it.
 - **CONC-14** Graceful shutdown means the signals the platform actually sends.
 - **CONC-15** For parallelism that ends inside the current function, `std::thread::scope` (stable since Rust 1.63) lets the spawned threads borrow local data directly …
+- **CONC-16** Never reach inside a poisoned lock: no `PoisonError::into_inner`, no `clear_poison`; propagate with `expect`.
 
 ## ASYNC — Async (typical severity: Medium--High) · [rules/ASYNC.md](ASYNC.md) (18 KB)
 
@@ -171,7 +172,7 @@ category file linked from its heading. Never file a finding from the index line 
 ## VER — Version-Specific Features (typical severity: Low) · [rules/VER.md](VER.md) (2 KB)
 
 - **VER-1** `RwLockWriteGuard::downgrade()` (stable since Rust 1.92): converts write lock to read lock atomically; use when you need to modify data then continue reading without releasing the lock …
-- **VER-4** `Mutex::clear_poison` and `RwLock::clear_poison` (stable since Rust 1.77): explicitly reset a poisoned lock after recovering from a panic, instead of unwrapping `PoisonError` or recreating the lock.
+- **VER-4** *Retired.* Poisoned locks are owned by **CONC-16**.
 - **VER-5** Async closures with `AsyncFn`/`AsyncFnMut`/`AsyncFnOnce` traits (stable since Rust 1.85): prefer `async || {}` over `|| async {}` workarounds — the latter captures borrows incorrectly …
 - **VER-6** `HashMap`/`HashSet` expose `extract_if` (stable since Rust 1.88; `BTreeMap`/`BTreeSet` since 1.91): drain entries matching a predicate in-place without collecting; replaces `retain` + side-effect patterns …
 - **VER-7** `ptr::fn_addr_eq` (stable since Rust 1.85): compare function pointers for equality by address without `as usize` casts; prefer over manual casting; check project MSRV before adopting
@@ -195,7 +196,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **FN-8** DRY: see DUP-1--10 for thresholds and refactoring guidance.
 - **FN-9** Explicit dependencies; no implicit state
 
-## READ — Readability · [rules/READ.md](READ.md) (7 KB)
+## READ — Readability · [rules/READ.md](READ.md) (9 KB)
 
 - **READ-1** Prefer clarity over cleverness: explicit > implicit, familiar patterns > obscure features, readability > brevity
 - **READ-2** Break dense expressions into named intermediate variables
@@ -210,8 +211,9 @@ category file linked from its heading. Never file a finding from the index line 
 - **READ-11** A hardcoded value in production code needs a comment saying *why that value*, what breaks if it changes, and which external system it is pinned to …
 - **READ-12** Log structured events with named fields and a message *template*, not a preformatted string.
 - **READ-13** Documentation describes the end state, not the journey that produced it.
+- **READ-14** Name lifetimes for what they borrow from once they outlive a single signature (`Parser<'src, 'cfg>`, not `<'a, 'b>`).
 
-## ARCH — Architecture & Modules · [rules/ARCH.md](ARCH.md) (15 KB)
+## ARCH — Architecture & Modules · [rules/ARCH.md](ARCH.md) (16 KB)
 
 - **ARCH-1** No god objects or god modules; split by responsibility.
 - **ARCH-2** At module boundaries, depend on traits for decoupling and testability; within a module, start concrete until abstraction is justified (see TRAIT-9 for when to extract traits)
@@ -231,8 +233,9 @@ category file linked from its heading. Never file a finding from the index line 
 - **ARCH-16** A published library must build with nothing but `cargo` and `rustc`.
 - **ARCH-17** A **new** crate or workspace should be created on the latest stable edition (2024 at the time of writing); the `resolver` key is implied by the edition and not needed.
 - **ARCH-18** Never write `#![deny(warnings)]` in the source.
+- **ARCH-19** Nothing runs before `main`: no `ctor` / `inventory` constructors; initialize explicitly or lazily.
 
-## API — API Design (typical severity: Medium) · [rules/API.md](API.md) (25 KB)
+## API — API Design (typical severity: Medium) · [rules/API.md](API.md) (28 KB)
 
 - **API-1** Expressive type names (`TemperatureCelsius`, not `f64`) — expressive, but **short**: Rust convention is that identifiers compound at most two short words …
 - **API-2** Newtype pattern: wrap primitives for type safety (`UserId(u32)`, `Email(String)`) to prevent argument order mistakes; zero-cost abstraction.
@@ -256,6 +259,7 @@ category file linked from its heading. Never file a finding from the index line 
 - **API-20** A custom collection should implement the iterator traits `std` establishes, or it will not compose with anything.
 - **API-21** A fallible function that *consumes* an argument must hand it back in the error.
 - **API-22** Give the dominant use case a one-call entry point.
+- **API-23** A `bool` parameter whose meaning is invisible at the call site should be a two-variant enum.
 
 ## CL — Cognitive Load · [rules/CL.md](CL.md) (4 KB)
 

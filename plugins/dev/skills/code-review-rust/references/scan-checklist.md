@@ -59,7 +59,7 @@ further.
 | Public item or module with no doc summary, or a `Result`/panicking/`unsafe` fn with no `# Errors`/`# Panics`/`# Safety` section | API-14 |
 | Newtype over a narrower domain with a public field or an infallible constructor | API-2 |
 | Builder with fallible setters, `set_x()` naming, or a public `FooBuilder::new()` | API-4 |
-| Trait implemented exactly once and passed as `dyn`, or `Arc`/`Box`/`RefCell` in a public signature | API-18 |
+| Trait implemented exactly once and passed as `dyn`, or `Arc`/`Box`/`RefCell` in a public signature, or a `MutexGuard`/`RwLock*Guard`/`Ref` returned from a public fn | API-18 |
 | Associated function with no receiver doing general computation (`Type::helper(x)`) | API-17, ARCH-13 |
 | `Service`/`Manager`/`Factory` type names, or names repeating their module (`foo::FooId`) | API-1 |
 | `static` / `thread_local!` holding correctness-relevant state in a library | CONC-10, SEC-40 |
@@ -111,6 +111,15 @@ further.
 | `.as_ptr()` on a `CString` temporary whose pointer the callee retains or writes through, or hand-rolled `strlen`/`copy_nonoverlapping` string conversion | SEC-41 |
 | Exported `*mut` handle borrowed from another handle, or `transmute` to `'static` at an FFI boundary | SEC-42, SEC-24 |
 | `///` example that defines a helper `fn` and asserts inside it | TEST-34, TEST-1 |
+| Public fn with two or more `bool` parameters, or a call passing bare `true`/`false` positionally (`f(x, true, false)`) | API-23, FN-3 |
+| `ctor` or `inventory` dependency, `#[ctor]`, or a `#[link_section = ".init_array"]` static | ARCH-19, CONC-10 |
+| Iterator chain in a `for` header, `.for_each(` with a block closure, or a `map`/`filter` closure mutating a captured variable | READ-3 |
+| Trait implemented only for foreign types (or blanket over a foreign trait) whose name lacks the `Ext` suffix | TRAIT-5 |
+| Public `const fn`, or a path through another crate's `__private` / `#[doc(hidden)]` module | API-10 |
+| `PoisonError::into_inner` / `get_ref` / `get_mut`, `.lock().unwrap_or_else(…into_inner…)`, or `clear_poison()` | CONC-16, ERR-15 |
+| `match` on another crate's `#[non_exhaustive]` enum whose `_` arm has no comment naming the variants it ignores | READ-7 |
+| Type or trait with two or more single-letter lifetime parameters (`Foo<'a, 'b>`) | READ-14 |
+| Type built mainly through `.into()` / `From::from` with no named constructor | TRAIT-1, API-16 |
 | JetStream without resource limits | NATS-9--14 |
 
 ## Sweep — categories with no signal
