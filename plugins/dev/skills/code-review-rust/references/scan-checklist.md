@@ -7,7 +7,7 @@ further.
 
 | Signal | Rules to check |
 |--------|----------------|
-| `unwrap` / `expect` in non-test code *(exclude `#[cfg(test)]` / `tests/` / `test-support` feature gates before counting — see ERR-5 scanning guidance)* | ERR-5, ERR-8 |
+| `unwrap` / `expect` in non-test code *(exclude `#[cfg(test)]` / `tests/` / `test-support` feature gates before counting, and `.lock()` / `.read()` / `.write()` poison propagation, which CONC-16 requires — see ERR-5 scanning guidance)* | ERR-5, ERR-8 |
 | `.clone()` in hot path or to appease borrow checker | OWN-8, PERF-3 |
 | `RefCell<T>` | OWN-10, SEC-24 |
 | `Arc<Mutex<T>>` around collections | CONC-1--3, CONC-7--9 |
