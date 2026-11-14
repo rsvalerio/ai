@@ -111,6 +111,8 @@ Formal review only — guardrail and ad-hoc review modes answer in chat instead.
 3. Wait for every subagent you delegate to. Subagents report, the parent files.
 4. The only terminal action is the summary (step 5), printed after all tasks exist.
 5. On tool failure, retry or report the specific error.
+6. Every backlog operation goes through `ops backlog` (`task view`, `task edit`), never the
+   `backlog` (backlog.md) binary. A failing `ops backlog` call is fixed, not swapped for another tool.
 
 ## Process
 
@@ -147,7 +149,7 @@ Formal review only — guardrail and ad-hoc review modes answer in chat instead.
    QRY-1's shared literal key at the first file using it (enclosing item: the key, `['products']`),
    and QRY-7 at the store file. List every `file:line` in the description.
 4. **Create tasks** — see below.
-5. **Summarize** — `ops backlog task list --status 'Triage' --plain`.
+5. **Summarize** — `ops backlog task list --status 'Triage' --plain`. This listing is the run's check that every finding landed; a directory listing or file read does not replace it.
 
 ### Calibration rules (always apply before filing)
 
@@ -206,6 +208,14 @@ acceptance criteria that the fix lands as a new migration file.
 
 `<category>` is the lowercased prefix (`rls`, `supa`, `auth`, `edge`, `qry`, `form`, `ui`, `shop`,
 `lov`).
+
+**Tracking task.** When the review runs under a tracking task (the prompt names one, such as
+`TASK-1764.02`), link each task you created to it right after the create:
+`ops backlog task edit <new-id> --parent <tracking-id> --plain`. Skip it when create printed
+`Exists <id>`: that task was filed by an earlier run and keeps its own parent. Triage later
+moves members under their wave, so this link records where a finding came from until then.
+Before the summary (step 5, the terminal action), close the tracking task with
+`ops backlog task edit <tracking-id> -s Done --append-notes "<what ran, what was filed>" --plain`.
 
 ## Finding ID Prefixes
 

@@ -54,6 +54,7 @@ Formal review only — guardrail and ad-hoc review modes answer in chat instead.
 3. **If you delegate to subagents, you MUST wait for every one to return before finishing.** Never end the turn with subagents still in flight. Collect each subagent's findings and create the backlog tasks yourself — subagents report, the parent writes.
 4. **The only terminal action is the summary table** (step 5 below), printed *after* all `ops backlog task create --plain` calls have succeeded. If you have not created tasks, you are not done.
 5. **On tool failure, retry or report the specific error.** Do not silently degrade to a text report.
+6. **Every backlog operation goes through `ops backlog`, never the `backlog` (backlog.md) binary**, even when one is on `PATH`. Read a task with `ops backlog task view <id> --plain`, change one with `ops backlog task edit`. When an `ops backlog` call fails, fix the call (`ops backlog task --help`); switching tools is not a fix.
 
 ## Process
 
@@ -61,7 +62,7 @@ Formal review only — guardrail and ad-hoc review modes answer in chat instead.
 2. **Scan** — Walk [scan-checklist.md](references/scan-checklist.md) signal by signal. For every signal that hits, open `references/rules/<CATEGORY>.md` for the rule IDs it named and confirm against the full rule text. Do not read `rules/index.md` — tier 1 already gave you the IDs. A category the table named whose signals did not hit, and whose code is not present, needs no rule file read. Then work the checklist's **Sweep** list: those categories have no signal at all, so nothing above opens them and that skip cannot apply to them — read each one regardless, or their rules drop out of the review silently. For each violation, prepare a finding with rule ID, severity, file location, description, and acceptance criteria
 3. **Deduplicate** — Give each finding an identity key, `<RULE-ID>:<path>:<enclosing item>`, where the item is the enclosing component, hook, function or module: it survives line shifts where a line number would not. Pass it as `--unless-exists` on create (step 4). When an open task already carries the key, ops creates nothing and prints `Exists <id>`, checked under the backlog's allocation lock, so concurrent reviews cannot file the same finding twice. A key whose only task is Done files again, which is right for a regression. Because the key has no line, several violations of one rule in the same enclosing item are **one** finding: list every `file:line` in its description before filing, never file them one by one, or every one after the first comes back `Exists` and is lost. Group findings that target the same `(file, component/function)` at different granularity into a single finding with the broadest scope
 4. **Create tasks** — For each finding, run `ops backlog task create --plain` with the flags below. Use a `"$(cat <<'EOF' ... EOF)"` heredoc for multi-line values (do NOT use `$'...'` ANSI-C quoting — it triggers an `ansi_c_string` safety prompt on every call).
-5. **Summarize** — run `ops backlog task list --status 'Triage' --plain`
+5. **Summarize** — run `ops backlog task list --status 'Triage' --plain`. This listing is the run's check that every finding landed; a directory listing or file read does not replace it.
 
 ### Calibration rules (always apply before filing)
 
@@ -105,6 +106,14 @@ order, and `ops backlog search --modified-file <path>` finds every finding touch
 finding filed without it is invisible to both.
 
 Map severity to `--priority`: critical→critical, high→high, medium→medium, low→low. The `<category>` label is the lowercased rule-category name (`react`, `typescript`, `async`, `perf`, `a11y`, `structure`, `duplication`, `security`, `tests`, `realtime`).
+
+**Tracking task.** When the review runs under a tracking task (the prompt names one, such as
+`TASK-1764.02`), link each task you created to it right after the create:
+`ops backlog task edit <new-id> --parent <tracking-id> --plain`. Skip it when create printed
+`Exists <id>`: that task was filed by an earlier run and keeps its own parent. Triage later
+moves members under their wave, so this link records where a finding came from until then.
+Before the summary (step 5, the terminal action), close the tracking task with
+`ops backlog task edit <tracking-id> -s Done --append-notes "<what ran, what was filed>" --plain`.
 
 ## Rule Categories and Severity Scale
 
