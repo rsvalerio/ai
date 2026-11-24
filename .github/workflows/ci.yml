@@ -30,7 +30,7 @@ jobs:
       # reads locally, so CI and a developer machine install identical versions.
       # skill-validator ships as GitHub release assets rather than a crates.io
       # crate, which is why it is pinned through mise's `github:` backend.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
 
       # The ops that runs the gates: 0.75.0 or newer for the `lint-actions` built-in, never
       # below the skills' ops floor (AGENTS.md "ops dependency"), and equal on both jobs.
@@ -55,7 +55,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
 
       # claude-code stays out of .tool-versions on purpose: mise's registry
       # does not know the tool, so an entry would fail `mise install` in CI.
